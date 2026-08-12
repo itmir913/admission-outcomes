@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coerce, readRow, inferGradeScale, buildDataset } from '../src/ingest/buildRecords.js';
+import { coerce, readRow, buildDataset } from '../src/ingest/buildRecords.js';
 import { buildHeaderLabels, fillMergedRow } from '../src/ingest/headerBlock.js';
 import { kcueGrid } from './helpers/workbook.js';
 
@@ -103,23 +103,6 @@ describe('행 읽기', () => {
   });
 });
 
-describe('등급 체계 헤아리기', () => {
-  it('5를 넘는 값이 있으면 9등급제로 확정한다', () => {
-    expect(inferGradeScale([1.8, 2.4, 6.3]).scale).toBe(9);
-  });
-
-  it('모두 5 이하면 단정하지 않는다', () => {
-    // 9등급제 우수 학생 집단일 수도 있다. 틀리면 축이 통째로 어긋난다
-    const guess = inferGradeScale([1.8, 2.4, 3.1]);
-    expect(guess.scale).toBeNull();
-    expect(guess.reason).toMatch(/알 수 없습니다/);
-  });
-
-  it('값이 없으면 단정하지 않는다', () => {
-    expect(inferGradeScale([]).scale).toBeNull();
-  });
-});
-
 describe('자료 묶음 만들기', () => {
   it('지원 건마다 한 행을 만든다', async () => {
     const result = await buildDataset([simpleSheet()]);
@@ -220,30 +203,6 @@ describe('수능 자료', () => {
     const korean = result.suneung.find((row) => row.area === '국어');
     expect(korean.subject).toBe('언어와매체');
     expect(korean.grade).toBe(2);
-  });
-});
-
-describe('등급 체계 판정', () => {
-  it('9등급제가 확실하면 학생에 붙인다', async () => {
-    const sheet = simpleSheet();
-    sheet.grid[1][4] = 6.36;
-    const result = await buildDataset([sheet]);
-    expect(result.gradeScales[0].scale).toBe(9);
-    expect(result.students.every((student) => student.gradeScale === 9)).toBe(true);
-  });
-
-  it('알 수 없으면 비워 두고 알린다', async () => {
-    const result = await buildDataset([simpleSheet()]);
-    expect(result.students.every((student) => student.gradeScale === null)).toBe(true);
-    expect(result.warnings.find((item) => item.type === 'grade-scale-unknown')).toBeDefined();
-  });
-
-  it('연도별로 따로 헤아린다', async () => {
-    const older = simpleSheet(2023);
-    older.grid[1][4] = 6.36;
-    const result = await buildDataset([older, simpleSheet(2025)]);
-    expect(result.gradeScales.find((item) => item.cohortYear === 2023).scale).toBe(9);
-    expect(result.gradeScales.find((item) => item.cohortYear === 2025).scale).toBeNull();
   });
 });
 

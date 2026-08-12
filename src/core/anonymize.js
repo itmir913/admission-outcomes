@@ -4,11 +4,17 @@
  * 이름과 학번은 **키 해시를 만드는 순간에만** 쓰이고 그 자리에서 버려진다.
  * 이 파일 밖으로 원문이 나가지 않는다.
  *
- * ## 왜 키가 하나가 아닌가
+ ## 주키
  *
- * 같은 학생이 여러 파일에 흩어져 있는데, **파일마다 있는 식별 열이 다르다.**
- * 어떤 파일엔 학번이 있고, 어떤 파일엔 반·번호만 있다. 키를 하나만 쓰면 같은 사람이
- * 둘로 갈라진다. 그래서 만들 수 있는 키를 모두 만들어 두고, 하나라도 겹치면 같은 사람으로 본다.
+ * **`고3 년도 + 학번`**, 학번이 없으면 **`고3 년도 + 반 + 번호`**가 사람을 가른다.
+ * 학번이 다르면 이름이 같아도 다른 사람이다.
+ *
+ * 이름은 주키에 넣지 않는다. 넣으면 같은 학번인데 표기가 조금 다른 것만으로
+ * 한 학생이 둘로 갈라진다 — 파일마다 `홍길동`, `홍 길동`, 오타가 섞인다.
+ *
+ * 다만 파일마다 있는 식별 열이 다르다. 어떤 파일엔 학번이 있고 어떤 파일엔 반·번호만 있다.
+ * 그래서 만들 수 있는 키를 모두 만들어 두고 하나라도 겹치면 같은 사람으로 본다.
+ * **이름 키는 주키를 만들 수 없을 때를 위한 보조 수단**이고, 그때만 동명이인이 문제가 된다.
  *
  * ## 왜 모든 키에 고3 년도가 들어가는가
  *
@@ -20,12 +26,23 @@
 import { sha256Text, toHex } from './hash.js';
 import { encodeBase32, group } from './base32.js';
 
-/** 키 종류와 강도. 숫자가 클수록 사람을 더 좁게 특정한다. */
+/**
+ * 키 종류와 강도. 숫자가 클수록 사람을 더 좁게 특정한다.
+ *
+ * **주키는 `고3 년도 + 학번`이고, 학번이 없으면 `고3 년도 + 반 + 번호`다.**
+ * 이름은 주키에 들어가지 않는다 — 같은 학번인데 이름 표기가 다르면
+ * 한 학생이 둘로 갈라지기 때문이다. 파일마다 `홍길동`, `홍 길동`, 오타가 섞인다.
+ *
+ * 학년은 키에 넣지 않는다. 진학결과는 모두 고3 자료라 값이 늘 같아서
+ * 사람을 가르는 데 쓸모가 없고, 학년 열이 없는 파일과 매칭만 막는다.
+ *
+ * 이름은 **주키를 만들 수 없을 때만** 쓴다. 그때만 동명이인이 문제가 된다.
+ */
 export const KEY_KIND = {
-  hakbun: { tag: 'h', strength: 4 },
-  classNumber: { tag: 'cn', strength: 3 },
-  number: { tag: 'n', strength: 2 },
-  name: { tag: 'nm', strength: 1 }
+  hakbun: { tag: 'h', strength: 4, usesName: false },
+  classNumber: { tag: 'cn', strength: 3, usesName: false },
+  numberName: { tag: 'nn', strength: 2, usesName: true },
+  name: { tag: 'nm', strength: 1, usesName: true }
 };
 
 /** 익명 ID의 글자 수. 40비트라 한 해 수백 명 규모에서 충돌은 사실상 없다. */
@@ -59,9 +76,7 @@ export function identityKeys(cohortYear, identity = {}) {
   const number = normalizePart(identity.number);
   const year = String(cohortYear ?? '').trim();
 
-  // 이름이 없으면 어떤 키도 사람을 특정하지 못한다.
-  // 학번만으로 잇는 것은 위험하다 — 전학·재입력으로 학번이 겹치는 일이 있다.
-  if (!year || !name) return [];
+  if (!year) return [];
 
   const keys = [];
   const push = (kind, ...parts) => {
@@ -69,10 +84,13 @@ export function identityKeys(cohortYear, identity = {}) {
     keys.push({ kind, strength, text: [year, tag, ...parts].join(UNIT) });
   };
 
-  if (hakbun) push('hakbun', hakbun, name);
-  if (classNo && number) push('classNumber', classNo, number, name);
-  if (number) push('number', number, name);
-  push('name', name);
+  // 주키 — 이름을 넣지 않는다
+  if (hakbun) push('hakbun', hakbun);
+  if (classNo && number) push('classNumber', classNo, number);
+
+  // 이름에 기대는 보조 키. 번호만으로는 반이 다른 학생과 겹치므로 이름을 함께 쓴다
+  if (name && number && !classNo) push('numberName', number, name);
+  if (name) push('name', name);
 
   return keys.sort((left, right) => right.strength - left.strength);
 }
@@ -121,8 +139,8 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
 
   // ── 1. 같은 고3 년도 안에서 이름이 유일한지 센다 ────────────────────────────
   //
-  // 이름 단독 키는 동명이인을 한 사람으로 합쳐 버린다. 지원 이력이 뒤섞이면
-  // 상담 자료가 조용히 거짓말을 하므로, **유일할 때만** 잇는 데 쓴다.
+  // 주키가 없어 이름에 기대야 하는 행이 있다. 그때 동명이인을 한 사람으로 합치면
+  // 지원 이력이 뒤섞여 상담 자료가 조용히 거짓말을 한다. **유일할 때만** 잇는 데 쓴다.
   // **종류별로 센다.** 같은 학생이라도 파일마다 있는 열이 달라
   // 어떤 행은 학번으로, 어떤 행은 반·번호로 나타난다. 종류를 뭉뚱그려 세면
   // 그 학생 한 명이 여러 사람으로 보인다.
@@ -135,11 +153,12 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
 
   for (const keys of keysByEntry) {
     if (keys.length === 0) continue;
-    const nameKey = keys[keys.length - 1].text;
+    const nameKey = keys.find((key) => key.kind === 'name')?.text;
+    if (!nameKey) continue;
     if (!strongKeysByName.has(nameKey)) strongKeysByName.set(nameKey, new Map());
     const byKind = strongKeysByName.get(nameKey);
     for (const key of keys) {
-      if (key.kind === 'name') continue;
+      if (KEY_KIND[key.kind].usesName) continue;
       if (!byKind.has(key.kind)) byKind.set(key.kind, new Set());
       byKind.get(key.kind).add(key.text);
     }
@@ -170,9 +189,12 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
   // ── 2. 쓸 키만 남기고 해시로 바꾼다 ────────────────────────────────────────
   const allowedByEntry = keysByEntry.map((keys) => {
     if (keys.length === 0) return [];
-    const nameKey = keys[keys.length - 1];
-    if (keys.length === 1) return keys; // 이름밖에 없는 행은 이름 키라도 써야 한다
-    return ambiguousNames.has(nameKey.text) ? keys.filter((key) => key.kind !== 'name') : keys;
+    const nameKey = keys.find((key) => key.kind === 'name');
+    if (!nameKey || !ambiguousNames.has(nameKey.text)) return keys;
+    // 동명이인이 있으면 이름에 기대는 키를 전부 버린다.
+    // 주키가 하나도 없던 행은 여기서 식별 불가가 되는데, 남에게 잘못 붙이는 것보다 낫다
+    const strongOnly = keys.filter((key) => !KEY_KIND[key.kind].usesName);
+    return strongOnly.length > 0 ? strongOnly : [];
   });
 
   /** @type {Map<string, string>} 키 원문 → 해시. 원문은 이 함수를 벗어나지 않는다 */
@@ -274,7 +296,7 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     warnings.push({
       type: 'no-identity',
       count: unidentified,
-      message: `이름을 읽지 못한 행이 ${unidentified}건 있습니다. 학생에 묶이지 않습니다.`
+      message: `학번·반·번호·이름을 모두 읽지 못한 행이 ${unidentified}건 있습니다. 학생에 묶이지 않습니다.`
     });
   }
 

@@ -108,29 +108,6 @@ function looksLikeApplication(parsed) {
 }
 
 /**
- * 내신 등급 체계를 값의 분포에서 헤아린다.
- *
- * 2025학년도 고1부터 9등급제가 5등급제로 바뀌었다. 두 체계를 같은 축에 올리면
- * 9등급제의 2.3과 5등급제의 2.3이 나란히 놓여 상담이 통째로 틀어진다(§4).
- *
- * 5를 넘는 값이 있으면 9등급제가 확실하다. 없다고 해서 5등급제라는 뜻은 아니므로
- * 그때는 **단정하지 않는다.** 연도 기준을 다룰 때와 같은 태도다.
- *
- * @param {number[]} values
- * @returns {{ scale: 9|5|null, reason: string }}
- */
-export function inferGradeScale(values) {
-  const numbers = values.filter((value) => typeof value === 'number' && Number.isFinite(value));
-  if (numbers.length === 0) return { scale: null, reason: '내신 값이 없습니다.' };
-  const max = Math.max(...numbers);
-  if (max > 5) return { scale: 9, reason: `5를 넘는 내신(${max})이 있어 9등급제입니다.` };
-  return {
-    scale: null,
-    reason: `내신이 모두 5 이하(최대 ${max})라 9등급제인지 5등급제인지 알 수 없습니다.`
-  };
-}
-
-/**
  * @typedef {object} SheetInput
  * @property {unknown[][]} grid
  * @property {number} headerRows
@@ -145,7 +122,7 @@ export function inferGradeScale(values) {
  *
  * @param {SheetInput[]} sheets
  * @param {{existing?: object[]}} [options] 이미 저장된 학생들 (ID 이어 붙이기)
- * @returns {Promise<{students: object[], applications: object[], suneung: object[], warnings: object[], gradeScales: object[]}>}
+ * @returns {Promise<{students: object[], applications: object[], suneung: object[], warnings: object[]}>}
  */
 export async function buildDataset(sheets, { existing = [] } = {}) {
   const warnings = [];
@@ -200,7 +177,6 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
       sid: student.sid,
       cohortYear: student.cohortYear,
       keyHashes: student.keyHashes,
-      gradeScale: null,
       gpa: {}
     });
   }
@@ -235,31 +211,6 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
     });
   });
 
-  // ── 등급 체계 헤아리기 ───────────────────────────────────────────────────
-  /** @type {Map<number, number[]>} */
-  const gpaByYear = new Map();
-  for (const student of studentBySid.values()) {
-    const values = Object.values(student.gpa).filter((value) => typeof value === 'number');
-    if (!gpaByYear.has(student.cohortYear)) gpaByYear.set(student.cohortYear, []);
-    gpaByYear.get(student.cohortYear).push(...values);
-  }
-  const gradeScales = [];
-  for (const [cohortYear, values] of [...gpaByYear.entries()].sort((a, b) => a[0] - b[0])) {
-    const guess = inferGradeScale(values);
-    gradeScales.push({ cohortYear, ...guess });
-    if (guess.scale !== null) {
-      for (const student of studentBySid.values()) {
-        if (student.cohortYear === cohortYear) student.gradeScale = guess.scale;
-      }
-    } else {
-      warnings.push({
-        type: 'grade-scale-unknown',
-        cohortYear,
-        message: `${cohortYear}년 고3의 ${guess.reason} 등급 체계를 정해 주세요.`
-      });
-    }
-  }
-
   const suneung = [];
   for (const areas of suneungBySid.values()) suneung.push(...areas.values());
 
@@ -267,7 +218,6 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
     students: [...studentBySid.values()].sort((left, right) => left.sid.localeCompare(right.sid)),
     applications,
     suneung,
-    gradeScales,
     warnings
   };
 }

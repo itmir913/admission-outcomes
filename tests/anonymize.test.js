@@ -8,7 +8,26 @@ const 박서린 = { name: '박서린', hakbun: '30102', classNo: '1', number: '2
 describe('식별 키 만들기', () => {
   it('만들 수 있는 키를 모두 만든다', () => {
     const keys = identityKeys(2025, 김가온);
-    expect(keys.map((key) => key.kind)).toEqual(['hakbun', 'classNumber', 'number', 'name']);
+    expect(keys.map((key) => key.kind)).toEqual(['hakbun', 'classNumber', 'name']);
+  });
+
+  it('주키에는 이름을 넣지 않는다', () => {
+    // 넣으면 같은 학번인데 표기가 다른 것만으로 한 학생이 둘로 갈라진다
+    const withName = identityKeys(2025, { hakbun: '30101', name: '김가온' });
+    const withoutName = identityKeys(2025, { hakbun: '30101' });
+    expect(withoutName[0].text).toBe(withName[0].text);
+  });
+
+  it('반·번호 키에도 이름을 넣지 않는다', () => {
+    const withName = identityKeys(2025, { classNo: '1', number: '1', name: '김가온' });
+    const withoutName = identityKeys(2025, { classNo: '1', number: '1' });
+    expect(withoutName[0].text).toBe(withName[0].text);
+  });
+
+  it('반이 없으면 번호만으로는 부족해 이름을 함께 쓴다', () => {
+    // 반이 다른 1번들이 서로 겹친다
+    const keys = identityKeys(2025, { number: '1', name: '김가온' });
+    expect(keys.map((key) => key.kind)).toEqual(['numberName', 'name']);
   });
 
   it('강한 키부터 돌려준다', () => {
@@ -30,8 +49,14 @@ describe('식별 키 만들기', () => {
     }
   });
 
-  it('이름이 없으면 키를 만들지 않는다', () => {
-    expect(identityKeys(2025, { hakbun: '30101' })).toEqual([]);
+  it('이름이 없어도 주키만으로 식별한다', () => {
+    // (연도, 학번)이 주키다. 이름은 없어도 된다
+    expect(identityKeys(2025, { hakbun: '30101' }).map((key) => key.kind)).toEqual(['hakbun']);
+    expect(identityKeys(2025, { classNo: '1', number: '1' }).map((key) => key.kind)).toEqual(['classNumber']);
+  });
+
+  it('아무 식별 값도 없으면 키를 만들지 않는다', () => {
+    expect(identityKeys(2025, {})).toEqual([]);
   });
 
   it('고3 년도가 없으면 키를 만들지 않는다', () => {
@@ -133,8 +158,26 @@ describe('파일마다 식별 열이 다를 때', () => {
       entry(2025, { name: '김가온', hakbun: '30101' }),
       entry(2025, { name: '김가온', classNo: '1', number: '1' })
     ]);
-    // 학번 키, 반·번호 키, 번호 키, 이름 키가 모두 모인다
-    expect(result.students[0].keyHashes.length).toBeGreaterThanOrEqual(4);
+    // 학번 키, 반·번호 키, 이름 키가 모인다
+    expect(result.students[0].keyHashes.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('같은 학번이면 이름 표기가 달라도 한 사람이다', async () => {
+    // 파일마다 오타나 표기 차이가 있다. 주키가 같으면 같은 사람이다
+    const result = await assignStudentIds([
+      entry(2025, { hakbun: '30101', name: '김가온' }),
+      entry(2025, { hakbun: '30101', name: '김가온(전학)' })
+    ]);
+    expect(result.sids[0]).toBe(result.sids[1]);
+    expect(result.students).toHaveLength(1);
+  });
+
+  it('이름이 아예 없는 행도 주키로 이어진다', async () => {
+    const result = await assignStudentIds([
+      entry(2025, { hakbun: '30101', name: '김가온' }),
+      entry(2025, { hakbun: '30101' })
+    ]);
+    expect(result.sids[0]).toBe(result.sids[1]);
   });
 
   it('강한 키가 겹치면 이름이 흔들려도 잇는다', async () => {
@@ -168,14 +211,16 @@ describe('동명이인 — 잘못 합치지 않는다', () => {
   });
 
   it('동명이인이 있으면 이름만 있는 행을 아무에게나 붙이지 않는다', async () => {
-    // 여기서 잘못 붙이면 남의 지원 이력이 섞인다
+    // 여기서 잘못 붙이면 남의 지원 이력이 섞인다.
+    // 붙일 곳을 정할 수 없으므로 식별 불가로 남기고 알린다
     const result = await assignStudentIds([
       entry(2025, { name: '김가온', hakbun: '30101' }),
       entry(2025, { name: '김가온', hakbun: '30215' }),
       entry(2025, { name: '김가온' })
     ]);
-    expect(result.students).toHaveLength(3);
-    expect(new Set(result.sids).size).toBe(3);
+    expect(result.students).toHaveLength(2);
+    expect(result.sids[2]).toBeNull();
+    expect(result.warnings.some((item) => item.type === 'no-identity')).toBe(true);
   });
 
   it('다른 해의 동명이인은 문제가 아니다', async () => {
@@ -196,9 +241,14 @@ describe('동명이인 — 잘못 합치지 않는다', () => {
 });
 
 describe('식별할 수 없는 행', () => {
-  it('이름이 없으면 ID를 주지 않는다', async () => {
-    const result = await assignStudentIds([entry(2025, { hakbun: '30101' })]);
+  it('식별 값이 하나도 없으면 ID를 주지 않는다', async () => {
+    const result = await assignStudentIds([entry(2025, {})]);
     expect(result.sids[0]).toBeNull();
+  });
+
+  it('학번만 있어도 ID를 준다', async () => {
+    const result = await assignStudentIds([entry(2025, { hakbun: '30101' })]);
+    expect(result.sids[0]).toMatch(/^2025-/);
   });
 
   it('이름 없는 행이 있으면 알린다', async () => {
