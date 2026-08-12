@@ -17,6 +17,7 @@ import { read as readWorkbook, utils as sheetUtils } from 'xlsx';
 import { normalizeCell } from '../src/ingest/files.js';
 import { headerFingerprint } from '../src/ingest/fingerprint.js';
 import { validateProfile } from '../src/ingest/profile.js';
+import { findYearColumn } from '../src/ingest/year.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, '..', 'src', 'dict', 'header-profiles');
@@ -27,6 +28,7 @@ const HINTS = [
   ['identity.hakbun', ['학번', '수험번호']],
   ['identity.class', ['반']],
   ['identity.number', ['번호']],
+  ['sourceYear', ['학년도', '입학년도', '졸업년도']],
   ['schoolYear', ['학년']],
   ['univ', ['대학명', '대학', '지원대학', '학교명']],
   ['region', ['지역']],
@@ -128,6 +130,7 @@ async function main() {
   const program = option('program', basename(path).replace(/\.[^.]+$/, ''));
   const programLabel = option('label', program);
   const year = Number(option('year', '0'));
+  const yearBasis = option('basis', null);
 
   const workbook = readWorkbook(readFileSync(path), { type: 'buffer', cellDates: true, cellFormula: false });
   const sheetName = option('sheet', workbook.SheetNames[0]);
@@ -142,6 +145,18 @@ async function main() {
   });
 
   const columns = draftColumns(labels);
+
+  // `학년` 헤더 아래에 연도가 든 파일이 있다. 이름이 아니라 값으로 가른다.
+  // 대교협은 3(학년)이, 센진학은 2026(연도)이 같은 이름 아래 들어 있다.
+  if ('schoolYear' in columns) {
+    const found = findYearColumn(grid, { headerRows });
+    if (found && found.column === columns.schoolYear) {
+      delete columns.schoolYear;
+      columns.sourceYear = found.column;
+      console.log(`
+  ※ ${found.column}번 열은 이름이 '학년'이지만 값이 연도(${found.values.join(', ')})입니다. sourceYear로 잡았습니다.`);
+    }
+  }
   const profile = {
     id: `${program}-${year}`,
     program,
@@ -149,6 +164,7 @@ async function main() {
     year,
     headerRows,
     fingerprint: await headerFingerprint(grid, headerRows),
+    ...(yearBasis ? { yearBasis } : {}),
     columns,
     source: `${basename(path)}#${sheetName}`
   };

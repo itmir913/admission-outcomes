@@ -8,8 +8,11 @@
  *
  * ```json
  * { "id": "kcue-2025", "program": "kcue", "programLabel": "대교협 수시진학관리",
- *   "year": 2025, "headerRows": 2, "fingerprint": "b7f3…",
+ *   "year": 2025, "headerRows": 2, "fingerprint": "b7f3…", "yearBasis": "admission",
  *   "columns": { "univ": 4, "gpa.전교과": 10, "suneung.국어.grade": 15 } }
+ *
+ * `yearBasis`는 연도 열(`sourceYear`)의 값이 **고3 년도인지 학년도인지**를 밝힌다.
+ * 이걸 빠뜨리면 자료 전체가 한 해씩 밀린 채로 멀쩡해 보인다.
  * ```
  *
  * `columns`는 **논리 키 → 열 인덱스**의 평평한 맵이다.
@@ -68,6 +71,12 @@ export function validateProfile(profile) {
     else usedIndexes.set(index, key);
   }
   if (!('univ' in columns)) problems.push('대학명(univ) 열이 없으면 분석할 수 없습니다.');
+
+  // 연도 열이 있으면 그 값이 고3 년도인지 학년도인지 반드시 밝혀야 한다.
+  // 밝히지 않으면 자료 전체가 한 해씩 밀리고, 밀렸다는 사실이 눈에 띄지 않는다.
+  if ('sourceYear' in columns && !['senior', 'admission'].includes(profile.yearBasis)) {
+    problems.push('연도 열이 있으면 yearBasis가 senior 또는 admission이어야 합니다.');
+  }
 
   return { valid: problems.length === 0, problems };
 }
@@ -181,8 +190,8 @@ export async function matchProfile(profileSet, { grid, year = null }) {
  * @param {{program: string, programLabel?: string, year: number, headerRows: number, grid: unknown[][], columns: Record<string, number>}} input
  * @returns {Promise<object>}
  */
-export async function buildProfile({ program, programLabel, year, headerRows, grid, columns }) {
-  return {
+export async function buildProfile({ program, programLabel, year, headerRows, grid, columns, yearBasis }) {
+  const profile = {
     id: `${program}-${year}`,
     program,
     programLabel: programLabel ?? program,
@@ -192,4 +201,6 @@ export async function buildProfile({ program, programLabel, year, headerRows, gr
     columns,
     createdAt: new Date().toISOString()
   };
+  if (yearBasis) profile.yearBasis = yearBasis;
+  return profile;
 }

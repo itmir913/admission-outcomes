@@ -79,7 +79,7 @@ describe('헤더 지문', () => {
 
 describe('필드 키 검사', () => {
   it('공통 스키마에 있는 키를 인정한다', () => {
-    for (const key of ['univ', 'dept', 'final', 'identity.name', 'year']) {
+    for (const key of ['univ', 'dept', 'final', 'identity.name', 'cohortYear', 'sourceYear']) {
       expect(isKnownFieldKey(key)).toBe(true);
     }
   });
@@ -99,9 +99,37 @@ describe('필드 키 검사', () => {
   });
 
   it('모르는 키를 거절한다', () => {
+    // year는 고3 년도인지 학년도인지 드러나지 않아 일부러 뺐다
+    expect(isKnownFieldKey('year')).toBe(false);
     expect(isKnownFieldKey('아무거나')).toBe(false);
     expect(isKnownFieldKey('gpa.')).toBe(false);
     expect(isKnownFieldKey('')).toBe(false);
+  });
+});
+
+describe('연도 기준 검사', () => {
+  it('연도 열이 있으면 기준을 밝혀야 한다', () => {
+    // 밝히지 않으면 자료 전체가 한 해씩 밀린 채로 멀쩡해 보인다
+    const result = validateProfile(baseProfile({ columns: { univ: 4, sourceYear: 0 } }));
+    expect(result.valid).toBe(false);
+    expect(result.problems.join()).toMatch(/yearBasis/);
+  });
+
+  it('기준을 밝히면 통과한다', () => {
+    for (const yearBasis of ['senior', 'admission']) {
+      const profile = baseProfile({ columns: { univ: 4, sourceYear: 0 }, yearBasis });
+      expect(validateProfile(profile).valid, yearBasis).toBe(true);
+    }
+  });
+
+  it('엉뚱한 기준값을 거절한다', () => {
+    const profile = baseProfile({ columns: { univ: 4, sourceYear: 0 }, yearBasis: '학년도' });
+    expect(validateProfile(profile).valid).toBe(false);
+  });
+
+  it('연도 열이 없으면 기준을 요구하지 않는다', () => {
+    // 대교협 파일에는 연도 열이 없다. 파일명에서 읽는다
+    expect(validateProfile(baseProfile({ columns: { univ: 4 } })).valid).toBe(true);
   });
 });
 

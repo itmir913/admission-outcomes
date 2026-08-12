@@ -5,8 +5,8 @@
   "year": 2026,
   "headerRows": 1,
   "fingerprint": "82549e9a37bcaccf8719462bd10b2484e1b10f7a4336f9072fa85447e0634c7c",
+  "yearBasis": "admission",
   "columns": {
-    "schoolYear": 0,
     "identity.hakbun": 1,
     "identity.name": 2,
     "region": 3,
@@ -22,7 +22,8 @@
     "stage1": 13,
     "final": 14,
     "waitRank": 15,
-    "register": 16
+    "register": 16,
+    "sourceYear": 0
   },
   "source": "센진학_수시지원결과_샘플.xlsx#result"
 }

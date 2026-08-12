@@ -1,6 +1,7 @@
 {
   "version": 1,
   "note": "공통 논리 필드 사전. 어떤 프로그램의 양식이든 이 키로 번역된다. 새 개념이 필요할 때만 여기에 한 줄 추가한다.",
+  "termNote": "연도는 언제나 고3 년도(cohortYear)로 통일한다. 학년도 = 고3 년도 + 1. 2025년 고3 → 2026학년도.",
 
   "scalars": [
     { "key": "identity.name",   "label": "이름",     "type": "text", "group": "identity", "discard": true },
@@ -8,8 +9,9 @@
     { "key": "identity.class",  "label": "반",       "type": "text", "group": "identity", "discard": true },
     { "key": "identity.number", "label": "번호",     "type": "text", "group": "identity", "discard": true },
 
-    { "key": "year",            "label": "학년도",   "type": "year",   "group": "student" },
-    { "key": "schoolYear",      "label": "학년",     "type": "text",   "group": "student" },
+    { "key": "cohortYear",      "label": "고3 년도", "type": "year",   "group": "student", "note": "고등학교 3학년이었던 달력 연도. 학년도(=고3 년도+1)와 절대 섞지 않는다." },
+    { "key": "sourceYear",      "label": "원본 연도 열", "type": "year", "group": "student", "note": "원본 파일의 연도 열. yearBasis에 따라 cohortYear로 변환된다." },
+    { "key": "schoolYear",      "label": "학년",     "type": "text",   "group": "student", "note": "1·2·3 같은 학년 값. 연도가 아니다." },
     { "key": "enrollStatus",    "label": "재학·졸업", "type": "text",  "group": "student" },
 
     { "key": "univ",            "label": "대학명",   "type": "text",   "group": "application", "required": true },
