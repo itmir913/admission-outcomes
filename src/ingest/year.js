@@ -100,7 +100,7 @@ export function extractYears(text, { currentYear = new Date().getFullYear() } = 
  * @param {{currentYear?: number, headerRows?: number, minRows?: number, ratio?: number}} [options]
  * @returns {{ column: number, values: number[], uniform: boolean, basis: string } | null}
  */
-export function findYearColumn(grid, {
+export function readYearColumn(grid, column, {
   currentYear = new Date().getFullYear(),
   headerRows = 1,
   minRows = 3,
@@ -108,27 +108,47 @@ export function findYearColumn(grid, {
 } = {}) {
   if (!Array.isArray(grid) || grid.length <= headerRows) return null;
   const body = grid.slice(headerRows);
-  const width = body.reduce((max, row) => Math.max(max, row?.length ?? 0), 0);
+
+  /** @type {number[]} */
+  const years = [];
+  let filled = 0;
+  for (const row of body) {
+    const raw = row?.[column];
+    if (raw === null || raw === undefined || String(raw).trim() === '') continue;
+    filled += 1;
+    const value = Number(String(raw).trim());
+    if (isPlausibleRawYear(value, currentYear)) years.push(value);
+  }
+  if (filled < minRows) return null;
+  if (years.length / filled < ratio) return null;
+
+  const distinct = [...new Set(years)].sort();
+  // 달력 연도를 넘어서는 값은 고3 년도일 수 없다. 학년도라는 확증이 된다.
+  // 반대로 넘지 않는다고 해서 고3 년도라는 뜻은 아니므로, 그때는 모른다고 답한다.
+  const basis = distinct[distinct.length - 1] > currentYear ? BASIS.admission : BASIS.unknown;
+  return { column, values: distinct, uniform: distinct.length === 1, basis };
+}
+
+/**
+ * 격자에서 연도가 담긴 열을 **찾는다.**
+ *
+ * 값의 생김새만 보므로 확실하지 않다. 생년(2007) 같은 열도 조건에 맞는다.
+ * 그래서 이렇게 찾은 열에는 **프로파일의 기준을 적용하지 않는다** — 프로파일이 말하는
+ * 연도 열과 여기서 찾은 열이 다를 수 있기 때문이다.
+ *
+ * @param {unknown[][]} grid
+ * @param {object} [options]
+ * @returns {{ column: number, values: number[], uniform: boolean, basis: string } | null}
+ */
+export function findYearColumn(grid, options = {}) {
+  const headerRows = options.headerRows ?? 1;
+  if (!Array.isArray(grid) || grid.length <= headerRows) return null;
+  const width = grid.slice(headerRows)
+    .reduce((max, row) => Math.max(max, row?.length ?? 0), 0);
 
   for (let column = 0; column < width; column += 1) {
-    /** @type {number[]} */
-    const years = [];
-    let filled = 0;
-    for (const row of body) {
-      const raw = row?.[column];
-      if (raw === null || raw === undefined || String(raw).trim() === '') continue;
-      filled += 1;
-      const value = Number(String(raw).trim());
-      if (isPlausibleRawYear(value, currentYear)) years.push(value);
-    }
-    if (filled < minRows) continue;
-    if (years.length / filled < ratio) continue;
-
-    const distinct = [...new Set(years)].sort();
-    // 달력 연도를 넘어서는 값은 고3 년도일 수 없다. 학년도라는 확증이 된다.
-    // 반대로 넘지 않는다고 해서 고3 년도라는 뜻은 아니므로, 그때는 모른다고 답한다.
-    const basis = distinct[distinct.length - 1] > currentYear ? BASIS.admission : BASIS.unknown;
-    return { column, values: distinct, uniform: distinct.length === 1, basis };
+    const found = readYearColumn(grid, column, options);
+    if (found) return found;
   }
   return null;
 }
@@ -154,13 +174,14 @@ export function findYearColumn(grid, {
  * **기준을 모르면 연도를 확정하지 않는다.** 1년 밀린 자료는 겉보기에 멀쩡해서
  * 잘못을 알아챌 방법이 없기 때문이다. 이때는 `needsInput`을 세워 사용자에게 넘긴다.
  *
- * @param {{fileName?: string, sheetName?: string, grid?: unknown[][], headerRows?: number, columnBasis?: string, currentYear?: number}} input
- * @param {string} [input.columnBasis] 프로파일이 알려 주는 연도 열의 기준
+ * @param {object} input
+ * @param {number|null} [input.yearColumn] 프로파일이 **연도 열이라고 밝힌** 열 번호
+ * @param {string} [input.columnBasis] 그 열의 기준. `yearColumn`과 짝으로만 쓰인다
  * @returns {CohortYearGuess}
  */
 export function inferCohortYear({
   fileName = '', sheetName = '', grid = [], headerRows = 1,
-  columnBasis = null, currentYear = new Date().getFullYear()
+  yearColumn = null, columnBasis = null, currentYear = new Date().getFullYear()
 } = {}) {
   const none = {
     cohortYear: null, yearColumn: null, basis: BASIS.unknown,
@@ -168,10 +189,16 @@ export function inferCohortYear({
     explanation: '연도를 찾지 못했습니다. 이 파일의 학생들이 고3이었던 년도를 적어 주세요.'
   };
 
-  const found = findYearColumn(grid, { currentYear, headerRows });
+  // 프로파일이 "이 열이 연도다"라고 밝혔으면 **그 열만** 본다.
+  // 밝히지 않았으면 값의 생김새로 찾되, 프로파일의 기준을 그 열에 갖다 붙이지 않는다.
+  // 붙이면 생년(2007) 열을 학년도로 읽어 자료 전체가 19년 밀린다.
+  const declared = yearColumn === null || yearColumn === undefined
+    ? null
+    : readYearColumn(grid, yearColumn, { currentYear, headerRows });
+  const found = declared ?? findYearColumn(grid, { currentYear, headerRows });
+
   if (found) {
-    // 프로파일이 기준을 알려 줬으면 그것을 따른다. 값으로 얻은 확증이 있으면 그것도 쓴다
-    const basis = columnBasis ?? found.basis;
+    const basis = declared ? (columnBasis ?? found.basis) : found.basis;
     const known = basis === BASIS.senior || basis === BASIS.admission;
     const label = `${found.column + 1}번째 열의 값(${found.values.join(', ')})`;
     return {

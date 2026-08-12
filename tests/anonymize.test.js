@@ -6,9 +6,16 @@ const 김가온 = { name: '김가온', hakbun: '30101', classNo: '1', number: '1
 const 박서린 = { name: '박서린', hakbun: '30102', classNo: '1', number: '2' };
 
 describe('식별 키 만들기', () => {
-  it('만들 수 있는 키를 모두 만든다', () => {
+  it('주키가 있으면 주키만 만든다', () => {
+    // 이름 키까지 만들면 이름이 같은 남남이 합쳐진다
     const keys = identityKeys(2025, 김가온);
-    expect(keys.map((key) => key.kind)).toEqual(['hakbun', 'classNumber', 'name']);
+    expect(keys.map((key) => key.kind)).toEqual(['hakbun', 'classNumber']);
+  });
+
+  it('주키가 없을 때만 이름 키를 만든다', () => {
+    expect(identityKeys(2025, { name: '김가온' }).map((key) => key.kind)).toEqual(['name']);
+    expect(identityKeys(2025, { name: '김가온', number: '1' }).map((key) => key.kind))
+      .toEqual(['numberName', 'name']);
   });
 
   it('주키에는 이름을 넣지 않는다', () => {
@@ -30,14 +37,22 @@ describe('식별 키 만들기', () => {
     expect(keys.map((key) => key.kind)).toEqual(['numberName', 'name']);
   });
 
+  it('문자열과 숫자로 적힌 같은 값을 같게 다룬다', () => {
+    // 엑셀은 같은 반·번호를 파일마다 '01'로도 1로도 담는다
+    const asText = identityKeys(2025, { classNo: '01', number: '07' });
+    const asNumber = identityKeys(2025, { classNo: 1, number: 7 });
+    expect(asNumber[0].text).toBe(asText[0].text);
+  });
+
+  it('전각 숫자와 반각 숫자를 같게 다룬다', () => {
+    const fullwidth = identityKeys(2025, { hakbun: '３０１０１' });
+    const halfwidth = identityKeys(2025, { hakbun: '30101' });
+    expect(fullwidth[0].text).toBe(halfwidth[0].text);
+  });
+
   it('강한 키부터 돌려준다', () => {
     const strengths = identityKeys(2025, 김가온).map((key) => key.strength);
     expect(strengths).toEqual([...strengths].sort((a, b) => b - a));
-  });
-
-  it('있는 값으로만 키를 만든다', () => {
-    const keys = identityKeys(2025, { name: '김가온' });
-    expect(keys.map((key) => key.kind)).toEqual(['name']);
   });
 
   it('모든 키에 고3 년도가 들어간다', () => {
@@ -143,23 +158,50 @@ describe('익명 ID 발급', () => {
 });
 
 describe('파일마다 식별 열이 다를 때', () => {
-  it('학번만 있는 파일과 반·번호만 있는 파일을 잇는다', async () => {
-    // 두 파일에 공통으로 있는 것은 이름뿐이다. 이름이 유일하면 이어야 한다
+  it('학번만 있는 파일과 반·번호만 있는 파일은 잇지 않는다', async () => {
+    // 두 파일에 공통으로 있는 것은 이름뿐이다. 그런데 이름이 같다고 같은 사람이라는 보장이 없다.
+    // 한 사람인지 동명이인 둘인지 자료만 봐서는 알 수 없으므로 합치지 않는다
     const result = await assignStudentIds([
       entry(2025, { name: '김가온', hakbun: '30101' }),
       entry(2025, { name: '김가온', classNo: '1', number: '1' })
     ]);
-    expect(result.sids[0]).toBe(result.sids[1]);
+    expect(result.sids[0]).not.toBe(result.sids[1]);
+    expect(result.students).toHaveLength(2);
+  });
+
+  it('한 행에 두 식별자가 함께 있으면 그 둘을 잇는다', async () => {
+    // 학번과 반·번호가 같이 실린 행이 "이 둘은 한 사람"이라는 증거가 된다
+    const result = await assignStudentIds([
+      entry(2025, { classNo: '1', number: '5' }),
+      entry(2025, { hakbun: '30105' }),
+      entry(2025, { classNo: '1', number: '5', hakbun: '30105' })
+    ]);
+    expect(new Set(result.sids).size).toBe(1);
     expect(result.students).toHaveLength(1);
   });
 
-  it('이어진 학생은 두 파일의 키를 모두 갖는다', async () => {
+  it('이어진 학생은 두 식별자의 키를 모두 갖는다', async () => {
     const result = await assignStudentIds([
-      entry(2025, { name: '김가온', hakbun: '30101' }),
-      entry(2025, { name: '김가온', classNo: '1', number: '1' })
+      entry(2025, { classNo: '1', number: '5' }),
+      entry(2025, { hakbun: '30105' }),
+      entry(2025, { classNo: '1', number: '5', hakbun: '30105' })
     ]);
-    // 학번 키, 반·번호 키, 이름 키가 모인다
-    expect(result.students[0].keyHashes.length).toBeGreaterThanOrEqual(3);
+    expect(result.students[0].keyHashes).toHaveLength(2);
+  });
+
+  it('이은 뒤에 어느 쪽 식별자로 와도 같은 ID를 준다', async () => {
+    // 잇지 못하면 같은 학생이 익명 ID를 둘 갖게 되고 스스로 낫지 않는다
+    const linked = await assignStudentIds([
+      entry(2025, { classNo: '1', number: '5' }),
+      entry(2025, { hakbun: '30105' }),
+      entry(2025, { classNo: '1', number: '5', hakbun: '30105' })
+    ]);
+    const later = await assignStudentIds(
+      [entry(2025, { classNo: '1', number: '5' }), entry(2025, { hakbun: '30105' })],
+      { existing: linked.students }
+    );
+    expect(later.sids[0]).toBe(later.sids[1]);
+    expect(later.sids[0]).toBe(linked.sids[0]);
   });
 
   it('같은 학번이면 이름 표기가 달라도 한 사람이다', async () => {
@@ -179,14 +221,6 @@ describe('파일마다 식별 열이 다를 때', () => {
     ]);
     expect(result.sids[0]).toBe(result.sids[1]);
   });
-
-  it('강한 키가 겹치면 이름이 흔들려도 잇는다', async () => {
-    const result = await assignStudentIds([
-      entry(2025, { name: '김가온', hakbun: '30101' }),
-      entry(2025, { name: '김가온', hakbun: '30101', classNo: '1', number: '1' })
-    ]);
-    expect(result.sids[0]).toBe(result.sids[1]);
-  });
 });
 
 describe('동명이인 — 잘못 합치지 않는다', () => {
@@ -199,28 +233,41 @@ describe('동명이인 — 잘못 합치지 않는다', () => {
     expect(result.students).toHaveLength(2);
   });
 
-  it('동명이인이 있으면 알린다', async () => {
+  it('식별 열이 다른 동명이인을 합치지 않는다', async () => {
+    // 학번으로 식별된 사람과 반·번호로 식별된 사람이 이름만 같은 경우.
+    // 두 확인된 엑셀 양식이 서로 다른 열로 학생을 식별하므로 흔한 경우다
     const result = await assignStudentIds([
-      entry(2025, { name: '김가온', hakbun: '30101' }),
-      entry(2025, { name: '김가온', hakbun: '30215' })
+      entry(2025, { hakbun: '30101', name: '김민준' }),
+      entry(2025, { classNo: '7', number: '12', name: '김민준' })
     ]);
-    const warning = result.warnings.find((item) => item.type === 'ambiguous-name');
-    expect(warning).toBeDefined();
-    expect(warning.cohortYear).toBe(2025);
-    expect(warning.message).toMatch(/이름만으로는 잇지 않고/);
+    expect(result.sids[0]).not.toBe(result.sids[1]);
+    expect(result.students).toHaveLength(2);
   });
 
-  it('동명이인이 있으면 이름만 있는 행을 아무에게나 붙이지 않는다', async () => {
-    // 여기서 잘못 붙이면 남의 지원 이력이 섞인다.
-    // 붙일 곳을 정할 수 없으므로 식별 불가로 남기고 알린다
+  it('주키가 있는 행에는 이름만 있는 행을 붙이지 않는다', async () => {
+    // 손으로 관리하는 추가합격 시트처럼 이름만 있는 행이 남의 이력에 섞이면 안 된다
     const result = await assignStudentIds([
       entry(2025, { name: '김가온', hakbun: '30101' }),
-      entry(2025, { name: '김가온', hakbun: '30215' }),
       entry(2025, { name: '김가온' })
     ]);
+    expect(result.sids[0]).not.toBe(result.sids[1]);
     expect(result.students).toHaveLength(2);
-    expect(result.sids[2]).toBeNull();
-    expect(result.warnings.some((item) => item.type === 'no-identity')).toBe(true);
+  });
+
+  it('이름만으로 식별한 행이 있으면 알린다', async () => {
+    const result = await assignStudentIds([entry(2025, { name: '김가온' })]);
+    const warning = result.warnings.find((item) => item.type === 'name-only-identity');
+    expect(warning.count).toBe(1);
+    expect(warning.message).toMatch(/동명이인이면 한 사람으로 묶입니다/);
+  });
+
+  it('주키가 없는 같은 이름끼리는 한 사람으로 본다', async () => {
+    // 더 볼 것이 없다. 그래서 알린다
+    const result = await assignStudentIds([
+      entry(2025, { name: '김가온' }),
+      entry(2025, { name: '김가온' })
+    ]);
+    expect(result.students).toHaveLength(1);
   });
 
   it('다른 해의 동명이인은 문제가 아니다', async () => {
@@ -228,15 +275,17 @@ describe('동명이인 — 잘못 합치지 않는다', () => {
       entry(2024, { name: '김가온', hakbun: '30101' }),
       entry(2025, { name: '김가온', hakbun: '30101' })
     ]);
-    expect(result.warnings.filter((item) => item.type === 'ambiguous-name')).toEqual([]);
+    expect(result.students).toHaveLength(2);
   });
 
-  it('이름이 유일하면 이름만으로도 잇는다', async () => {
-    const result = await assignStudentIds([
-      entry(2025, { name: '김가온', hakbun: '30101' }),
-      entry(2025, { name: '김가온' })
-    ]);
-    expect(result.sids[0]).toBe(result.sids[1]);
+  it('이름만으로 기존 학생에 이어 붙이면 알린다', async () => {
+    // 예전 자료에서도 그 이름이 유일했는지 확인할 방법이 없다
+    const first = await assignStudentIds([entry(2025, { name: '김가온' })]);
+    const second = await assignStudentIds(
+      [entry(2025, { name: '김가온' })],
+      { existing: first.students }
+    );
+    expect(second.warnings.find((item) => item.type === 'unverified-name-link').count).toBe(1);
   });
 });
 
@@ -279,10 +328,10 @@ describe('이어서 올리기', () => {
     expect(second.students).toHaveLength(1);
   });
 
-  it('나중 파일의 새 키를 기존 학생에 합친다', async () => {
-    const first = await assignStudentIds([entry(2025, { name: '김가온', hakbun: '30101' })]);
+  it('나중 파일이 두 식별자를 함께 실어 오면 기존 학생과 이어진다', async () => {
+    const first = await assignStudentIds([entry(2025, { hakbun: '30101' })]);
     const second = await assignStudentIds(
-      [entry(2025, { name: '김가온', classNo: '1', number: '1' })],
+      [entry(2025, { hakbun: '30101', classNo: '1', number: '1' })],
       { existing: first.students }
     );
     expect(second.sids[0]).toBe(first.sids[0]);

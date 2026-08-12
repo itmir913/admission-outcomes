@@ -206,39 +206,24 @@ describe('프로파일 묶음', () => {
 describe('프로파일 고르기', () => {
   const fingerprint = 'b'.repeat(64);
 
-  it('같은 학년도 프로파일을 먼저 쓴다', () => {
+  it('지문이 맞으면 학년도와 무관하게 쓴다', () => {
+    // 지문이 같다는 것은 헤더가 글자 하나까지 같다는 뜻이다
+    const set = new ProfileSet([baseProfile({ id: 'a-2024', year: 2024, fingerprint })]);
+    expect(set.select({ fingerprint }).profile.year).toBe(2024);
+  });
+
+  it('후보가 여럿이면 가장 나중에 만든 것을 쓴다', () => {
     const set = new ProfileSet([
       baseProfile({ id: 'a-2024', year: 2024, fingerprint }),
       baseProfile({ id: 'a-2025', year: 2025, fingerprint })
     ]);
-    const found = set.select({ fingerprint, year: 2024 });
-    expect(found.profile.year).toBe(2024);
-    expect(found.match).toBe('year');
+    expect(set.select({ fingerprint }).profile.year).toBe(2025);
   });
 
-  it('그 학년도가 없으면 가장 최신 것을 물려쓴다', () => {
-    // "2026년 헤더 정보가 없으면 2025년 것을 쓴다"
-    const set = new ProfileSet([
-      baseProfile({ id: 'a-2024', year: 2024, fingerprint }),
-      baseProfile({ id: 'a-2025', year: 2025, fingerprint })
-    ]);
-    const found = set.select({ fingerprint, year: 2026 });
-    expect(found.profile.year).toBe(2025);
-    expect(found.match).toBe('carried');
-  });
-
-  it('지문이 다르면 물려쓰지 않는다', () => {
+  it('지문이 다르면 고르지 않는다', () => {
     // 여기가 핵심이다. 헤더가 바뀌었는데 옛 인덱스를 쓰면 조용히 엉뚱한 열을 읽는다
     const set = new ProfileSet([baseProfile({ year: 2025, fingerprint })]);
-    expect(set.select({ fingerprint: 'c'.repeat(64), year: 2026 })).toBeNull();
-  });
-
-  it('학년도를 모르면 최신 것을 쓴다', () => {
-    const set = new ProfileSet([
-      baseProfile({ id: 'a-2024', year: 2024, fingerprint }),
-      baseProfile({ id: 'a-2025', year: 2025, fingerprint })
-    ]);
-    expect(set.select({ fingerprint, year: null }).profile.year).toBe(2025);
+    expect(set.select({ fingerprint: 'c'.repeat(64) })).toBeNull();
   });
 });
 
@@ -248,25 +233,24 @@ describe('시트에 프로파일 맞추기', () => {
     const profile = await buildProfile({
       program: 'sample', year: 2025, headerRows: 2, grid, columns: { univ: 4 }
     });
-    const set = new ProfileSet([profile]);
-    const matched = await matchProfile(set, { grid, year: 2025 });
+    const matched = await matchProfile(new ProfileSet([profile]), { grid });
     expect(matched.profile.id).toBe('sample-2025');
-    expect(matched.match).toBe('year');
+    expect(matched.match).toBe('fingerprint');
     expect(matched.needsFallback).toBe(false);
   });
 
-  it('물려쓴 경우 어느 해 것인지 알려준다', async () => {
-    const grid = senjinhakGrid(2026);
+  it('어느 해에 만든 프로파일인지 알려준다', async () => {
+    // 헤더 값(학년도)이 달라도 헤더 이름이 같으면 지문이 같다
     const profile = await buildProfile({
       program: 'sample', year: 2025, headerRows: 1, grid: senjinhakGrid(2025), columns: { univ: 4 }
     });
-    const matched = await matchProfile(new ProfileSet([profile]), { grid, year: 2026 });
-    expect(matched.match).toBe('carried');
-    expect(matched.carriedFrom).toBe(2025);
+    const matched = await matchProfile(new ProfileSet([profile]), { grid: senjinhakGrid(2026) });
+    expect(matched.match).toBe('fingerprint');
+    expect(matched.profileYear).toBe(2025);
   });
 
   it('맞는 프로파일이 없으면 이름 매칭으로 내려보낸다', async () => {
-    const matched = await matchProfile(new ProfileSet([]), { grid: senjinhakGrid(2026), year: 2026 });
+    const matched = await matchProfile(new ProfileSet([]), { grid: senjinhakGrid(2026) });
     expect(matched.profile).toBeNull();
     expect(matched.needsFallback).toBe(true);
     expect(matched.fingerprint).toMatch(/^[0-9a-f]{64}$/);
@@ -278,7 +262,7 @@ describe('시트에 프로파일 맞추기', () => {
       program: 'sample', year: 2025, headerRows: 1, grid: original, columns: { univ: 4 }
     });
     const changed = senjinhakGrid(2026).map((row, index) => (index === 0 ? [...row, '추가열'] : [...row, null]));
-    const matched = await matchProfile(new ProfileSet([profile]), { grid: changed, year: 2026 });
+    const matched = await matchProfile(new ProfileSet([profile]), { grid: changed });
     expect(matched.needsFallback).toBe(true);
   });
 });
@@ -300,7 +284,7 @@ describe('프로파일 만들기', () => {
     const profile = await buildProfile({
       program: 'newprogram', year: 2026, headerRows: 1, grid, columns: { univ: 4 }
     });
-    const matched = await matchProfile(new ProfileSet([profile]), { grid, year: 2026 });
-    expect(matched.match).toBe('year');
+    const matched = await matchProfile(new ProfileSet([profile]), { grid });
+    expect(matched.match).toBe('fingerprint');
   });
 });

@@ -109,24 +109,21 @@ export class ProfileSet {
   }
 
   /**
-   * 이 시트에 쓸 프로파일을 고른다 (§4 해석 순서 2~3).
+   * 이 시트에 쓸 프로파일을 고른다 (§4 해석 순서).
    *
-   * 지문이 맞는 것만 후보다. 같은 학년도를 먼저 보고, 없으면 **가장 최신 학년도부터**
-   * 거슬러 올라간다. 양식이 바뀌지 않은 해는 여기서 걸린다.
+   * **지문이 맞는 것만 후보다.** 지문이 같다는 것은 헤더가 글자 하나까지 같다는 뜻이므로,
+   * 어느 학년도에 만든 프로파일이든 그대로 쓸 수 있다. 양식이 바뀌지 않은 해는 여기서 걸린다.
    *
-   * @param {{fingerprint: string, year?: number|null}} input
-   * @returns {{ profile: object, match: 'year'|'carried' } | null}
+   * 후보가 여럿이면 가장 최근에 만든 것을 쓴다. 지문이 같은데 매핑이 다르다면 둘 중 하나가
+   * 틀린 것이고, 나중에 손본 쪽이 맞을 가능성이 높다.
+   *
+   * @param {{fingerprint: string}} input
+   * @returns {{ profile: object } | null}
    */
-  select({ fingerprint, year = null }) {
+  select({ fingerprint }) {
     const matching = this.profiles.filter((profile) => profile.fingerprint === fingerprint);
     if (matching.length === 0) return null;
-
-    if (year !== null) {
-      const sameYear = matching.find((profile) => profile.year === year);
-      if (sameYear) return { profile: sameYear, match: 'year' };
-    }
-    const newest = [...matching].sort((left, right) => right.year - left.year)[0];
-    return { profile: newest, match: 'carried' };
+    return { profile: [...matching].sort((left, right) => right.year - left.year)[0] };
   }
 
   /** 지문과 무관하게 이름만으로 찾는다. 수동 매핑 화면에서 참고용으로 쓴다. */
@@ -140,8 +137,8 @@ export class ProfileSet {
 /**
  * @typedef {object} ProfileMatch
  * @property {object|null} profile 쓸 프로파일
- * @property {'year'|'carried'|'none'} match year=그 학년도 것, carried=다른 해에서 물려씀
- * @property {number|null} carriedFrom 물려썼다면 어느 해 것인지 (화면에 알린다)
+ * @property {'fingerprint'|'none'} match 지문이 맞았는지
+ * @property {number|null} profileYear 어느 해에 만든 프로파일인지 (화면에 알린다)
  * @property {string} fingerprint
  * @property {boolean} needsFallback 이름 매칭으로 내려가야 하는지
  */
@@ -153,21 +150,21 @@ export class ProfileSet {
  * 헤더 행 수를 모두 시도한다. 대부분 1~2줄이라 비용이 크지 않다.
  *
  * @param {ProfileSet} profileSet
- * @param {{grid: unknown[][], year?: number|null}} sheet
+ * @param {{grid: unknown[][]}} sheet
  * @returns {Promise<ProfileMatch>}
  */
-export async function matchProfile(profileSet, { grid, year = null }) {
+export async function matchProfile(profileSet, { grid }) {
   const rowCounts = [...new Set(profileSet.profiles.map((profile) => profile.headerRows))].sort();
   const attempts = rowCounts.length ? rowCounts : [1];
 
   for (const headerRows of attempts) {
     const fingerprint = await headerFingerprint(grid, headerRows);
-    const found = profileSet.select({ fingerprint, year });
+    const found = profileSet.select({ fingerprint });
     if (found) {
       return {
         profile: found.profile,
-        match: found.match,
-        carriedFrom: found.match === 'carried' ? found.profile.year : null,
+        match: 'fingerprint',
+        profileYear: found.profile.year,
         fingerprint,
         needsFallback: false
       };
@@ -177,7 +174,7 @@ export async function matchProfile(profileSet, { grid, year = null }) {
   return {
     profile: null,
     match: 'none',
-    carriedFrom: null,
+    profileYear: null,
     fingerprint: await headerFingerprint(grid, 1),
     needsFallback: true
   };

@@ -139,11 +139,12 @@ describe('격자에서 연도 열 찾기', () => {
 });
 
 describe('고3 년도 추론', () => {
-  it('프로파일이 알려 준 기준으로 변환한다', () => {
-    // 센진학의 연도 열은 학년도 기준이다. 2026 → 고3 년도 2025
+  it('프로파일이 알려 준 열과 기준으로 변환한다', () => {
+    // 센진학의 0번 열은 학년도 기준이다. 2026 → 고3 년도 2025
     const guess = inferCohortYear({
       fileName: '센진학.xlsx',
       grid: senjinhakGrid(2026),
+      yearColumn: 0,
       columnBasis: BASIS.admission,
       currentYear: NOW
     });
@@ -151,6 +152,34 @@ describe('고3 년도 추론', () => {
     expect(guess.source).toBe('cell');
     expect(guess.confidence).toBe('high');
     expect(guess.needsInput).toBe(false);
+  });
+
+  it('프로파일이 밝히지 않은 열에는 프로파일 기준을 적용하지 않는다', () => {
+    // 생년 열이 연도처럼 생겼다고 학년도 기준을 갖다 붙이면 자료가 19년 밀린다
+    const grid = [
+      ['출생년도', '학년', '학번', '대학'],
+      [2007, 2026, '30101', '서울대학교'],
+      [2007, 2026, '30102', '연세대학교'],
+      [2006, 2026, '30103', '고려대학교']
+    ];
+    const guess = inferCohortYear({ grid, columnBasis: BASIS.admission, currentYear: NOW });
+    expect(guess.cohortYear).toBeNull();
+    expect(guess.needsInput).toBe(true);
+  });
+
+  it('프로파일이 밝힌 열만 읽는다', () => {
+    // 왼쪽에 연도처럼 생긴 열이 있어도 밝혀진 열을 본다
+    const grid = [
+      ['출생년도', '학년도', '학번', '대학'],
+      [2007, 2026, '30101', '서울대학교'],
+      [2007, 2026, '30102', '연세대학교'],
+      [2006, 2026, '30103', '고려대학교']
+    ];
+    const guess = inferCohortYear({
+      grid, yearColumn: 1, columnBasis: BASIS.admission, currentYear: NOW
+    });
+    expect(guess.cohortYear).toBe(2025);
+    expect(guess.yearColumn).toBe(1);
   });
 
   it('기준을 모르면 연도를 확정하지 않고 사용자에게 넘긴다', () => {

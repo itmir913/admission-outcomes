@@ -53,15 +53,6 @@ export function isSpreadsheetBytes(bytes) {
 }
 
 /**
- * xlsx도 실체는 zip이라 매직 바이트만으로는 갈리지 않는다.
- * xlsx는 항상 `[Content_Types].xml`을 갖고 있으므로 그것으로 구분한다.
- * @param {Record<string, Uint8Array>} entries
- */
-function looksLikeOfficeDocument(entries) {
-  return Object.keys(entries).some((name) => name === '[Content_Types].xml');
-}
-
-/**
  * zip 항목 이름에서 파일명만 남긴다.
  * 폴더 구조는 쓰지 않으므로 경로 순회(`../`)가 끼어들 여지를 없앤다.
  * @param {string} entryName
@@ -96,7 +87,6 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
   const files = [];
   /** @type {{name: string, reason: string}[]} */
   const skipped = [];
-  let totalBytes = 0;
 
   for (const upload of uploads) {
     const { name, bytes } = upload;
@@ -107,47 +97,69 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
       continue;
     }
 
-    let entries;
+    // xlsx 자체가 zip이므로 먼저 오피스 문서인지 본다.
+    // 이 조회는 작은 파일 하나만 펼치므로 값이 싸다
+    let officeMarker;
     try {
-      entries = unzipSync(bytes);
+      officeMarker = unzipSync(bytes, { filter: (entry) => entry.name === '[Content_Types].xml' });
     } catch {
       skipped.push({ name, reason: '압축을 풀 수 없습니다.' });
       continue;
     }
-
-    // xlsx 자체가 zip이므로, 오피스 문서면 압축 파일로 취급하지 않는다
-    if (looksLikeOfficeDocument(entries)) {
+    if (Object.keys(officeMarker).length > 0) {
       if (isExcelName(name)) files.push({ name, bytes });
       else skipped.push({ name, reason: '엑셀 파일이 아닙니다.' });
       continue;
     }
 
-    const names = Object.keys(entries);
-    if (names.length > limits.maxEntries) {
-      skipped.push({ name, reason: `압축 안에 파일이 너무 많습니다(${names.length}개).` });
+    // **펼치기 전에 걸러낸다.** 다 펼쳐 놓고 크기를 재면 그때는 이미 늦다 —
+    // 압축 폭탄은 펼치는 순간 메모리를 삼킨다
+    let seen = 0;
+    let declaredBytes = 0;
+    let tooManyEntries = false;
+    let tooLarge = false;
+    const nested = [];
+
+    let entries;
+    try {
+      entries = unzipSync(bytes, {
+        filter: (entry) => {
+          seen += 1;
+          if (seen > limits.maxEntries) { tooManyEntries = true; return false; }
+          if (isNoise(entry.name)) return false;
+          const inner = baseName(entry.name);
+          if (!isExcelName(inner)) {
+            if (inner.toLowerCase().endsWith('.zip')) nested.push(inner);
+            return false;
+          }
+          declaredBytes += entry.originalSize ?? 0;
+          if (declaredBytes > limits.maxTotalBytes) { tooLarge = true; return false; }
+          return true;
+        }
+      });
+    } catch {
+      skipped.push({ name, reason: '압축을 풀 수 없습니다.' });
       continue;
     }
 
-    let found = 0;
-    for (const entryName of names) {
-      if (isNoise(entryName)) continue;
-      const inner = baseName(entryName);
-      const innerBytes = entries[entryName];
-      if (!innerBytes?.length) continue;
+    if (tooManyEntries) {
+      skipped.push({ name, reason: `압축 안에 파일이 너무 많습니다(${seen}개 이상).` });
+      continue;
+    }
+    if (tooLarge) skipped.push({ name, reason: '전체 용량이 너무 큽니다.' });
+    for (const inner of nested) {
+      skipped.push({ name: inner, reason: '압축 안의 압축은 풀지 않습니다.' });
+    }
 
-      if (!isExcelName(inner)) {
-        if (isZipBytes(innerBytes)) skipped.push({ name: inner, reason: '압축 안의 압축은 풀지 않습니다.' });
-        continue;
-      }
-      totalBytes += innerBytes.length;
-      if (totalBytes > limits.maxTotalBytes) {
-        skipped.push({ name: inner, reason: '전체 용량이 너무 큽니다.' });
-        break;
-      }
-      files.push({ name: inner, bytes: innerBytes, container: name });
+    let found = 0;
+    for (const [entryName, innerBytes] of Object.entries(entries)) {
+      if (!innerBytes?.length) continue;
+      files.push({ name: baseName(entryName), bytes: innerBytes, container: name });
       found += 1;
     }
-    if (found === 0) skipped.push({ name, reason: '압축 안에 엑셀 파일이 없습니다.' });
+    if (found === 0 && !tooLarge) {
+      skipped.push({ name, reason: '압축 안에 엑셀 파일이 없습니다.' });
+    }
   }
 
   return { files, skipped };

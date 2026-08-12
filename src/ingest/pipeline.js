@@ -47,7 +47,7 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
 
   const prepared = [];
   for (const sheet of sheets) {
-    const match = await matchProfile(profiles, { grid: sheet.grid, year: null });
+    const match = await matchProfile(profiles, { grid: sheet.grid });
     const headerRows = match.profile?.headerRows ?? 1;
 
     const yearGuess = inferCohortYear({
@@ -55,6 +55,9 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
       sheetName: sheet.sheetName,
       grid: sheet.grid,
       headerRows,
+      // 프로파일이 밝힌 연도 열과 그 기준을 짝으로 넘긴다.
+      // 짝을 깨면 엉뚱한 열에 기준이 적용된다
+      yearColumn: match.profile?.columns?.sourceYear ?? null,
       columnBasis: match.profile?.yearBasis ?? null,
       currentYear
     });

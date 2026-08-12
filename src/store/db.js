@@ -130,6 +130,9 @@ function mergeStudent(existing, incoming) {
 export async function saveDataset(db, dataset) {
   const names = [STORE.students, STORE.applications, STORE.suneung, STORE.files];
   const transaction = db.transaction(names, 'readwrite');
+  // 주의: 이 트랜잭션 안에서 await하는 것은 전부 IDB 요청의 onsuccess에서 풀리는 약속이라야 한다.
+  // sha256이나 fetch 같은 다른 await를 끼워 넣으면 트랜잭션이 먼저 닫혀
+  // 실제 브라우저에서 TransactionInactiveError가 난다 (테스트 대역은 이를 잡아내지 못한다)
   const students = transaction.objectStore(STORE.students);
   const applications = transaction.objectStore(STORE.applications);
   const suneung = transaction.objectStore(STORE.suneung);
@@ -139,11 +142,24 @@ export async function saveDataset(db, dataset) {
     const existing = await promisify(students.get(student.sid));
     students.put(mergeStudent(existing, student));
   }
+  // 같은 파일을 다시 올리면 그 파일이 넣었던 기록을 먼저 걷어낸다.
+  // 걷어내지 않으면 재업로드마다 지원 건이 두 배로 쌓인다
+  const incomingFiles = new Set(
+    (dataset.applications ?? []).map((row) => row.fileHash).filter(Boolean)
+  );
+  for (const fileHash of incomingFiles) {
+    for (const old of await promisify(applications.index('fileHash').getAll(fileHash))) {
+      applications.delete(old.id);
+    }
+  }
   for (const application of dataset.applications ?? []) {
     applications.add(application);
   }
   for (const row of dataset.suneung ?? []) {
-    suneung.put(row);
+    // 덮지 않고 합친다. 양식마다 담는 항목이 달라 — 어떤 것은 등급만, 어떤 것은 표점·백분위까지 —
+    // 덮어쓰면 먼저 넣은 파일의 자세한 값이 사라진다
+    const existing = await promisify(suneung.get([row.sid, row.area]));
+    suneung.put(existing ? { ...row, ...existing } : row);
   }
   for (const file of dataset.files ?? []) {
     files.put(file);
@@ -177,6 +193,7 @@ export async function loadDataset(db) {
  * @returns {Promise<{applications: number, students: number}>}
  */
 export async function removeFile(db, fileHash) {
+  if (!fileHash) return { applications: 0, students: 0 };
   const names = [STORE.students, STORE.applications, STORE.suneung, STORE.files];
   const transaction = db.transaction(names, 'readwrite');
   const applications = transaction.objectStore(STORE.applications);
@@ -187,10 +204,8 @@ export async function removeFile(db, fileHash) {
   for (const application of doomed) applications.delete(application.id);
   transaction.objectStore(STORE.files).delete(fileHash);
 
-  const survivors = await promisify(applications.getAll());
-  const alive = new Set(survivors
-    .filter((row) => row.fileHash !== fileHash)
-    .map((row) => row.sid));
+  // 위의 delete가 같은 트랜잭션에 이미 반영되어 있으므로 남은 것이 곧 살아남은 기록이다
+  const alive = new Set((await promisify(applications.getAll())).map((row) => row.sid));
 
   let removedStudents = 0;
   for (const sid of new Set(doomed.map((row) => row.sid))) {

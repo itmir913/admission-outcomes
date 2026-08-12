@@ -44,21 +44,10 @@ describe('동봉된 헤더 프로파일', () => {
     }
   });
 
-  it('학년도별로 찾아 쓸 수 있다', () => {
+  it('지문으로 찾아 쓸 수 있다', () => {
     const set = new ProfileSet(bundledProfiles);
     for (const profile of bundledProfiles) {
-      const found = set.select({ fingerprint: profile.fingerprint, year: profile.year });
-      expect(found?.profile.id).toBe(profile.id);
-      expect(found?.match).toBe('year');
-    }
-  });
-
-  it('이듬해 파일에 물려쓸 수 있다', () => {
-    const set = new ProfileSet(bundledProfiles);
-    for (const profile of bundledProfiles) {
-      const found = set.select({ fingerprint: profile.fingerprint, year: profile.year + 1 });
-      expect(found?.match).toBe('carried');
-      expect(found?.profile.year).toBe(profile.year);
+      expect(set.select({ fingerprint: profile.fingerprint })?.profile.id).toBe(profile.id);
     }
   });
 });

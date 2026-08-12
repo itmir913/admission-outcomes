@@ -57,7 +57,11 @@ const UNIT = '';
  */
 function normalizePart(value) {
   if (value === null || value === undefined) return '';
-  return String(value).normalize('NFC').replace(/\s+/g, '').trim();
+  // NFKC로 전각 숫자(３０１０１)와 반각을 같게 만든다
+  const text = String(value).normalize('NFKC').replace(/\s+/g, '').trim();
+  // 엑셀은 같은 반·번호·학번을 파일마다 문자열('01')로도 숫자(1)로도 담는다.
+  // 앞의 0을 떼어 표기 차이를 흡수하지 않으면 한 학생이 둘로 갈라진다
+  return /^\d+$/.test(text) ? String(Number(text)) : text;
 }
 
 /**
@@ -88,8 +92,13 @@ export function identityKeys(cohortYear, identity = {}) {
   if (hakbun) push('hakbun', hakbun);
   if (classNo && number) push('classNumber', classNo, number);
 
-  // 이름에 기대는 보조 키. 번호만으로는 반이 다른 학생과 겹치므로 이름을 함께 쓴다
-  if (name && number && !classNo) push('numberName', number, name);
+  // **주키를 만들 수 있으면 이름 키를 만들지 않는다.**
+  // 만들면 학번으로 식별된 사람과 반·번호로 식별된 사람이 이름만 같아도 한 사람으로 합쳐진다.
+  // 두 사람인지 한 사람인지는 자료만 봐서는 알 수 없으므로, 합치지 않는 쪽을 고른다.
+  if (keys.length > 0) return keys.sort((left, right) => right.strength - left.strength);
+
+  // 여기부터는 주키가 없는 행이다. 이름에 기대는 수밖에 없다
+  if (name && number) push('numberName', number, name);
   if (name) push('name', name);
 
   return keys.sort((left, right) => right.strength - left.strength);
@@ -137,65 +146,23 @@ class DisjointSet {
 export async function assignStudentIds(entries, { existing = [] } = {}) {
   const warnings = [];
 
-  // ── 1. 같은 고3 년도 안에서 이름이 유일한지 센다 ────────────────────────────
+  // ── 1. 키를 만든다 ────────────────────────────────────────────────────────
   //
-  // 주키가 없어 이름에 기대야 하는 행이 있다. 그때 동명이인을 한 사람으로 합치면
-  // 지원 이력이 뒤섞여 상담 자료가 조용히 거짓말을 한다. **유일할 때만** 잇는 데 쓴다.
-  // **종류별로 센다.** 같은 학생이라도 파일마다 있는 열이 달라
-  // 어떤 행은 학번으로, 어떤 행은 반·번호로 나타난다. 종류를 뭉뚱그려 세면
-  // 그 학생 한 명이 여러 사람으로 보인다.
-  //
-  // 진짜 동명이인은 **같은 종류의 키가 서로 다른 값을 가질 때** 드러난다.
-  // 학번이 30101과 30215로 갈리면 두 사람이다.
-  /** @type {Map<string, Map<string, Set<string>>>} 연도␟이름 → 종류 → 값들 */
-  const strongKeysByName = new Map();
+  // 주키(학번 또는 반·번호)가 있는 행은 이름 키를 만들지 않는다(identityKeys 참조).
+  // 그래서 이름으로 이어지는 것은 **주키가 하나도 없는 행끼리**뿐이다.
+  // 그런 행은 같은 이름이면 같은 사람으로 볼 수밖에 없다 — 더 볼 것이 없다.
   const keysByEntry = entries.map((entry) => identityKeys(entry.cohortYear, entry.identity));
+  const allowedByEntry = keysByEntry;
 
-  for (const keys of keysByEntry) {
-    if (keys.length === 0) continue;
-    const nameKey = keys.find((key) => key.kind === 'name')?.text;
-    if (!nameKey) continue;
-    if (!strongKeysByName.has(nameKey)) strongKeysByName.set(nameKey, new Map());
-    const byKind = strongKeysByName.get(nameKey);
-    for (const key of keys) {
-      if (KEY_KIND[key.kind].usesName) continue;
-      if (!byKind.has(key.kind)) byKind.set(key.kind, new Set());
-      byKind.get(key.kind).add(key.text);
-    }
+  const nameOnlyRows = keysByEntry
+    .filter((keys) => keys.length > 0 && keys.every((key) => KEY_KIND[key.kind].usesName)).length;
+  if (nameOnlyRows > 0) {
+    warnings.push({
+      type: 'name-only-identity',
+      count: nameOnlyRows,
+      message: `학번도 반·번호도 없어 이름만으로 식별한 행이 ${nameOnlyRows}건 있습니다. 동명이인이면 한 사람으로 묶입니다.`
+    });
   }
-
-  const ambiguousNames = new Set();
-  for (const [nameKey, byKind] of strongKeysByName.entries()) {
-    for (const values of byKind.values()) {
-      if (values.size > 1) { ambiguousNames.add(nameKey); break; }
-    }
-  }
-  if (ambiguousNames.size > 0) {
-    const byYear = new Map();
-    for (const nameKey of ambiguousNames) {
-      const year = Number(nameKey.split(UNIT)[0]);
-      byYear.set(year, (byYear.get(year) ?? 0) + 1);
-    }
-    for (const [cohortYear, count] of byYear.entries()) {
-      warnings.push({
-        type: 'ambiguous-name',
-        cohortYear,
-        count,
-        message: `${cohortYear}년 고3에 이름이 같은 학생이 ${count}건 있습니다. 이름만으로는 잇지 않고 따로 두었습니다.`
-      });
-    }
-  }
-
-  // ── 2. 쓸 키만 남기고 해시로 바꾼다 ────────────────────────────────────────
-  const allowedByEntry = keysByEntry.map((keys) => {
-    if (keys.length === 0) return [];
-    const nameKey = keys.find((key) => key.kind === 'name');
-    if (!nameKey || !ambiguousNames.has(nameKey.text)) return keys;
-    // 동명이인이 있으면 이름에 기대는 키를 전부 버린다.
-    // 주키가 하나도 없던 행은 여기서 식별 불가가 되는데, 남에게 잘못 붙이는 것보다 낫다
-    const strongOnly = keys.filter((key) => !KEY_KIND[key.kind].usesName);
-    return strongOnly.length > 0 ? strongOnly : [];
-  });
 
   /** @type {Map<string, string>} 키 원문 → 해시. 원문은 이 함수를 벗어나지 않는다 */
   const hashByText = new Map();
@@ -230,10 +197,16 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
   };
 
   // 이미 저장된 학생을 먼저 심는다. 그 ID가 이어져야 한다
+  /** @type {Set<string>} 저장돼 있던 학생의 키 해시. 이름 유일성을 검사할 수 없는 대상이다 */
+  const storedHashes = new Set();
   for (const student of existing) {
     const index = newCluster(student.cohortYear);
-    for (const hash of student.keyHashes ?? []) absorb(index, hash, 0, student.cohortYear, student.sid);
+    for (const hash of student.keyHashes ?? []) {
+      absorb(index, hash, 0, student.cohortYear, student.sid);
+      storedHashes.add(hash);
+    }
   }
+  let unverifiedNameLinks = 0;
 
   /** @type {(number|null)[]} */
   const clusterOfEntry = [];
@@ -247,17 +220,17 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     if (matched.length === 0) {
       target = newCluster(entries[index].cohortYear);
     } else {
+      // 한 행이 여러 묶음을 가리킨다면 그 식별자들이 한 사람의 것이라는 증거다.
+      // 예: 반·번호만 있던 묶음과 학번만 있던 묶음을, 둘 다 실린 행이 이어 준다.
+      // 합치지 않으면 같은 학생이 익명 ID를 둘 갖게 되고 스스로 낫지 않는다
       target = matched[0];
-      // 한 행이 서로 다른 학생 둘을 가리키면 원본 자료가 어긋난 것이다.
-      // 임의로 합치지 않고 첫 묶음에 붙인 뒤 알린다
-      if (matched.length > 1) {
-        warnings.push({
-          type: 'conflicting-keys',
-          cohortYear: entries[index].cohortYear,
-          message: `${entries[index].cohortYear}년 자료에 서로 다른 학생을 동시에 가리키는 행이 있습니다. 원본을 확인해 주세요.`
-        });
-      }
+      for (const other of matched.slice(1)) sets.union(target, other);
     }
+    // 주키가 없는 행이 이미 저장돼 있던 학생에 이름으로 붙는 경우, 그 이름이 예전 자료에서도
+    // 유일했는지 확인할 방법이 없다. 붙이되 몇 건인지 알린다
+    const onlyName = keys.every((key) => KEY_KIND[key.kind].usesName);
+    if (onlyName && hashes.some((item) => storedHashes.has(item.hash))) unverifiedNameLinks += 1;
+
     for (const item of hashes) absorb(target, item.hash, item.strength, entries[index].cohortYear);
     clusterOfEntry[index] = sets.find(target);
   });
@@ -289,6 +262,14 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     const sid = merged.sid ?? `${merged.cohortYear}-${group(encodeBase32(bytes, ANON_ID_CHARS), 4)}`;
     sidByRoot.set(root, sid);
     students.push({ sid, cohortYear: merged.cohortYear, keyHashes: [...merged.hashes].sort() });
+  }
+
+  if (unverifiedNameLinks > 0) {
+    warnings.push({
+      type: 'unverified-name-link',
+      count: unverifiedNameLinks,
+      message: `학번·반·번호 없이 이름만으로 기존 학생에 이어 붙인 행이 ${unverifiedNameLinks}건 있습니다. 동명이인이면 이력이 섞일 수 있습니다.`
+    });
   }
 
   const unidentified = clusterOfEntry.filter((value) => value === null).length;

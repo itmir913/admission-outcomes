@@ -84,22 +84,42 @@ export function readRow(row, columns) {
   return { identity, scalars, gpa, suneung };
 }
 
+const IDENTITY_TOKENS = fields.identityLabels.tokens.map((token) => token.toLowerCase());
+
+/**
+ * 해석하지 못한 열이 사람을 특정하는 열인지 본다.
+ *
+ * 프로파일이 집어 가지 않은 열은 원본 이름 그대로 `extra`에 보존하는데(§4),
+ * 그 통로로 이름·학번·수험번호·생년월일이 보관소에 그대로 들어갈 수 있다.
+ * **개인정보가 새는 유일한 경로였다.** 여기서 막는다.
+ *
+ * @param {string} label
+ */
+export function isIdentityLabel(label) {
+  const normalized = String(label ?? '').replace(/[\s()[\]·_-]/g, '').toLowerCase();
+  return IDENTITY_TOKENS.some((token) => normalized.includes(token));
+}
+
 /**
  * 프로파일이 집어 가지 않은 열을 원본 헤더 이름 그대로 담는다 (§4 미지 열 보존).
  * 버리지 않아야 나중에 사전에 추가해 정식 필드로 올릴 수 있다.
+ *
+ * 다만 사람을 특정하는 열은 보존하지 않는다. 보존보다 개인정보가 우선이다.
  */
 function readExtra(row, columns, labels) {
   const used = new Set(Object.values(columns));
   const extra = {};
+  const dropped = [];
   for (let index = 0; index < labels.length; index += 1) {
     if (used.has(index)) continue;
     const label = labels[index].label;
     if (!label) continue;
     const value = row?.[index];
     if (value === null || value === undefined || String(value).trim() === '') continue;
+    if (isIdentityLabel(label)) { dropped.push(label); continue; }
     extra[label] = String(value).trim();
   }
-  return extra;
+  return { extra, dropped };
 }
 
 /** 지원 기록으로 볼 만한 행인지 본다. 양식에는 빈 행과 합계 행이 섞여 있다. */
@@ -126,6 +146,8 @@ function looksLikeApplication(parsed) {
  */
 export async function buildDataset(sheets, { existing = [] } = {}) {
   const warnings = [];
+  /** 해석하지 못했는데 사람을 특정하는 열. 보존하지 않고 버린 것을 알린다 */
+  const droppedIdentityLabels = new Set();
   /** @type {{parsed: object, cohortYear: number, extra: object, source: object}[]} */
   const rows = [];
 
@@ -146,12 +168,9 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
       }
       if (cohortYear === null || cohortYear === undefined) { skipped += 1; continue; }
 
-      rows.push({
-        parsed,
-        cohortYear,
-        extra: readExtra(row, sheet.columns, labels),
-        source: sheet.source ?? null
-      });
+      const { extra, dropped } = readExtra(row, sheet.columns, labels);
+      for (const label of dropped) droppedIdentityLabels.add(label);
+      rows.push({ parsed, cohortYear, extra, source: sheet.source ?? null });
     }
 
     if (skipped > 0) {
@@ -161,6 +180,14 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
         message: `고3 년도를 정하지 못해 ${skipped}건을 넣지 못했습니다. 파일의 연도를 확인해 주세요.`
       });
     }
+  }
+
+  if (droppedIdentityLabels.size > 0) {
+    warnings.push({
+      type: 'identity-column-dropped',
+      labels: [...droppedIdentityLabels],
+      message: `개인정보로 보이는 열(${[...droppedIdentityLabels].join(', ')})은 보관하지 않고 버렸습니다.`
+    });
   }
 
   const { sids, students: identified, warnings: idWarnings } = await assignStudentIds(
@@ -199,7 +226,13 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
     if (!suneungBySid.has(sid)) suneungBySid.set(sid, new Map());
     const areas = suneungBySid.get(sid);
     for (const [area, parts] of Object.entries(row.parsed.suneung)) {
-      if (!areas.has(area)) areas.set(area, { sid, area, ...parts });
+      // 덮지 않고 합친다. 파일마다 담고 있는 항목이 다르다 —
+      // 어떤 양식은 등급만, 어떤 양식은 표점·백분위까지 준다
+      const merged = areas.get(area) ?? { sid, area };
+      for (const [key, value] of Object.entries(parts)) {
+        if (merged[key] === undefined) merged[key] = value;
+      }
+      areas.set(area, merged);
     }
 
     applications.push({
