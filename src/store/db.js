@@ -43,7 +43,13 @@ function done(transaction) {
 function indexedDbFactory() {
   const factory = globalThis.indexedDB;
   if (!factory) {
-    throw new Error('이 브라우저에서는 자료를 보관할 수 없습니다. 시크릿 모드라면 일반 창에서 열어 주세요.');
+    // 어느 쪽인지 여기서 가려낼 수 없으므로 짚이는 곳을 모두 알린다.
+    // "안 됩니다"만 남기면 사용자가 무엇을 바꿔 볼지 알 수 없다
+    throw new Error(
+      '이 브라우저에서는 자료를 보관할 수 없습니다.\n'
+      + '· 시크릿 모드라면 일반 창에서 열어 주세요.\n'
+      + '· 파일을 직접 연 것(file://)이라면 브라우저가 보관을 막습니다. 웹 주소로 열어 주세요.'
+    );
   }
   return factory;
 }

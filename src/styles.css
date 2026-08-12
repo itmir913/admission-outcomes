@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+/**
+ * 화면 원칙 (§7): 큼직하게 · 시원하게 · 직관적으로.
+ *
+ * 본문 16px 이상, 표 행 높이 44px 이상, 클릭 대상 44px 이상.
+ * 상담은 선생님과 학생이 한 화면을 **같이 들여다보는** 자리다.
+ * 개발자 눈높이로 촘촘하게 짜면 둘 중 한 사람은 못 읽는다.
+ */
+
+@theme {
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+
+  --color-canvas: oklch(0.985 0.002 250);
+  --color-surface: oklch(1 0 0);
+  --color-line: oklch(0.9 0.005 250);
+  --color-ink: oklch(0.28 0.015 260);
+  --color-ink-soft: oklch(0.52 0.012 260);
+
+  --color-brand: oklch(0.52 0.16 265);
+  --color-brand-soft: oklch(0.955 0.02 265);
+
+  /* 결과 색. 색만으로 구분하지 않는다 — 모양(●△✕)이 늘 함께 붙는다 */
+  --color-pass: oklch(0.55 0.13 155);
+  --color-pass-soft: oklch(0.96 0.03 155);
+  --color-wait: oklch(0.62 0.14 75);
+  --color-wait-soft: oklch(0.96 0.04 85);
+  --color-fail: oklch(0.58 0.16 20);
+  --color-fail-soft: oklch(0.96 0.02 20);
+
+  --spacing-row: 2.75rem; /* 44px */
+}
+
+@layer base {
+  html {
+    font-size: 17px;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+
+  /* 키보드로 다니는 사람에게 지금 어디인지 늘 보이게 한다 */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line
+      bg-surface px-4 text-base font-medium text-ink transition
+      hover:bg-brand-soft hover:border-brand/40 disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply border-transparent bg-brand text-white hover:bg-brand/90 hover:border-transparent;
+  }
+
+  .btn-danger {
+    @apply border-fail/30 text-fail hover:bg-fail-soft hover:border-fail/50;
+  }
+
+  .btn-sm {
+    @apply min-h-9 rounded-lg px-3 text-sm;
+  }
+
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+
+  .field {
+    @apply min-h-11 w-full rounded-xl border border-line bg-surface px-4 text-base
+      text-ink placeholder:text-ink-soft/60 focus:border-brand focus:outline-none;
+  }
+
+  /* 활성 필터 칩. 하나씩 눌러 뗄 수 있어야 한다 (§7) */
+  .chip {
+    @apply inline-flex min-h-9 items-center gap-2 rounded-full border border-brand/30
+      bg-brand-soft px-3 text-sm font-medium text-brand;
+  }
+
+  .tag {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-sm font-semibold;
+  }
+  .tag-pass { @apply bg-pass-soft text-pass; }
+  .tag-wait { @apply bg-wait-soft text-wait; }
+  .tag-fail { @apply bg-fail-soft text-fail; }
+  .tag-none { @apply bg-canvas text-ink-soft; }
+  /* 못 읽은 표기. 조용히 넘어가지 않고 눈에 띄어야 한다 */
+  .tag-unknown { @apply bg-wait-soft text-wait ring-1 ring-wait/40; }
+}
+
+@layer utilities {
+  /*
+   * 표 (§7).
+   *
+   * 열 너비는 사람이 드래그로 정하므로 `<col>`의 width를 자바스크립트가 직접 만진다 —
+   * 유틸리티 클래스로 표현할 수 없는 유일한 값이다.
+   * 고정 열의 left도 앞선 열들의 실제 너비 합이라 같은 이유로 인라인이다.
+   */
+  /* 표만 스크롤한다. 페이지가 통째로 밀리면 머리글과 조건이 화면 밖으로 나간다 */
+  .table-scroll {
+    max-height: calc(100vh - 12rem);
+  }
+
+  .grid-table {
+    @apply w-full border-collapse text-base;
+    table-layout: fixed;
+  }
+
+  /*
+   * 한 줄로 자른다. 줄바꿈을 허용하면 행 높이가 들쭉날쭉해지고,
+   * 그러면 열 너비 조정이 무슨 뜻인지 알 수 없게 된다.
+   * 잘린 값은 셀에 마우스를 올리면 전부 보인다.
+   */
+  .grid-table th,
+  .grid-table td {
+    @apply overflow-hidden text-ellipsis whitespace-nowrap border-b border-line px-3 text-left align-middle;
+    height: var(--spacing-row);
+  }
+
+  .grid-table thead th {
+    @apply sticky top-0 z-20 bg-surface text-sm font-semibold text-ink-soft select-none;
+    box-shadow: inset 0 -1px 0 var(--color-line);
+  }
+
+  /* 좌측 고정. 대교협 81열을 펼치면 익명 ID와 대학이 화면 밖으로 나간다 */
+  .grid-table .pinned {
+    @apply sticky bg-surface;
+    z-index: 10;
+  }
+  .grid-table thead .pinned {
+    z-index: 30;
+  }
+  .grid-table .pin-edge {
+    box-shadow: 6px 0 8px -6px oklch(0 0 0 / 0.18);
+  }
+  .grid-table tbody tr:hover td {
+    @apply bg-brand-soft/50;
+  }
+  .grid-table tbody tr:hover td.pinned {
+    @apply bg-brand-soft;
+  }
+
+  .num {
+    @apply text-right tabular-nums;
+  }
+
+  /*
+   * 듀얼 핸들 슬라이더 (§7 내신 범위).
+   *
+   * 슬라이더 둘을 겹쳐 놓고 손잡이만 눌리게 한다. 트랙까지 눌리면
+   * 위에 깔린 쪽이 아래쪽 손잡이를 통째로 가려 잡을 수 없다.
+   */
+  .dual-range-wrap {
+    @apply relative h-6;
+  }
+  .dual-range {
+    @apply pointer-events-none absolute inset-x-0 top-2 m-0 h-1 w-full appearance-none bg-line;
+    border-radius: 9999px;
+  }
+  .dual-range-high {
+    background: transparent;
+  }
+  .dual-range::-webkit-slider-thumb {
+    @apply pointer-events-auto size-6 cursor-grab appearance-none rounded-full border-2 border-white bg-brand;
+    box-shadow: 0 1px 4px oklch(0 0 0 / 0.3);
+  }
+  .dual-range::-moz-range-thumb {
+    @apply pointer-events-auto size-6 cursor-grab rounded-full border-2 border-white bg-brand;
+    box-shadow: 0 1px 4px oklch(0 0 0 / 0.3);
+  }
+  .dual-range::-moz-range-track {
+    @apply h-1 bg-transparent;
+  }
+}
+
+@media print {
+  /* 상담 자료를 출력해 쓰는 수요가 실재한다 (§7). 출력물도 익명 상태다 */
+  .no-print { display: none !important; }
+  html { font-size: 12px; }
+  .grid-table thead th { position: static; }
+}
