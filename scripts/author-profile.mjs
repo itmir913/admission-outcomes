@@ -48,6 +48,8 @@ const HINTS = [
 ];
 
 const GPA_LABELS = ['전교과', '전과목', '국영수사/과', '국수영사과', '국수영사/과', '국영수과', '국수영과', '국영수사', '국수영사', '국영수', '국영사', '국수영사과', '수영과', '국영수사과'];
+// 내신 구역에 있는 과목별 등급. 수능 구역의 같은 이름과는 구역 판정으로 이미 갈렸다
+const GPA_SUBJECTS = ['국어', '영어', '수학', '사회', '과학', '한국사'];
 const SUNEUNG_AREAS = ['한국사', '국어', '수학', '영어', '탐구1', '탐구2', '제2외국어'];
 const SUNEUNG_PART_BY_LABEL = { 과목: 'subject', 과목명: 'subject', 표점: 'stdScore', 표준점수: 'stdScore', 백분위: 'percentile', 등급: 'grade' };
 
@@ -98,6 +100,12 @@ function draftColumns(labels) {
   labels.forEach((item, index) => {
     if (suneungStart >= 0 && index >= suneungStart) return;
     const label = compact(item.top);
+    const subject = GPA_SUBJECTS.find((name) => compact(name) === label);
+    if (subject) {
+      const weight = item.sub && item.sub !== '100' ? `(${item.sub})` : '';
+      claim(`gpa.${subject}${weight}`, index);
+      return;
+    }
     const gpa = GPA_LABELS.find((name) => compact(name) === label);
     if (gpa) {
       // 같은 조합이 반영비별로 여러 열에 걸쳐 있다. 100 반영을 기본으로 두고
