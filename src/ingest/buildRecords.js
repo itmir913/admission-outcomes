@@ -114,7 +114,7 @@ function looksLikeApplication(parsed) {
  * @property {Record<string, number>} columns 프로파일의 열 매핑
  * @property {number|null} cohortYear 사용자가 확정한 고3 년도
  * @property {string} [yearBasis] 연도 열이 있을 때 그 값의 기준
- * @property {object} [source] 어느 파일·시트에서 왔는지
+ * @property {{fileHash?: string, sourceFile?: string, sourceSheet?: string}} [source] 어느 파일·시트에서 왔는지
  */
 
 /**
@@ -138,11 +138,11 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
       const parsed = readRow(row, sheet.columns);
       if (!looksLikeApplication(parsed)) continue;
 
-      // 행마다 연도가 다른 누적 파일이면 그 열을 쓴다. 기준을 모르면 파일 연도로 돌아간다
+      // 파일 연도가 정해져 있으면 그것이 이긴다. 사람이 확정한 값을 자료가 덮으면 안 된다.
+      // 연도 열은 파일 연도가 비어 있을 때 — 여러 해가 섞인 누적 파일일 때 — 쓴다
       let cohortYear = sheet.cohortYear;
-      if (yearColumn !== undefined && sheet.yearBasis) {
-        const perRow = toCohortYear(coerce('sourceYear', row?.[yearColumn]), sheet.yearBasis);
-        if (perRow !== null) cohortYear = perRow;
+      if ((cohortYear === null || cohortYear === undefined) && yearColumn !== undefined && sheet.yearBasis) {
+        cohortYear = toCohortYear(coerce('sourceYear', row?.[yearColumn]), sheet.yearBasis);
       }
       if (cohortYear === null || cohortYear === undefined) { skipped += 1; continue; }
 
@@ -207,7 +207,8 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
       cohortYear: row.cohortYear,
       ...row.parsed.scalars,
       ...(Object.keys(row.extra).length ? { extra: row.extra } : {}),
-      ...(row.source ? { source: row.source } : {})
+      // 파일 단위로 되돌릴 수 있어야 하므로 출처를 평평하게 남긴다
+      ...(row.source ?? {})
     });
   });
 

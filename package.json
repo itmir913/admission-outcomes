@@ -12,6 +12,7 @@
   "type": "module",
   "private": true,
   "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
     "vite": "^8.2.1",
     "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^4.1.10"
