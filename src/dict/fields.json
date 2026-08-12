@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "note": "공통 논리 필드 사전. 어떤 프로그램의 양식이든 이 키로 번역된다. 새 개념이 필요할 때만 여기에 한 줄 추가한다.",
+
+  "scalars": [
+    { "key": "identity.name",   "label": "이름",     "type": "text", "group": "identity", "discard": true },
+    { "key": "identity.hakbun", "label": "학번",     "type": "text", "group": "identity", "discard": true },
+    { "key": "identity.class",  "label": "반",       "type": "text", "group": "identity", "discard": true },
+    { "key": "identity.number", "label": "번호",     "type": "text", "group": "identity", "discard": true },
+
+    { "key": "year",            "label": "학년도",   "type": "year",   "group": "student" },
+    { "key": "schoolYear",      "label": "학년",     "type": "text",   "group": "student" },
+    { "key": "enrollStatus",    "label": "재학·졸업", "type": "text",  "group": "student" },
+
+    { "key": "univ",            "label": "대학명",   "type": "text",   "group": "application", "required": true },
+    { "key": "region",          "label": "지역",     "type": "text",   "group": "application" },
+    { "key": "dept",            "label": "모집단위", "type": "text",   "group": "application" },
+    { "key": "track",           "label": "계열",     "type": "text",   "group": "application" },
+    { "key": "period",          "label": "모집시기", "type": "text",   "group": "application" },
+    { "key": "admType",         "label": "전형유형", "type": "text",   "group": "application" },
+    { "key": "admName",         "label": "전형명",   "type": "text",   "group": "application" },
+    { "key": "admDetail",       "label": "세부유형", "type": "text",   "group": "application" },
+    { "key": "selectType",      "label": "선발유형", "type": "text",   "group": "application" },
+    { "key": "quota",           "label": "모집인원", "type": "number", "group": "application" },
+    { "key": "stage1",          "label": "1단계",    "type": "text",   "group": "application" },
+    { "key": "final",           "label": "최종",     "type": "text",   "group": "application" },
+    { "key": "failReason",      "label": "불합격사유", "type": "text", "group": "application" },
+    { "key": "waitRank",        "label": "예비순위", "type": "text",   "group": "application" },
+    { "key": "register",        "label": "등록여부", "type": "text",   "group": "application" }
+  ],
+
+  "repeating": {
+    "gpa": {
+      "label": "내신",
+      "note": "반영 조합마다 열이 하나씩 있다. 조합 이름은 학교·프로그램마다 다르므로 자유 문자열로 둔다.",
+      "keyPattern": "gpa.<조합>",
+      "parts": null,
+      "type": "number",
+      "examples": ["gpa.전교과", "gpa.국수영사과", "gpa.국수영과"]
+    },
+    "suneung": {
+      "label": "수능",
+      "note": "영역마다 과목·표점·백분위·등급이 따로 있다. 있는 것만 적으면 된다.",
+      "keyPattern": "suneung.<영역>.<항목>",
+      "parts": ["subject", "stdScore", "percentile", "grade"],
+      "type": "mixed",
+      "examples": ["suneung.국어.grade", "suneung.탐구1.percentile"]
+    }
+  },
+
+  "partTypes": {
+    "subject": "text",
+    "stdScore": "number",
+    "percentile": "number",
+    "grade": "number"
+  }
+}

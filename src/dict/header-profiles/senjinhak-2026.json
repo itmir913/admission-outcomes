@@ -1,0 +1,28 @@
+{
+  "id": "senjinhak-2026",
+  "program": "senjinhak",
+  "programLabel": "센진학 수시지원결과",
+  "year": 2026,
+  "headerRows": 1,
+  "fingerprint": "82549e9a37bcaccf8719462bd10b2484e1b10f7a4336f9072fa85447e0634c7c",
+  "columns": {
+    "schoolYear": 0,
+    "identity.hakbun": 1,
+    "identity.name": 2,
+    "region": 3,
+    "univ": 4,
+    "dept": 5,
+    "admName": 6,
+    "track": 7,
+    "period": 8,
+    "gpa.전과목": 9,
+    "gpa.국수영사과": 10,
+    "gpa.국수영과": 11,
+    "gpa.국수영사": 12,
+    "stage1": 13,
+    "final": 14,
+    "waitRank": 15,
+    "register": 16
+  },
+  "source": "센진학_수시지원결과_샘플.xlsx#result"
+}
