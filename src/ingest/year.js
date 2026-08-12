@@ -11,8 +11,15 @@
  * **이 시스템은 언제나 고3 년도(`cohortYear`)만 쓴다.** 화면에도, 축에도, 익명 ID에도.
  * 두 값을 섞으면 자료가 통째로 한 해씩 밀리고, 밀렸다는 사실조차 눈에 띄지 않는다.
  *
- * 그래서 값을 읽을 때마다 **그 값이 어느 쪽 기준인지(basis)** 를 반드시 함께 판정한다.
- * 판정하지 못하면 추측하지 않고 사용자에게 묻는다.
+ * ## 여기서 하는 일은 '제안'이다
+ *
+ * **고3 년도는 언제나 사용자가 확정한다.** 이 파일의 추론은 입력란을 미리 채워 두기 위한
+ * 제안일 뿐이고, 최종 값은 사람이 정한다.
+ *
+ * 한 해 밀린 자료는 겉보기에 완전히 멀쩡해서 나중에 알아챌 방법이 없다. 파일을 올릴 때
+ * 숫자 하나를 확인받는 비용이, 몇 년치 상담 자료가 조용히 어긋나는 위험보다 훨씬 싸다.
+ *
+ * 그래서 확신이 서지 않으면 **빈칸으로 둔다.** 어설픈 값을 채워 두면 사용자가 그냥 넘긴다.
  */
 
 /** 연도로 인정할 범위의 아래쪽 끝. 이보다 오래된 자료는 다루지 않는다. */
@@ -132,9 +139,10 @@ export function findYearColumn(grid, {
  * @property {number|null} yearColumn 행마다 연도가 다를 때 그 열 번호
  * @property {string} basis 읽어 들인 값의 기준
  * @property {'cell'|'filename'|'sheet'|null} source 어디서 알아냈는지 (화면에 보여준다)
- * @property {'high'|'low'|'none'} confidence low 이하면 사용자 확인을 받는다
- * @property {number[]} rawCandidates 변환 전 후보값 (사용자에게 보여줄 때 쓴다)
- * @property {boolean} needsInput 사용자에게 직접 입력받아야 하는지
+ * @property {'high'|'low'|'none'} confidence high일 때만 입력란을 미리 채운다
+ * @property {number[]} rawCandidates 변환 전 후보값 (힌트로 보여준다)
+ * @property {boolean} needsInput 미리 채울 값이 없어 사용자가 직접 적어야 하는지
+ * @property {string} explanation 어떻게 추정했는지 사람이 읽을 문장
  */
 
 /**
@@ -156,7 +164,8 @@ export function inferCohortYear({
 } = {}) {
   const none = {
     cohortYear: null, yearColumn: null, basis: BASIS.unknown,
-    source: null, confidence: 'none', rawCandidates: [], needsInput: true
+    source: null, confidence: 'none', rawCandidates: [], needsInput: true,
+    explanation: '연도를 찾지 못했습니다. 이 파일의 학생들이 고3이었던 년도를 적어 주세요.'
   };
 
   const found = findYearColumn(grid, { currentYear, headerRows });
@@ -164,6 +173,7 @@ export function inferCohortYear({
     // 프로파일이 기준을 알려 줬으면 그것을 따른다. 값으로 얻은 확증이 있으면 그것도 쓴다
     const basis = columnBasis ?? found.basis;
     const known = basis === BASIS.senior || basis === BASIS.admission;
+    const label = `${found.column + 1}번째 열의 값(${found.values.join(', ')})`;
     return {
       cohortYear: found.uniform && known ? toCohortYear(found.values[0], basis) : null,
       yearColumn: found.column,
@@ -171,30 +181,37 @@ export function inferCohortYear({
       source: 'cell',
       confidence: known ? 'high' : 'low',
       rawCandidates: found.values,
-      needsInput: !known
+      needsInput: !known,
+      explanation: known
+        ? `${label}을 ${basis === BASIS.admission ? '학년도' : '고3 년도'}로 읽었습니다.`
+        : `${label}이 학년도인지 고3 년도인지 알 수 없습니다. 어느 쪽인지 정해 주세요.`
     };
   }
 
   for (const [source, text] of [['filename', fileName], ['sheet', sheetName]]) {
     const { admission, unknown } = extractYears(text, { currentYear });
+    const where = source === 'filename' ? '파일 이름' : '시트 이름';
     if (admission.length === 1) {
       return {
         cohortYear: toCohortYear(admission[0], BASIS.admission),
         yearColumn: null, basis: BASIS.admission, source,
-        confidence: 'high', rawCandidates: admission, needsInput: false
+        confidence: 'high', rawCandidates: admission, needsInput: false,
+        explanation: `${where}의 '${admission[0]}학년도'에서 고3 년도 ${admission[0] - 1}로 추정했습니다.`
       };
     }
     if (admission.length > 1) {
       return {
         cohortYear: null, yearColumn: null, basis: BASIS.admission, source,
-        confidence: 'low', rawCandidates: admission, needsInput: true
+        confidence: 'low', rawCandidates: admission, needsInput: true,
+        explanation: `${where}에 학년도가 여럿(${admission.join(', ')}) 있습니다. 어느 해인지 정해 주세요.`
       };
     }
     if (unknown.length > 0) {
-      // 숫자는 찾았지만 고3 년도인지 학년도인지 알 수 없다. 후보만 들고 사용자에게 간다
+      // 숫자는 찾았지만 고3 년도인지 학년도인지 알 수 없다. 채워 넣지 않고 힌트로만 보여준다
       return {
         cohortYear: null, yearColumn: null, basis: BASIS.unknown, source,
-        confidence: 'low', rawCandidates: unknown, needsInput: true
+        confidence: 'low', rawCandidates: unknown, needsInput: true,
+        explanation: `${where}에서 ${unknown.join(', ')}을 찾았지만, 고3 년도인지 학년도인지 알 수 없습니다.`
       };
     }
   }

@@ -227,4 +227,31 @@ describe('고3 년도 추론', () => {
   it('인자 없이 불러도 터지지 않는다', () => {
     expect(inferCohortYear().needsInput).toBe(true);
   });
+
+  it('어떻게 추정했는지 사람이 읽을 문장을 함께 준다', () => {
+    // 사용자가 제안값을 그냥 넘기지 않고 검토할 수 있어야 한다
+    const guess = inferCohortYear({ fileName: '2024학년도_수시결과.xlsx', currentYear: NOW });
+    expect(guess.explanation).toContain('2024학년도');
+    expect(guess.explanation).toContain('2023');
+  });
+
+  it('추정하지 못했을 때도 무엇을 해야 하는지 알려준다', () => {
+    const guess = inferCohortYear({ fileName: '진학결과.xlsx', currentYear: NOW });
+    expect(guess.explanation).toMatch(/고3이었던 년도/);
+  });
+
+  it('기준이 모호할 때 무엇이 모호한지 밝힌다', () => {
+    const guess = inferCohortYear({ fileName: '대교협_2022.xlsx', currentYear: NOW });
+    expect(guess.explanation).toContain('2022');
+    expect(guess.explanation).toMatch(/알 수 없습니다/);
+  });
+
+  it('제안값이 없으면 채워 넣지 않는다', () => {
+    // 어설픈 값을 미리 채우면 사용자가 그냥 넘긴다
+    for (const fileName of ['대교협_2022.xlsx', '진학결과.xlsx', '2022학년도_2023학년도.xlsx']) {
+      const guess = inferCohortYear({ fileName, currentYear: NOW });
+      expect(guess.cohortYear, fileName).toBeNull();
+      expect(guess.needsInput, fileName).toBe(true);
+    }
+  });
 });
