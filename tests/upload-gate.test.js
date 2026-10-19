@@ -15,17 +15,17 @@ import { uploadBlockers, chosenCount, needsFileYear, yearLooksSane, toSchoolYear
 
 /** 읽을 수 있는 시트. 연도 열이 없어 파일 단위 고3 년도를 요구한다. */
 function readable(id, name = `${id}.xlsx`) {
-  return { id, fileName: name, profile: { id: 'demo-1', columns: { univ: 0 } } };
+  return { id, fileName: name, reading: { source: 'profile', readable: true, perRowYear: false, columns: { univ: 0 } } };
 }
 
 /** 행마다 연도가 실린 누적 시트. 파일 연도를 비워 둬도 된다. */
 function perRowYear(id, name = `${id}.xlsx`) {
-  return { id, fileName: name, profile: { id: 'demo-2', yearBasis: 'admission', columns: { univ: 0, sourceYear: 3 } } };
+  return { id, fileName: name, reading: { source: 'profile', readable: true, perRowYear: true, effectiveBasis: 'admission', columns: { univ: 0, sourceYear: 3 } } };
 }
 
-/** 열 구성을 알아보지 못한 시트. */
+/** 대학명 열을 찾지 못한 시트. */
 function unreadable(id, name = `${id}.xlsx`) {
-  return { id, fileName: name, profile: null };
+  return { id, fileName: name, reading: { source: 'names', readable: false, perRowYear: false, columns: {} } };
 }
 
 const 넣음 = (cohortYear = 2025) => ({ cohortYear, include: true });
@@ -44,10 +44,10 @@ describe('불러오기를 막는 조건', () => {
     expect(uploadBlockers(sheets, decisions)).toEqual([]);
   });
 
-  it('켜 둔 시트가 읽히지 않으면 막는다', () => {
+  it('켜 둔 시트에서 대학명을 못 찾으면 막는다', () => {
     const sheets = [unreadable('a', '새양식.xlsx')];
     const decisions = new Map([['a', 넣음(2025)]]);
-    expect(uploadBlockers(sheets, decisions)).toEqual(['새양식.xlsx: 열 구성을 알아보지 못했습니다']);
+    expect(uploadBlockers(sheets, decisions)).toEqual(['새양식.xlsx: 대학명 열을 찾지 못했습니다']);
   });
 
   it('켜 둔 시트에 고3 년도가 없으면 막는다 — 한 해 밀린 자료는 알아챌 방법이 없다', () => {
@@ -66,7 +66,7 @@ describe('불러오기를 막는 조건', () => {
     const sheets = [unreadable('a', '가.xlsx'), readable('b', '나.xlsx')];
     const decisions = new Map([['a', 넣음(2025)], ['b', { cohortYear: null, include: true }]]);
     expect(uploadBlockers(sheets, decisions)).toEqual([
-      '가.xlsx: 열 구성을 알아보지 못했습니다',
+      '가.xlsx: 대학명 열을 찾지 못했습니다',
       '나.xlsx: 고3 년도를 넣어 주세요'
     ]);
   });

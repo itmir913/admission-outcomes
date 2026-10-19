@@ -37,8 +37,8 @@ export async function readFiles(files) {
  * @param {object} sheet
  */
 export function needsFileYear(sheet) {
-  const perRowYear = sheet?.profile?.columns?.sourceYear !== undefined && Boolean(sheet?.profile?.yearBasis);
-  return !perRowYear;
+  // 판단은 prepare 단계가 이미 내려 두었다. 화면이 따로 셈하면 둘이 어긋난다
+  return !sheet?.reading?.perRowYear;
 }
 
 /**
@@ -63,8 +63,8 @@ export function uploadBlockers(sheets, decisions) {
   for (const sheet of sheets ?? []) {
     const decision = lookup(sheet.id);
     if (!decision?.include) continue;
-    if (!sheet.profile) {
-      problems.push(`${sheet.fileName}: 열 구성을 알아보지 못했습니다`);
+    if (!sheet.reading?.readable) {
+      problems.push(`${sheet.fileName}: 대학명 열을 찾지 못했습니다`);
       continue;
     }
     if (decision.cohortYear === null && needsFileYear(sheet)) {
@@ -105,7 +105,7 @@ export function confirmUploads(dialog, prepared, currentYear) {
      */
     const decisions = new Map(prepared.sheets.map((sheet) => [
       sheet.id,
-      { cohortYear: sheet.yearGuess.cohortYear, include: Boolean(sheet.profile) }
+      { cohortYear: sheet.yearGuess.cohortYear, include: Boolean(sheet.reading?.readable) }
     ]));
 
     const finish = (value) => { dialog.close(); resolve(value); };
@@ -151,6 +151,7 @@ export function confirmUploads(dialog, prepared, currentYear) {
         }
       });
 
+      const reading = sheet.reading;
       const perRowYear = !needsFileYear(sheet);
 
       function echoYear() {
@@ -194,9 +195,12 @@ export function confirmUploads(dialog, prepared, currentYear) {
           ]),
 
           el('div', { class: 'ml-auto flex items-center gap-2' }, [
-            sheet.profile
-              ? el('span', { class: 'tag tag-pass', text: `${sheet.profile.programLabel ?? sheet.profile.id} 양식` })
-              : el('span', { class: 'tag tag-fail', text: '열 구성을 알아보지 못함' }),
+            // 상태가 셋이다. 어떻게 읽어 냈는지에 따라 사람이 할 일이 다르다
+            !reading?.readable
+              ? el('span', { class: 'tag tag-fail', text: '대학명 열을 찾지 못함' })
+              : reading.source === 'profile'
+                ? el('span', { class: 'tag tag-pass', text: `${reading.label} 양식` })
+                : el('span', { class: 'tag tag-wait', text: '이름으로 알아냄' }),
             sheet.duplicate ? el('span', { class: 'tag tag-wait', text: '이미 불러온 파일' }) : null
           ])
         ]),
@@ -207,9 +211,27 @@ export function confirmUploads(dialog, prepared, currentYear) {
             ])
           : null,
 
-        !sheet.profile
+        !reading?.readable
           ? el('p', { class: 'mt-3 rounded-lg bg-fail-soft px-4 py-2 text-base text-fail' }, [
-              '어느 열이 무엇인지 알 수 없어 체크를 꺼 두었습니다. 나머지만 불러오면 됩니다. 헤더가 바뀐 새 양식이라면 프로파일을 추가해야 합니다.'
+              '대학명 열을 찾지 못해 체크를 꺼 두었습니다. 나머지만 불러오면 됩니다. 대학 이름이 든 열의 머리글을 「대학명」으로 고쳐 다시 올리면 읽힙니다.'
+            ])
+          : null,
+
+        /*
+         * 이름으로 푼 시트는 **한 번은 눈으로 보게 한다.**
+         * 맞게 풀렸을 가능성이 높지만, 틀렸을 때 틀린 티가 안 나는 쪽이라 그렇다.
+         */
+        reading?.readable && reading.source === 'names'
+          ? el('div', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-3 text-base text-wait' }, [
+              el('p', { class: 'font-semibold', text: '등록된 양식과 달라 열 이름으로 풀었습니다. 한 번 확인해 주세요.' }),
+              el('p', { class: 'mt-1 text-sm' , text: `열 ${reading.columnCount}개 중 ${Object.keys(reading.columns).length}개를 짚었습니다.` }),
+              reading.unresolved.length > 0
+                ? el('p', {
+                    class: 'mt-1 text-sm',
+                    text: `짚지 못한 ${reading.unresolved.length}개는 원본 이름 그대로 보존합니다 — ${reading.unresolved.slice(0, 6).map((item) => item.label).join(', ')}${reading.unresolved.length > 6 ? ' …' : ''}`
+                  })
+                : null,
+              ...reading.notes.map((note) => el('p', { class: 'mt-1 text-sm', text: note }))
             ])
           : null,
 

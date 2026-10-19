@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "note": "헤더 이름 → 논리 필드. 열 해석의 주 경로다(§4). 새 양식 지원은 대개 여기에 이름 하나 추가하는 것으로 끝난다.",
+  "matchNote": "exact는 라벨 전체가 같을 때, affix는 라벨이 그 말로 시작하거나 끝날 때, partial은 라벨 안에 그 말이 들어 있을 때다. affix와 partial에는 짧고 흔한 말을 넣지 않는다 — '최종'을 affix에 넣으면 '최종발표일'이 최종단계로 잡힌다.",
+
+  "scalars": [
+    { "key": "identity.name",   "exact": ["이름", "성명"], "affix": [], "partial": [] },
+    { "key": "identity.hakbun", "exact": ["학번", "수험번호"], "affix": ["수험번호"], "partial": [] },
+    { "key": "identity.class",  "exact": ["반", "학급"], "affix": [], "partial": [] },
+    { "key": "identity.number", "exact": ["번호", "출석번호"], "affix": ["출석번호"], "partial": [] },
+
+    { "key": "schoolYear",   "exact": ["학년"], "affix": [], "partial": [] },
+    { "key": "sourceYear",   "exact": ["학년도", "입학년도", "입학연도", "졸업년도", "졸업연도"], "affix": ["학년도"], "partial": [] },
+    { "key": "enrollStatus", "exact": ["재학구분", "졸업구분", "재수여부", "재학여부"], "affix": [], "partial": [] },
+
+    { "key": "univ",   "exact": ["대학명", "대학", "지원대학", "지원대학명", "학교명"], "affix": ["대학명"], "partial": [] },
+    { "key": "region", "exact": ["지역", "소재지"], "affix": [], "partial": [] },
+    { "key": "dept",   "exact": ["모집단위", "학과", "학과명", "전공", "전공명", "학부"], "affix": ["모집단위", "학과명"], "partial": [] },
+    { "key": "track",  "exact": ["계열", "계열구분"], "affix": [], "partial": [] },
+    { "key": "period", "exact": ["모집시기", "지원시기", "모집구분", "전형시기", "시기"], "affix": ["모집시기", "지원시기"], "partial": [] },
+
+    { "key": "admType",    "exact": ["전형유형", "전형구분", "전형대분류"], "affix": ["전형유형"], "partial": [] },
+    { "key": "admName",    "exact": ["전형명", "전형", "전형이름"], "affix": ["전형명"], "partial": [] },
+    { "key": "admDetail",  "exact": ["세부유형", "세부전형", "전형세부", "세부전형명"], "affix": ["세부전형"], "partial": [] },
+    { "key": "selectType", "exact": ["선발유형", "선발구분"], "affix": [], "partial": [] },
+    { "key": "quota",      "exact": ["모집인원", "선발인원"], "affix": [], "partial": [] },
+
+    { "key": "stage1",     "exact": ["1단계", "1단계결과", "일단계"], "affix": ["1단계"], "partial": [] },
+    { "key": "final",      "exact": ["최종단계", "최종결과", "최종", "합격여부", "합불", "합불여부"], "affix": ["최종단계", "최종결과"], "partial": [] },
+    { "key": "failReason", "exact": ["불합격사유", "탈락사유", "불합사유"], "affix": ["불합격사유"], "partial": [] },
+    { "key": "waitRank",   "exact": ["최초후보순위", "후보순위", "예비순위", "예비", "충원순위", "예비번호"], "affix": ["후보순위", "예비순위"], "partial": [] },
+    { "key": "register",   "exact": ["등록여부", "등록", "등록구분", "최종등록"], "affix": ["등록여부"], "partial": [] }
+  ],
+
+  "scores": {
+    "exact": 100,
+    "affix": 70,
+    "partialMax": 40,
+    "threshold": 40,
+    "thresholdNote": "임계값 미달이면 배정하지 않는다. 틀리게 붙이는 것보다 비워 두는 쪽이 낫다(CLAUDE.md §5)."
+  }
+}

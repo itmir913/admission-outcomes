@@ -38,7 +38,8 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
                   : '행마다 연도',
                 `${rowCounts.get(file.hash) ?? 0}건`,
                 (file.sheets ?? []).length > 1 ? `시트 ${file.sheets.length}장` : null,
-                file.profileId
+                // 어떻게 읽어 냈는지를 남긴다. 나중에 값이 이상할 때 먼저 볼 자리다
+                file.profileId ?? (file.resolvedBy === 'names' ? '이름으로 알아냄' : null)
               ].filter(Boolean).join(' · ')
             })
           ]),

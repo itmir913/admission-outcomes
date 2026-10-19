@@ -13,6 +13,7 @@
 
 import { loadUploads } from './files.js';
 import { matchProfile } from './profile.js';
+import { resolveSheet } from './resolveColumns.js';
 import { inferCohortYear } from './year.js';
 import { buildDataset } from './buildRecords.js';
 
@@ -24,13 +25,74 @@ import { buildDataset } from './buildRecords.js';
  * @property {string} fileHash
  * @property {string} [container] zip으로 올렸다면 그 zip 이름
  * @property {unknown[][]} grid
- * @property {object|null} profile 맞은 헤더 프로파일
- * @property {object} match 어떻게 맞았는지 (물려썼다면 어느 해 것인지)
+ * @property {Reading} reading 어느 열이 무엇인지, 그리고 그걸 어떻게 알아냈는지
+ * @property {object|null} profile 지문이 맞은 헤더 프로파일 (없으면 이름으로 푼 것)
+ * @property {object} match 지문 대조 결과
  * @property {object} yearGuess 고3 년도 제안과 그 근거
  * @property {object|null} duplicate 이미 올린 적 있는 파일이면 그 기록
  * @property {number} rowCount 헤더를 뺀 행 수
  * @property {boolean} ready 사람이 더 정할 것 없이 바로 넣을 수 있는지
  */
+
+/**
+ * @typedef {object} Reading
+ * @property {'profile'|'names'} source 지문이 맞은 프로파일로 읽었는지, 이름으로 풀었는지
+ * @property {Record<string, number>} columns 논리 키 → 열 번호
+ * @property {number} headerRows
+ * @property {number} headerStart 헤더가 시작하는 행
+ * @property {string|null} yearBasis 연도 열의 기준. 이름으로 풀었으면 모른다
+ * @property {{index: number, label: string, reason: string}[]} unresolved 짚지 못한 열
+ * @property {string[]} notes 사람이 읽을 설명
+ * @property {string|null} profileId
+ * @property {string|null} label 화면에 보일 양식 이름
+ * @property {boolean} readable 분석할 수 있는 상태인지 (대학명 열이 있어야 한다)
+ * @property {number} columnCount 전체 열 수
+
+/**
+ * 시트 하나의 열을 읽어 낸다 (§4).
+ *
+ * **이름 매칭이 주 경로다.** 지문이 맞는 프로파일이 있으면 이미 사람이 확인해 둔
+ * 답이므로 그것을 쓰고, 없으면 이름으로 푼다. 지문이 어긋났다는 것은
+ * "읽을 수 없다"가 아니라 "다시 풀어야 한다"는 뜻이다.
+ *
+ * @param {unknown[][]} grid
+ * @param {object} match
+ * @returns {Reading}
+ */
+export function readSheetColumns(grid, match) {
+  if (match.profile) {
+    const columns = match.profile.columns;
+    return {
+      source: 'profile',
+      columns,
+      headerRows: match.profile.headerRows,
+      headerStart: 0,
+      yearBasis: match.profile.yearBasis ?? null,
+      unresolved: [],
+      notes: [],
+      profileId: match.profile.id,
+      label: match.profile.programLabel ?? match.profile.id,
+      readable: columns.univ !== undefined,
+      columnCount: Object.keys(columns).length
+    };
+  }
+
+  const resolved = resolveSheet(grid);
+  return {
+    source: 'names',
+    columns: resolved.columns,
+    headerRows: resolved.headerRows,
+    headerStart: resolved.headerStart,
+    // 이름으로는 연도 열의 기준을 알 수 없다. 기준을 모르면 값을 만들지 않는다 (§2)
+    yearBasis: null,
+    unresolved: resolved.unresolved,
+    notes: resolved.notes,
+    profileId: null,
+    label: '이름으로 알아냄',
+    readable: resolved.columns.univ !== undefined,
+    columnCount: resolved.labels.length
+  };
+}
 
 /**
  * 올린 파일들을 읽고, 시트마다 무엇을 알아냈는지 보고한다.
@@ -48,19 +110,31 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
   const prepared = [];
   for (const sheet of sheets) {
     const match = await matchProfile(profiles, { grid: sheet.grid });
-    const headerRows = match.profile?.headerRows ?? 1;
+    const reading = readSheetColumns(sheet.grid, match);
+    const body = sheet.grid.slice(reading.headerStart);
 
     const yearGuess = inferCohortYear({
       fileName: sheet.fileName,
       sheetName: sheet.sheetName,
-      grid: sheet.grid,
-      headerRows,
-      // 프로파일이 밝힌 연도 열과 그 기준을 짝으로 넘긴다.
-      // 짝을 깨면 엉뚱한 열에 기준이 적용된다
-      yearColumn: match.profile?.columns?.sourceYear ?? null,
-      columnBasis: match.profile?.yearBasis ?? null,
+      grid: body,
+      headerRows: reading.headerRows,
+      // 연도 열과 그 기준을 짝으로 넘긴다. 짝을 깨면 엉뚱한 열에 기준이 적용된다.
+      // 이름으로 푼 시트는 기준이 null이라, 값이 올해를 넘지 않는 한 사람에게 묻는다
+      yearColumn: reading.columns.sourceYear ?? null,
+      columnBasis: reading.yearBasis,
       currentYear
     });
+
+    /*
+     * 행마다 연도를 읽어도 되는지를 **여기서 한 번만** 정한다.
+     *
+     * 기준은 프로파일이 밝힌 것을 먼저 쓰고, 없으면 연도 추론이 값에서 확정한 것만 쓴다 —
+     * 값이 올해를 넘으면 고3 년도일 수 없으므로 학년도다. 둘 다 없으면 사람에게 묻는다.
+     * 화면과 저장 쪽이 이 판단을 따로 하면 둘이 어긋나고, 어긋난 쪽이 조용히 이긴다.
+     */
+    reading.effectiveBasis = reading.yearBasis
+      ?? (['senior', 'admission'].includes(yearGuess.basis) ? yearGuess.basis : null);
+    reading.perRowYear = reading.columns.sourceYear !== undefined && Boolean(reading.effectiveBasis);
 
     prepared.push({
       id: `${sheet.fileHash}#${sheet.sheetName}`,
@@ -69,13 +143,16 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
       fileHash: sheet.fileHash,
       container: sheet.container,
       grid: sheet.grid,
+      reading,
       profile: match.profile,
       match,
       yearGuess,
       duplicate: knownFiles.get(sheet.fileHash) ?? null,
-      rowCount: Math.max(0, sheet.grid.length - headerRows),
-      // 프로파일이 맞고 연도까지 확실할 때만 손댈 것이 없다
-      ready: Boolean(match.profile) && !yearGuess.needsInput && yearGuess.cohortYear !== null
+      rowCount: Math.max(0, body.length - reading.headerRows),
+      // 사람이 확인해 둔 프로파일로 읽었고 연도까지 확실할 때만 손댈 것이 없다.
+      // 이름으로 푼 것은 맞아 보여도 한 번은 눈으로 보게 한다
+      ready: reading.source === 'profile' && reading.readable
+        && !yearGuess.needsInput && yearGuess.cohortYear !== null
     });
   }
 
@@ -102,20 +179,25 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
     const decision = decisions[sheet.id] ?? {};
     if (decision.include === false) continue;
 
-    if (!sheet.profile) {
-      // 프로파일이 없으면 어느 열이 무엇인지 모른다. 수동 매핑을 거쳐야 한다(§4)
+    const reading = sheet.reading;
+    if (!reading?.readable) {
+      // 대학명 열을 못 찾으면 분석할 거리가 없다. 여기서 멈추는 편이 낫다(§5)
       warnings.push({
-        type: 'no-profile',
+        type: 'not-readable',
         sheet: sheet.id,
-        message: `${sheet.fileName}의 열 구성을 알아보지 못했습니다. 열을 직접 지정해 주세요.`
+        message: `${sheet.fileName}에서 대학명 열을 찾지 못해 넣지 않았습니다.`
       });
       continue;
     }
 
     const cohortYear = decision.cohortYear ?? sheet.yearGuess.cohortYear;
-    // 여러 해가 섞인 누적 파일이면 파일 연도 없이 행마다 읽는다
-    const perRowYear = sheet.profile.columns.sourceYear !== undefined
-      && Boolean(sheet.profile.yearBasis);
+    /*
+     * 여러 해가 섞인 누적 파일이면 파일 연도 없이 행마다 읽는다.
+     *
+     * 어떤 기준으로 읽을지는 prepare 단계에서 이미 정해 두었다 (§2).
+     */
+    const basis = reading.effectiveBasis ?? null;
+    const perRowYear = Boolean(reading.perRowYear);
     if ((cohortYear === null || cohortYear === undefined) && !perRowYear) {
       warnings.push({
         type: 'year-not-set',
@@ -126,10 +208,11 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
     }
 
     inputs.push({
-      grid: sheet.grid,
-      headerRows: sheet.profile.headerRows,
-      columns: sheet.profile.columns,
-      yearBasis: sheet.profile.yearBasis,
+      // 머리글 앞에 제목 줄이 붙은 양식이 있다. 잘라 내고 넘긴다
+      grid: sheet.grid.slice(reading.headerStart),
+      headerRows: reading.headerRows,
+      columns: reading.columns,
+      yearBasis: basis,
       cohortYear,
       source: {
         fileHash: sheet.fileHash,
@@ -145,9 +228,21 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
       container: sheet.container ?? null,
       sheets: [],
       cohortYears: [],
-      profileId: sheet.profile.id,
+      profileId: reading.profileId,
+      resolvedBy: reading.source,
       loadedAt: new Date().toISOString()
     };
+    if (reading.source === 'names' && reading.unresolved.length > 0) {
+      warnings.push({
+        type: 'columns-unresolved',
+        sheet: sheet.id,
+        message: `${sheet.fileName}에서 열 ${reading.unresolved.length}개를 짚지 못해 원본 이름 그대로 보존했습니다: ${reading.unresolved.slice(0, 5).map((item) => item.label).join(', ')}${reading.unresolved.length > 5 ? ' …' : ''}`
+      });
+    }
+    for (const note of reading.notes) {
+      warnings.push({ type: 'reading-note', sheet: sheet.id, message: `${sheet.fileName}: ${note}` });
+    }
+
     file.sheets.push(sheet.sheetName);
     if (!file.cohortYears.includes(cohortYear)) file.cohortYears.push(cohortYear);
     files.set(sheet.fileHash, file);

@@ -169,14 +169,32 @@ describe('확정하고 넣기', () => {
     expect(dumped).not.toContain('30101');
   });
 
-  it('프로파일이 없으면 넣지 않고 알린다', async () => {
+  it('프로파일이 없어도 이름으로 풀어 넣는다', async () => {
+    // 지문이 어긋났다는 것은 "읽을 수 없다"가 아니라 "다시 풀어야 한다"는 뜻이다 (§4)
     const { sheets } = await prepareUploads(
       [upload('a.xlsx', makeWorkbook({ result: senjinhakGrid(2026) }))],
       { profiles: new ProfileSet([]), currentYear: NOW }
     );
+    expect(sheets[0].reading.source).toBe('names');
+    expect(sheets[0].reading.readable).toBe(true);
+    // 이름으로 푼 것은 맞아 보여도 한 번은 눈으로 보게 한다
+    expect(sheets[0].ready).toBe(false);
+
+    const dataset = await commitSheets(sheets, { decisions: { [sheets[0].id]: { cohortYear: 2025, include: true } } });
+    expect(dataset.applications.length).toBeGreaterThan(0);
+    expect(dataset.applications[0].univ).toBe('서울대학교');
+  });
+
+  it('대학명 열을 못 찾으면 넣지 않고 알린다', async () => {
+    const grid = [['쪽지', '메모'], ['가', '나']];
+    const { sheets } = await prepareUploads(
+      [upload('a.xlsx', makeWorkbook({ result: grid }))],
+      { profiles: new ProfileSet([]), currentYear: NOW }
+    );
+    expect(sheets[0].reading.readable).toBe(false);
     const dataset = await commitSheets(sheets);
     expect(dataset.applications).toHaveLength(0);
-    expect(dataset.warnings.find((item) => item.type === 'no-profile')).toBeDefined();
+    expect(dataset.warnings.find((item) => item.type === 'not-readable')).toBeDefined();
   });
 
   it('연도가 정해지지 않으면 넣지 않고 알린다', async () => {

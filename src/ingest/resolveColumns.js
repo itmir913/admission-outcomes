@@ -1,0 +1,371 @@
+/**
+ * 열 해석의 주 경로 — 이름으로 푼다 (§4).
+ *
+ * 엑셀에서 믿을 수 있는 것은 **열 이름**이지 열 번호가 아니다. 번호는 양식이
+ * 조금만 달라져도 통째로 밀린다 — 실제로 대교협 양식에 5등급제 열 하나가
+ * 끼어들면서 뒤따르는 논리 필드 53개가 한 칸씩 밀렸다. 이름은 하나도 바뀌지 않았는데도.
+ *
+ * 그래서 순서를 이렇게 둔다.
+ *
+ *   헤더 블록 탐지 → 병합셀 채움 · 여러 줄 라벨 합성 → **구역 판정**
+ *     → 이름 매칭 → 값으로 교차검증 → 확정된 열 번호
+ *
+ * 열 번호는 **이 과정의 결과물**이다. 번호를 먼저 믿고 읽는 일은 없다.
+ * 한 번 푼 답은 지문과 함께 프로파일로 저장되어, 같은 양식이 다시 오면 그대로 쓰인다.
+ *
+ * 구역 판정이 이름 매칭보다 먼저인 이유는 §4에 적힌 그대로다. 대교협 양식에는
+ * `국어`·`영어`·`수학`이 내신 구역과 수능 구역에 각각 한 번씩 나오고,
+ * 이름만 보면 어느 쪽인지 알 수 없다.
+ */
+
+import synonyms from '../dict/field-synonyms.json' with { type: 'json' };
+import anchors from '../dict/section-anchors.json' with { type: 'json' };
+import { buildHeaderLabels, bodyRows } from './headerBlock.js';
+import { isKnownFieldKey } from './profile.js';
+
+const SCORES = synonyms.scores;
+
+/** 헤더 블록이 차지할 수 있는 줄 수. 셋을 넘는 양식은 아직 본 적이 없다. */
+export const MAX_HEADER_ROWS = 3;
+
+/** 머리글이 맨 위에 없을 수도 있다. 제목 줄·안내 줄이 앞에 붙는 양식이 있다. */
+export const MAX_HEADER_START = 5;
+
+/**
+ * 라벨을 견주기 좋게 다듬는다.
+ *
+ * 두 가지를 돌려주는 이유가 있다. `전형명(대)`는 괄호를 통째로 걷어내야 `전형명`과
+ * 만나는데, `전교과(2/4/4)`는 괄호 안이 **뜻을 나르는 값**이라 걷어내면 네 열이 한 열이 된다.
+ *
+ * @param {string} text
+ * @returns {{tight: string, base: string}} tight은 괄호 글자만 지운 것, base는 괄호 묶음을 걷어낸 것
+ */
+export function normalizeLabel(text) {
+  const flat = String(text ?? '')
+    .replace(/[！-～]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/\s+/g, '')
+    .toLowerCase();
+  const tight = flat.replace(/[()[\]{}]/g, '');
+  const stripped = flat.replace(/[([{][^)\]}]*[)\]}]/g, '');
+  return { tight, base: stripped === '' ? tight : stripped };
+}
+
+/**
+ * 라벨 하나와 논리 필드 하나가 얼마나 맞는지.
+ *
+ * @param {{tight: string, base: string}} label
+ * @param {{exact?: string[], affix?: string[], partial?: string[]}} rule
+ * @returns {number} 0이면 안 맞는 것
+ */
+export function scoreLabel(label, rule) {
+  const forms = [label.base, label.tight];
+  const norm = (text) => normalizeLabel(text).tight;
+
+  for (const word of rule.exact ?? []) {
+    if (forms.includes(norm(word))) return SCORES.exact;
+  }
+  for (const word of rule.affix ?? []) {
+    const target = norm(word);
+    if (!target) continue;
+    if (forms.some((form) => form !== target && (form.startsWith(target) || form.endsWith(target)))) {
+      return SCORES.affix;
+    }
+  }
+  let best = 0;
+  for (const word of rule.partial ?? []) {
+    const target = norm(word);
+    if (!target) continue;
+    for (const form of forms) {
+      if (!form.includes(target)) continue;
+      // 긴 라벨이 짧은 말을 품고 있는 것은 약한 근거다 — `최종발표일`이 `최종`을 품는다
+      best = Math.max(best, Math.round(SCORES.partialMax * (target.length / form.length)));
+    }
+  }
+  return best;
+}
+
+// ── 구역 판정 ────────────────────────────────────────────────────────────────
+
+const GPA_ANCHORS = anchors.gpa.anchors.map((word) => normalizeLabel(word).tight);
+const GPA_SUBJECTS = anchors.gpa.subjects.map((word) => normalizeLabel(word).tight);
+const SUNEUNG_ANCHORS = anchors.suneung.anchors.map((word) => normalizeLabel(word).tight);
+const WHOLE_RATIOS = new Set(anchors.gpa.wholeRatios.map((word) => normalizeLabel(word).tight));
+const PART_BY_LABEL = new Map(
+  Object.entries(anchors.suneung.parts).map(([word, part]) => [normalizeLabel(word).tight, part])
+);
+
+/**
+ * 이 열 이름이 사전에 있는 논리 필드를 가리키는지.
+ * 내신 구역의 오른쪽 끝을 정하는 데 쓴다.
+ *
+ * @param {import('./headerBlock.js').HeaderLabel} label
+ */
+export function namesAScalar(label) {
+  const normalized = normalizeLabel(label.label);
+  if (normalized.tight === '') return false;
+  return synonyms.scalars.some((rule) => scoreLabel(normalized, rule) >= SCORES.threshold);
+}
+
+/**
+ * 열들을 세 구역으로 가른다.
+ *
+ * 수능 구역을 먼저 찾고, 그다음 내신 구역을 찾는다. 수능이 뒤쪽에 있어서
+ * 내신 구역의 오른쪽 끝을 수능의 시작이 정해 주기 때문이다.
+ *
+ * @param {import('./headerBlock.js').HeaderLabel[]} labels
+ * @returns {{gpa: {start: number, end: number}|null, suneung: {start: number, end: number}|null}}
+ */
+export function findSections(labels) {
+  const tops = labels.map((label) => normalizeLabel(label.top));
+  const subs = labels.map((label) => normalizeLabel(label.sub));
+
+  // 수능: 한국사가 표지다. 없으면 항목 이름(과목·표점·백분위)이 처음 나오는 자리를 쓴다
+  let suneungStart = tops.findIndex((top) => SUNEUNG_ANCHORS.includes(top.tight));
+  if (suneungStart === -1) {
+    suneungStart = subs.findIndex((sub) => {
+      const part = PART_BY_LABEL.get(sub.tight);
+      return part === 'subject' || part === 'stdScore' || part === 'percentile';
+    });
+  }
+
+  // 내신: 조합 표지(전교과·전과목)에서 시작해, 왼쪽으로 과목 이름이 이어지는 만큼 넓힌다
+  const anchorAt = tops.findIndex((top, index) =>
+    GPA_ANCHORS.includes(top.base) && (suneungStart === -1 || index < suneungStart));
+
+  let gpa = null;
+  if (anchorAt !== -1) {
+    let start = anchorAt;
+    while (start > 0 && GPA_SUBJECTS.includes(tops[start - 1].base)) start -= 1;
+
+    /*
+     * 오른쪽 끝은 수능 구역이 정해 준다. **다만 수능 구역이 없는 양식이 있다** —
+     * 등급만 싣고 한국사를 안 싣는 양식이 그렇다. 그때 내신 구역을 줄 끝까지 두면
+     * `1단계`·`최종`까지 내신으로 삼키고, 값 검증이 뒤늦게 물러 주는 대신
+     * 그 열들이 통째로 미해결로 남는다.
+     *
+     * 그래서 사전에 이름이 있는 열을 만나면 거기서 끊는다. 내신 조합 이름은
+     * 자유 문자열이지만, 사전에 있는 이름과 겹치는 일은 없다.
+     */
+    let end = suneungStart === -1 ? labels.length : suneungStart;
+    for (let index = anchorAt + 1; index < end; index += 1) {
+      if (namesAScalar(labels[index])) { end = index; break; }
+    }
+    gpa = { start, end };
+  }
+
+  return {
+    gpa,
+    suneung: suneungStart === -1 ? null : { start: suneungStart, end: labels.length }
+  };
+}
+
+/**
+ * 내신 구역의 열 하나에서 논리 키를 만든다.
+ *
+ * 반영비가 전체(100)면 조합 이름만 쓰고, 아니면 비를 괄호로 붙인다.
+ * 그래야 `전교과`와 `전교과(2/4/4)`가 서로 다른 열로 남는다.
+ */
+export function gpaKeyOf(label) {
+  const combo = String(label.top ?? '').trim();
+  if (combo === '') return null;
+  const ratio = String(label.sub ?? '').trim();
+  const whole = WHOLE_RATIOS.has(normalizeLabel(ratio).tight);
+  return whole ? `gpa.${combo}` : `gpa.${combo}(${ratio})`;
+}
+
+/** 수능 구역의 열 하나에서 논리 키를 만든다. */
+export function suneungKeyOf(label) {
+  const area = String(label.top ?? '').trim();
+  if (area === '') return null;
+  // 항목 이름이 없으면 등급만 있는 양식이다 (센진학)
+  const part = PART_BY_LABEL.get(normalizeLabel(label.sub).tight) ?? 'grade';
+  return `suneung.${area}.${part}`;
+}
+
+// ── 값으로 교차검증 ──────────────────────────────────────────────────────────
+
+/**
+ * 논리 필드마다 값이 어느 범위에 있어야 하는지.
+ *
+ * 이름이 맞아 보여도 값이 전혀 다른 범위면 잘못 짚은 것이다.
+ * **배정을 지우고 비워 둔다** — 조용히 틀린 값이 이 시스템에서 가장 위험하다(§5).
+ */
+const VALUE_RANGE = {
+  gpa: { min: 1, max: 9, label: '내신 1.00~9.00' },
+  'suneung.percentile': { min: 0, max: 100, label: '백분위 0~100' },
+  'suneung.stdScore': { min: 0, max: 200, label: '표준점수 0~200' },
+  'suneung.grade': { min: 1, max: 9, label: '수능 등급 1~9' },
+  quota: { min: 0, max: 100000, label: '모집인원' },
+  sourceYear: { min: 1990, max: 2100, label: '연도 네 자리' }
+};
+
+/** @param {string} key */
+function rangeFor(key) {
+  if (key.startsWith('gpa.')) return VALUE_RANGE.gpa;
+  if (key.startsWith('suneung.')) {
+    const part = key.split('.')[2];
+    return VALUE_RANGE[`suneung.${part}`] ?? null;
+  }
+  return VALUE_RANGE[key] ?? null;
+}
+
+/** 값이 범위에 드는 비율. 값이 아예 없으면 null — 검증할 거리가 없다는 뜻이다. */
+export function fitRatio(values, range) {
+  let seen = 0;
+  let inside = 0;
+  for (const raw of values) {
+    if (raw === null || raw === undefined || String(raw).trim() === '') continue;
+    seen += 1;
+    const value = Number(String(raw).replace(/,/g, ''));
+    if (Number.isFinite(value) && value >= range.min && value <= range.max) inside += 1;
+  }
+  return seen === 0 ? null : inside / seen;
+}
+
+/** 이보다 적게 맞으면 잘못 짚은 것으로 본다. */
+const FIT_FLOOR = 0.6;
+
+// ── 해석 ────────────────────────────────────────────────────────────────────
+
+/**
+ * @typedef {object} Resolution
+ * @property {number} headerStart 헤더가 시작하는 행
+ * @property {number} headerRows 헤더 줄 수
+ * @property {Record<string, number>} columns 논리 키 → 열 번호
+ * @property {{index: number, label: string, reason: string}[]} unresolved 짚지 못한 열
+ * @property {string[]} notes 사람이 읽을 설명
+ * @property {import('./headerBlock.js').HeaderLabel[]} labels
+ */
+
+/**
+ * 헤더 블록이 정해졌다는 전제에서 열을 푼다.
+ *
+ * @param {unknown[][]} grid 헤더가 첫 줄에 오도록 이미 잘라 둔 격자
+ * @param {number} headerRows
+ * @param {number} [sampleRows] 값 검증에 쓸 행 수
+ * @returns {Resolution}
+ */
+export function resolveColumns(grid, headerRows = 1, sampleRows = 200) {
+  const labels = buildHeaderLabels(grid, headerRows);
+  const body = bodyRows(grid, headerRows).slice(0, sampleRows);
+  const sections = findSections(labels);
+  const notes = [];
+
+  /** @type {Map<number, string>} 열 번호 → 논리 키 */
+  const taken = new Map();
+  /** @type {Map<string, number>} 논리 키 → 열 번호 */
+  const columns = new Map();
+  /** @type {Map<number, string>} 짚지 못한 이유 */
+  const why = new Map();
+
+  const claim = (index, key) => {
+    if (taken.has(index) || columns.has(key)) return false;
+    taken.set(index, key);
+    columns.set(key, index);
+    return true;
+  };
+
+  const inSection = (index, section) => section !== null && index >= section.start && index < section.end;
+
+  // 1. 구역이 정해진 열부터 집는다. 이름 매칭이 `국어`를 가로채기 전에 끝내야 한다
+  for (let index = 0; index < labels.length; index += 1) {
+    const key = inSection(index, sections.gpa) ? gpaKeyOf(labels[index])
+      : inSection(index, sections.suneung) ? suneungKeyOf(labels[index])
+        : null;
+    if (key === null) continue;
+    if (!isKnownFieldKey(key)) { why.set(index, `만들 수 없는 필드 이름입니다: ${key}`); continue; }
+    if (!claim(index, key)) why.set(index, `${key}는 앞선 열이 이미 차지했습니다`);
+  }
+
+  // 2. 나머지는 이름으로 겨룬다. 점수가 높은 짝부터 확정하고, 한 열에 한 필드만 준다
+  const bids = [];
+  for (let index = 0; index < labels.length; index += 1) {
+    if (taken.has(index)) continue;
+    if (inSection(index, sections.gpa) || inSection(index, sections.suneung)) continue;
+    const label = normalizeLabel(labels[index].label);
+    if (label.tight === '') continue;
+    for (const rule of synonyms.scalars) {
+      const score = scoreLabel(label, rule);
+      if (score >= SCORES.threshold) bids.push({ index, key: rule.key, score });
+    }
+  }
+  // 점수 내림차순, 같으면 왼쪽 열이 이긴다 — 병합셀 때문에 같은 이름이 연달아 나온다
+  bids.sort((left, right) => right.score - left.score || left.index - right.index);
+  for (const bid of bids) claim(bid.index, bid.key);
+
+  // 3. 값으로 교차검증한다. 이름이 맞아 보여도 값이 딴 세상이면 지운다
+  for (const [key, index] of [...columns]) {
+    const range = rangeFor(key);
+    if (!range) continue;
+    const ratio = fitRatio(body.map((row) => row?.[index]), range);
+    if (ratio === null || ratio >= FIT_FLOOR) continue;
+    columns.delete(key);
+    taken.delete(index);
+    why.set(index, `${labels[index].label}의 값이 ${range.label}에 맞지 않아 ${key}로 보지 않았습니다`);
+    notes.push(`${labels[index].label} 열을 ${key}로 짚었다가 값이 ${range.label} 밖이라 물렀습니다.`);
+  }
+
+  // 4. `학년` 열에 학년(3)이 아니라 연도(2026)가 들어 있는 양식이 있다 (§3의 함정).
+  //    이름으로는 갈리지 않으므로 값으로 판별해 승격시킨다
+  const schoolYearAt = columns.get('schoolYear');
+  if (schoolYearAt !== undefined && !columns.has('sourceYear')) {
+    const asYear = fitRatio(body.map((row) => row?.[schoolYearAt]), VALUE_RANGE.sourceYear);
+    if (asYear !== null && asYear >= 0.9) {
+      columns.delete('schoolYear');
+      columns.set('sourceYear', schoolYearAt);
+      taken.set(schoolYearAt, 'sourceYear');
+      notes.push(`'${labels[schoolYearAt].label}' 열에 학년이 아니라 연도가 들어 있어 연도 열로 보았습니다. 고3 년도인지 학년도인지는 사람이 정합니다.`);
+    }
+  }
+
+  const unresolved = [];
+  for (let index = 0; index < labels.length; index += 1) {
+    if (taken.has(index)) continue;
+    const label = labels[index].label;
+    if (!label) continue;
+    unresolved.push({ index, label, reason: why.get(index) ?? '사전에 없는 이름입니다' });
+  }
+
+  return {
+    headerStart: 0,
+    headerRows,
+    columns: Object.fromEntries(columns),
+    unresolved,
+    notes,
+    labels
+  };
+}
+
+/**
+ * 헤더가 몇 번째 줄에서 몇 줄인지까지 알아내 푼다.
+ *
+ * 줄 수를 눈으로 정하는 규칙을 쌓는 대신 **해 보고 가장 잘 풀린 것을 남긴다.**
+ * 규칙은 양식 하나를 볼 때마다 늘어나지만, 결과를 견주는 것은 양식이 몇이든 같다.
+ *
+ * @param {unknown[][]} grid
+ * @param {{sampleRows?: number}} [options]
+ * @returns {Resolution}
+ */
+export function resolveSheet(grid, { sampleRows = 200 } = {}) {
+  const rows = grid ?? [];
+  const isEmptyRow = (row) => !(row ?? []).some((cell) => String(cell ?? '').trim() !== '');
+
+  let best = null;
+  for (let start = 0; start <= Math.min(MAX_HEADER_START, Math.max(0, rows.length - 1)); start += 1) {
+    if (isEmptyRow(rows[start])) continue;
+    for (let headerRows = 1; headerRows <= MAX_HEADER_ROWS; headerRows += 1) {
+      if (start + headerRows >= rows.length) break;
+      const attempt = resolveColumns(rows.slice(start), headerRows, sampleRows);
+      attempt.headerStart = start;
+      // 많이 푼 쪽이 이기고, 같으면 머리줄이 짧은 쪽·위쪽에서 시작한 쪽이 이긴다
+      const size = Object.keys(attempt.columns).length;
+      const bestSize = best ? Object.keys(best.columns).length : -1;
+      if (size > bestSize
+        || (size === bestSize && best && (headerRows < best.headerRows || start < best.headerStart))) {
+        best = attempt;
+      }
+    }
+  }
+
+  return best ?? resolveColumns(rows, 1, sampleRows);
+}
