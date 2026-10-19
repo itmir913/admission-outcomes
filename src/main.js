@@ -35,13 +35,13 @@ import { loadView, saveView, forgetView, pruneView, emptyView } from './ui/prefs
 const CURRENT_YEAR = new Date().getFullYear();
 
 const dom = {
-  단계: pick('#단계'),
   요약: pick('#요약'),
+  요약띠: pick('#요약띠'),
   시작화면: pick('#시작화면'),
   본화면: pick('#본화면'),
   필터판: pick('#필터판'),
+  필터막: pick('#필터막'),
   검색: /** @type {HTMLInputElement} */ (pick('#검색')),
-  건수: pick('#건수'),
   칩줄: pick('#칩줄'),
   알림줄: pick('#알림줄'),
   표: pick('#표'),
@@ -92,7 +92,7 @@ const table = createTable({
   }
 });
 
-// ── 조건 좁히기 ───────────────────────────────────────────────────────────────
+// ── 필터 ──────────────────────────────────────────────────────────────────────
 const filters = createFilters({
   mount: dom.필터판,
   read: () => ({
@@ -105,28 +105,94 @@ const filters = createFilters({
     state.view = { ...state.view, filters: next };
     saveView(state.view);
     refresh();
-  }
+  },
+  onClose: () => 필터판보이기(false)
 });
+
+/**
+ * 좁은 화면에서 필터 패널을 열고 닫는다.
+ *
+ * 넓은 화면에서는 `lg:block`이 늘 켜 두므로 여기서 할 일이 없다 — `hidden`만 다룬다.
+ */
+function 필터판보이기(on) {
+  dom.필터판.classList.toggle('hidden', !on);
+  dom.필터막.classList.toggle('hidden', !on);
+}
 
 // ── 다시 그리기 ───────────────────────────────────────────────────────────────
 
-/** 상단 3단계 표시. 지금 어디인지 늘 보이게 둔다 (§7). */
-function paintSteps(hasData, narrowed) {
-  const steps = [
-    { label: '① 불러오기', done: hasData },
-    { label: '② 조건 좁히기', done: narrowed },
-    { label: '③ 사례 보기', done: false }
-  ];
-  clear(dom.단계).append(...steps.flatMap((step, index) => [
-    index > 0 ? el('li', { class: 'text-line', attrs: { 'aria-hidden': 'true' }, text: '→' }) : null,
-    el('li', {
-      class: `rounded-lg px-2 py-1 ${step.done ? 'bg-brand-soft text-brand' : ''}`,
-      text: step.label
-    })
-  ].filter(Boolean)));
+/**
+ * 지금 보이는 지원 건을 판정별로 센다.
+ *
+ * 읽지 못한 표기(`unknown`)와 기록이 없는 건(`none`)을 합격에도 불합격에도 넣지 않는다.
+ * 어느 한쪽에 밀어 넣으면 합격률이 조용히 틀리고, 틀린 티가 나지 않는다(§5).
+ *
+ * @param {object[]} rows
+ */
+export function tallyOutcomes(rows) {
+  const tally = { 지원: rows.length, 합격: 0, 충원합격: 0, 불합격: 0, 미상: 0, 학생: 0 };
+  const students = new Set();
+  for (const row of rows) {
+    if (row.sid) students.add(row.sid);
+    const code = row['#outcome']?.code;
+    if (code === 'pass') tally.합격 += 1;
+    else if (code === 'waitPass') tally.충원합격 += 1;
+    else if (code === 'fail') tally.불합격 += 1;
+    else tally.미상 += 1;
+  }
+  tally.학생 = students.size;
+  return tally;
 }
 
-/** 활성 필터 칩. 하나씩 뗄 수 있고 전체 해제도 있다 (§7). */
+/**
+ * 합격률. 분모는 **판정을 읽어 낸 지원 건수**다.
+ *
+ * 전체 건수로 나누면 읽지 못한 표기가 많은 해일수록 합격률이 낮게 나오는데,
+ * 그건 그 해 실적이 아니라 우리 사전의 구멍이다.
+ *
+ * @returns {number|null} 셀 수 있는 건이 하나도 없으면 null
+ */
+export function passRate(tally) {
+  const judged = tally.합격 + tally.충원합격 + tally.불합격;
+  return judged === 0 ? null : (tally.합격 + tally.충원합격) / judged;
+}
+
+/**
+ * 요약 띠 (§7 · plan.md §6).
+ *
+ * **측정값의 정의를 늘 문장으로 함께 둔다.** 상담 중에 숫자의 근거를 설명하지
+ * 못하면 그 숫자는 쓸 수 없다. "합격 12"가 건수인지 사람 수인지는 보는 사람마다 다르게 읽는다.
+ */
+function paintSummary(visible, total) {
+  const tally = tallyOutcomes(visible);
+  const rate = passRate(tally);
+  const 걸러짐 = visible.length !== total;
+
+  const cell = (name, value, tone = '') => el('div', { class: `stat ${tone}` }, [
+    el('p', { class: 'stat-name', text: name }),
+    el('p', { class: 'stat-value', text: value })
+  ]);
+
+  clear(dom.요약띠).append(el('div', { class: 'card overflow-hidden' }, [
+    el('div', { class: 'flex flex-wrap divide-x divide-line' }, [
+      cell(걸러짐 ? `지원 (전체 ${total})` : '지원', tally.지원),
+      cell('학생', tally.학생),
+      cell('합격', tally.합격, 'text-pass'),
+      cell('충원합격', tally.충원합격, 'text-wait'),
+      cell('불합격', tally.불합격, 'text-fail'),
+      cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`),
+      tally.미상 > 0 ? cell('판정 미상', tally.미상, 'text-ink-soft') : null
+    ].filter(Boolean)),
+    el('p', {
+      class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-sm text-ink-soft',
+      text: tally.미상 > 0
+        ? '합격률 = (합격 + 충원합격) ÷ 판정을 읽어 낸 지원 건수. 판정 미상 건은 분모에서 빠집니다.'
+        : '합격률 = (합격 + 충원합격) ÷ 지원 건수. 사람 수가 아니라 지원 건수 기준입니다.'
+    })
+  ]));
+}
+
+/** 걸려 있는 필터 칩. 하나씩 뗄 수 있고 전체 해제도 있다 (§7). */
 function paintChips() {
   clear(dom.칩줄);
   if (state.view.filters.length === 0) return;
@@ -137,7 +203,7 @@ function paintChips() {
       el('button', {
         class: 'text-brand/70 hover:text-brand',
         text: '✕',
-        attrs: { type: 'button', 'aria-label': `${fieldLabel(filter.key)} 조건 해제` },
+        attrs: { type: 'button', 'aria-label': `${fieldLabel(filter.key)} 필터 해제` },
         on: {
           click: () => {
             state.view = { ...state.view, filters: state.view.filters.filter((item) => item !== filter) };
@@ -149,7 +215,7 @@ function paintChips() {
     ]));
   }
   dom.칩줄.append(el('button', {
-    class: 'btn btn-sm', text: '조건 전체 해제', attrs: { type: 'button' },
+    class: 'btn btn-sm shrink-0', text: '필터 전체 해제', attrs: { type: 'button' },
     on: {
       click: () => {
         state.view = { ...state.view, filters: [] };
@@ -195,8 +261,7 @@ function refresh({ keepScroll = false } = {}) {
     ? `파일 ${state.dataset.files?.length ?? 0}개 · 학생 ${students}명 · 지원 ${state.rows.length}건`
     : '';
 
-  paintSteps(hasData, state.view.filters.length > 0 || state.search.trim() !== '');
-  if (!hasData) { clear(dom.칩줄); clear(dom.알림줄); return; }
+  if (!hasData) { clear(dom.칩줄); clear(dom.알림줄); clear(dom.요약띠); return; }
 
   const visible = applyQuery(state.rows, {
     filters: state.view.filters,
@@ -204,11 +269,9 @@ function refresh({ keepScroll = false } = {}) {
     sorts: state.view.sorts
   });
 
-  dom.건수.textContent = visible.length === state.rows.length
-    ? `${state.rows.length}건`
-    : `${state.rows.length}건 중 ${visible.length}건`;
-  dom.표없음.textContent = '조건에 맞는 지원 기록이 없습니다. 위 칩에서 조건을 하나씩 떼어 보세요.';
+  dom.표없음.textContent = '걸려 있는 필터에 맞는 지원 기록이 없습니다. 위 칩에서 필터를 하나씩 떼어 보세요.';
 
+  paintSummary(visible, state.rows.length);
   paintChips();
   paintNotices();
   filters.render();
@@ -288,7 +351,7 @@ async function handleFiles(files) {
 bindDropzone({
   zone: pick('#투하영역'),
   input: dom.파일입력,
-  triggers: [pick('#파일고르기')],
+  triggers: [pick('#파일선택')],
   onFiles: handleFiles
 });
 
@@ -298,8 +361,17 @@ dom.검색.addEventListener('input', debounce((event) => {
 }, 180));
 
 pick('#필터토글').addEventListener('click', () => {
-  dom.필터판.classList.toggle('hidden');
-  dom.필터판.classList.toggle('block');
+  필터판보이기(dom.필터판.classList.contains('hidden'));
+});
+
+// 뒤를 덮은 막을 누르면 닫는다. 덮개를 눌러 닫는 것은 사람이 먼저 해 보는 동작이다
+dom.필터막.addEventListener('click', () => 필터판보이기(false));
+
+// Esc로도 닫는다. 대화상자가 열려 있으면 그쪽이 먼저 받는다
+globalThis.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (dom.필터막.classList.contains('hidden')) return;
+  필터판보이기(false);
 });
 
 pick('#정렬해제').addEventListener('click', () => {
@@ -310,7 +382,7 @@ pick('#정렬해제').addEventListener('click', () => {
 
 pick('#인쇄').addEventListener('click', () => globalThis.print());
 
-pick('#열고르기').addEventListener('click', () => {
+pick('#열선택').addEventListener('click', () => {
   openColumns(dom.열상자, {
     registry: state.registry,
     columns: state.view.columns,

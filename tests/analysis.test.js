@@ -131,7 +131,7 @@ describe('레지스트리', () => {
 describe('필터', () => {
   const rows = buildRows(dataset);
 
-  it('고른 값만 남긴다', () => {
+  it('선택한 값만 남긴다', () => {
     const kept = applyQuery(rows, { filters: [{ key: 'univ', op: 'in', values: ['가온대학교'] }] });
     expect(kept).toHaveLength(2);
   });
@@ -165,7 +165,7 @@ describe('필터', () => {
     expect(matchesFilter({ g: 5 }, { key: 'g', op: 'range', min: null, max: 3 })).toBe(false);
   });
 
-  it('빈칸을 골라낼 수 있다', () => {
+  it('빈칸만 남길 수 있다', () => {
     expect(applyQuery(rows, { filters: [{ key: 'register', op: 'blank' }] })).toHaveLength(2);
     expect(applyQuery(rows, { filters: [{ key: 'register', op: 'filled' }] })).toHaveLength(1);
   });
@@ -250,24 +250,32 @@ describe('헤더 클릭', () => {
     expect(sorts).toEqual([]);
   });
 
-  it('Shift 없이 누르면 다른 정렬을 걷어낸다', () => {
-    const sorts = toggleSort([{ key: 'univ', dir: 'asc' }], 'dept');
-    expect(sorts).toEqual([{ key: 'dept', dir: 'asc' }]);
-  });
-
-  it('Shift를 누른 채면 차순위로 쌓인다', () => {
+  it('그냥 누르면 1순위 · 2순위로 쌓인다', () => {
+    // 먼저 누른 열이 1순위다. 쌓으려고 Shift를 요구하면 아무도 쌓지 않는다
     let sorts = toggleSort([], 'univ');
-    sorts = toggleSort(sorts, 'dept', true);
-    sorts = toggleSort(sorts, 'gpa.전교과', true);
+    sorts = toggleSort(sorts, 'dept');
+    sorts = toggleSort(sorts, 'gpa.전교과');
     expect(sorts.map((sort) => sort.key)).toEqual(['univ', 'dept', 'gpa.전교과']);
   });
 
-  it('쌓인 정렬 하나만 방향을 바꿔도 순번은 유지된다', () => {
-    // 헤더의 ①②③ 배지가 클릭할 때마다 뒤바뀌면 쓸 수 없다
+  it('쌓인 정렬 하나만 방향을 바꿔도 순번은 그 자리다', () => {
+    // 헤더의 ①②③ 배지가 방향을 바꿀 때마다 뒤바뀌면 왜 저렇게 섞였는지 설명할 수 없다
     let sorts = [{ key: 'univ', dir: 'asc' }, { key: 'dept', dir: 'asc' }];
-    sorts = toggleSort(sorts, 'univ', true);
-    expect(sorts.map((sort) => sort.key)).toEqual(['dept', 'univ']);
+    sorts = toggleSort(sorts, 'univ');
+    expect(sorts.map((sort) => sort.key)).toEqual(['univ', 'dept']);
     expect(sorts.find((sort) => sort.key === 'univ').dir).toBe('desc');
+  });
+
+  it('Shift를 누른 채면 이 열만 남는다', () => {
+    const sorts = toggleSort([{ key: 'univ', dir: 'asc' }], 'dept', true);
+    expect(sorts).toEqual([{ key: 'dept', dir: 'asc' }]);
+  });
+
+  it('Shift로 같은 열을 끝까지 누르면 정렬이 사라진다', () => {
+    let sorts = toggleSort([{ key: 'univ', dir: 'asc' }], 'univ', true);
+    expect(sorts).toEqual([{ key: 'univ', dir: 'desc' }]);
+    sorts = toggleSort(sorts, 'univ', true);
+    expect(sorts).toEqual([]);
   });
 });
 

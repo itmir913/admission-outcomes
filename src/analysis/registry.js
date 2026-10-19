@@ -173,26 +173,25 @@ export function buildRegistry(rows) {
  * 표를 처음 열었을 때 보일 열.
  *
  * 대교협은 81열이다. 전부 펼쳐 놓고 시작하면 아무것도 읽을 수 없다.
- * 상담에서 먼저 보는 것부터 내놓고 나머지는 열 고르기로 켜게 한다.
+ * 상담에서 먼저 보는 것부터 내놓고 나머지는 열 선택으로 켜게 한다.
  *
  * @param {Field[]} registry
  * @returns {string[]}
  */
 export function defaultColumns(registry) {
   const has = new Set(registry.map((field) => field.key));
-  const wanted = [
-    'sid', 'cohortYear', 'univ', 'dept', 'track', 'admType', 'admName',
-    'outcome', 'stage1'
-  ].filter((key) => has.has(key));
-
   const gpa = primaryGpaField(registry);
-  if (gpa) wanted.push(gpa.key);
 
-  return wanted;
+  // 앞의 셋은 좌측에 고정되므로(prefs.js), **넷째가 가로로 밀어도 처음 보이는 열**이다.
+  // 상담에서 대학 다음에 보는 것은 합·불과 내신이지 모집단위가 아니다.
+  return [
+    'sid', 'cohortYear', 'univ',
+    'outcome', gpa?.key, 'dept', 'track', 'admType', 'admName', 'stage1'
+  ].filter((key) => key && has.has(key));
 }
 
 /**
- * 내신 조합 하나를 대표로 고른다.
+ * 내신 조합 하나를 대표로 정한다.
  *
  * 조합이 스무 개 넘게 오는 양식이 있어서 전부 펼칠 수 없다. 전과목 평균을 먼저 찾는다 —
  * 반영 조합 중 하나를 무작정 고르면 '과학 6.88'처럼 그 학생을 대표하지 않는 값이

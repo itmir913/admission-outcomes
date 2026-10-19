@@ -94,7 +94,7 @@ export function identityKeys(cohortYear, identity = {}) {
 
   // **주키를 만들 수 있으면 이름 키를 만들지 않는다.**
   // 만들면 학번으로 식별된 사람과 반·번호로 식별된 사람이 이름만 같아도 한 사람으로 합쳐진다.
-  // 두 사람인지 한 사람인지는 자료만 봐서는 알 수 없으므로, 합치지 않는 쪽을 고른다.
+  // 두 사람인지 한 사람인지는 자료만 봐서는 알 수 없으므로, 합치지 않는 쪽을 택한다.
   if (keys.length > 0) return keys.sort((left, right) => right.strength - left.strength);
 
   // 여기부터는 주키가 없는 행이다. 이름에 기대는 수밖에 없다

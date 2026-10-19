@@ -1,5 +1,5 @@
 /**
- * 곁다리 화면 둘 — 불러온 파일 목록과 열 고르기.
+ * 곁다리 화면 둘 — 불러온 파일 목록과 열 선택.
  *
  * 파일 목록은 설정 깊숙이 숨기지 않는다. 무엇이 들어 있는지 늘 확인할 수 있어야
  * 사람이 이 도구를 믿고 쓴다(CLAUDE.md §1).
@@ -83,9 +83,9 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
 }
 
 /**
- * 열 고르기 — 표시/숨김 · 차례 바꾸기 · 좌측 고정.
+ * 열 선택 — 표시/숨김 · 차례 바꾸기 · 좌측 고정.
  *
- * 대교협은 81열이다. 전부 켜 놓고 시작할 수 없어서 고르는 화면이 반드시 필요하다.
+ * 대교협은 81열이다. 전부 켜 놓고 시작할 수 없어서 선택하는 화면이 반드시 필요하다.
  *
  * @param {HTMLDialogElement} dialog
  * @param {object} options
@@ -99,8 +99,10 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
   let pinCount = pinned;
   const byKey = new Map(registry.map((field) => [field.key, field]));
 
-  const shownList = el('ol', { class: 'mt-2 space-y-1' });
-  const pickList = el('div', { class: 'mt-2 max-h-[26rem] space-y-4 overflow-y-auto pr-1' });
+  // 두 목록이 각자 스크롤한다. 대화상자까지 함께 스크롤되면 스크롤바가 둘로 겹쳐
+  // 어느 쪽이 움직이는지 알 수 없다
+  const shownList = el('ol', { class: 'mt-2 max-h-[22rem] space-y-1 overflow-y-auto pr-1' });
+  const pickList = el('div', { class: 'mt-2 max-h-[22rem] space-y-4 overflow-y-auto pr-1' });
   const pinNote = el('p', { class: 'mt-1 text-sm text-ink-soft' });
 
   function move(key, delta) {
@@ -192,15 +194,17 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
       : `앞 ${pinCount}개 열이 왼쪽에 붙어 있습니다.`;
   }
 
-  const body = el('div', { class: 'grid gap-6 lg:grid-cols-2' }, [
+  // 좁은 화면에서 좌우로 나누면 「자료에 있는 열」이 접혀 내려가 안 보인다.
+  // 그 목록이 이 화면에 오는 이유 자체라, 768px부터 갈라 둘 다 한눈에 둔다
+  const body = el('div', { class: 'grid gap-5 md:grid-cols-2' }, [
     el('section', {}, [
       el('h3', { class: 'text-lg font-bold tracking-tight', text: '보이는 열' }),
-      el('p', { class: 'text-sm text-ink-soft', text: '끌어다 놓거나 화살표로 차례를 바꿉니다.' }),
+      el('p', { class: 'text-sm text-ink-soft', text: '끌어다 놓거나 화살표로 차례를 바꿉니다. 표의 머리줄을 끌어도 됩니다.' }),
       shownList,
       el('div', { class: 'mt-4' }, [
         el('label', { class: 'text-base font-semibold', text: '왼쪽에 고정할 열 수' }),
         el('input', {
-          class: 'field mt-1 w-24 text-center num',
+          class: 'field mt-1 w-24 text-center figure',
           attrs: { type: 'number', min: 0, max: 6, step: 1, value: pinCount, 'aria-label': '고정할 열 수' },
           on: { change: (event) => { pinCount = Math.max(0, Math.min(6, Number(event.target.value) || 0)); paint(); } }
         }),
@@ -217,7 +221,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
   paint();
 
   openDialog(dialog, dialogFrame({
-    title: '열 고르기',
+    title: '열 선택',
     body,
     onClose: () => dialog.close(),
     footer: el('div', { class: 'flex w-full items-center justify-end gap-3' }, [

@@ -203,7 +203,7 @@ describe('프로파일 묶음', () => {
   });
 });
 
-describe('프로파일 고르기', () => {
+describe('프로파일 선택', () => {
   const fingerprint = 'b'.repeat(64);
 
   it('지문이 맞으면 학년도와 무관하게 쓴다', () => {

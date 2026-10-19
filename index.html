@@ -11,95 +11,125 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'" />
 </head>
-<body class="min-h-screen">
+<body>
   <a href="#표" class="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-white">
     표로 건너뛰기
   </a>
 
-  <header class="no-print sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
-    <div class="flex flex-wrap items-center gap-x-6 gap-y-3 px-6 py-3">
-      <h1 class="text-xl font-bold tracking-tight">진학결과 분석</h1>
+  <!--
+    머리줄은 한 줄이다. 줄이 늘면 표가 그만큼 줄어드는데,
+    이 도구에서 세로 한 줄은 지원 기록 한 건이다.
+  -->
+  <header class="no-print flex h-bar shrink-0 items-center gap-4 border-b border-line bg-surface px-5">
+    <h1 class="shrink-0 whitespace-nowrap text-lg font-bold tracking-tight">진학결과 분석</h1>
+    <p id="요약" class="min-w-0 truncate text-sm text-ink-soft"></p>
 
-      <!-- ① → ② → ③ 를 늘 보이게 둔다 (§7 직관적으로) -->
-      <ol id="단계" class="flex items-center gap-1 text-sm font-medium text-ink-soft"></ol>
-
-      <div class="ml-auto flex items-center gap-2">
-        <p id="요약" class="mr-2 text-sm text-ink-soft"></p>
-        <button type="button" id="파일열기" class="btn btn-sm">불러온 파일</button>
-        <!-- 「전체 지우기」는 화면 상단에 늘 보인다. 설정 깊숙이 숨기지 않는다 (§1) -->
-        <button type="button" id="전체지우기" class="btn btn-sm btn-danger">전체 지우기</button>
-      </div>
+    <div class="ml-auto flex shrink-0 items-center gap-2">
+      <button type="button" id="파일열기" class="btn btn-sm">불러온 파일</button>
+      <!-- 「전체 지우기」는 화면 상단에 늘 보인다. 설정 깊숙이 숨기지 않는다 (§1) -->
+      <button type="button" id="전체지우기" class="btn btn-sm btn-danger">전체 지우기</button>
     </div>
   </header>
 
   <!-- 자료가 없을 때: 불러오기 화면 -->
-  <section id="시작화면" class="mx-auto hidden max-w-3xl px-6 py-16">
-    <h2 class="text-3xl font-bold tracking-tight">과년도 진학결과를 불러옵니다</h2>
-    <p class="mt-3 text-lg text-ink-soft">
-      엑셀 파일을 여러 개 한꺼번에 올리거나, 그것들을 담은 zip 하나를 올리세요.
-    </p>
+  <section id="시작화면" class="hidden min-h-0 flex-1 overflow-y-auto">
+    <div class="mx-auto max-w-3xl px-6 py-14">
+      <h2 class="text-3xl font-bold tracking-tight">과년도 진학결과를 불러옵니다</h2>
+      <p class="mt-3 text-lg text-ink-soft">
+        엑셀 파일을 여러 개 한꺼번에 올리거나, 그것들을 담은 zip 하나를 올리세요.
+      </p>
 
-    <div id="투하영역"
-         class="card mt-8 flex flex-col items-center gap-4 border-2 border-dashed px-6 py-14 text-center transition">
-      <p class="text-lg font-medium">여기로 파일을 끌어다 놓으세요</p>
-      <p class="text-ink-soft">.xlsx · .xls · .zip</p>
-      <button type="button" id="파일고르기" class="btn btn-primary">파일 고르기</button>
-      <input type="file" id="파일입력" class="sr-only" multiple
-             accept=".xlsx,.xlsm,.xlsb,.xls,.zip" />
-    </div>
+      <div id="투하영역"
+           class="card mt-8 flex flex-col items-center gap-4 border-2 border-dashed px-6 py-14 text-center transition-colors">
+        <p class="text-lg font-medium">여기로 파일을 끌어다 놓으세요</p>
+        <p class="text-ink-soft">.xlsx · .xls · .zip</p>
+        <button type="button" id="파일선택" class="btn btn-primary">파일 선택</button>
+        <input type="file" id="파일입력" class="sr-only" multiple
+               accept=".xlsx,.xlsm,.xlsb,.xls,.zip" />
+      </div>
 
-    <div class="card mt-6 px-6 py-5 text-base leading-relaxed text-ink-soft">
-      <p class="font-semibold text-ink">이 도구가 지키는 약속</p>
-      <ul class="mt-2 list-disc space-y-1 pl-5">
-        <li><strong class="text-ink">이름과 학번은 보관하지 않습니다.</strong> 익명 ID를 만드는 순간에만 쓰고 그 자리에서 버립니다.</li>
-        <li><strong class="text-ink">서버로 아무것도 보내지 않습니다.</strong> 모든 처리는 이 브라우저 안에서 끝납니다.</li>
-        <li><strong class="text-ink">내보내기 기능이 없습니다.</strong> 원본 엑셀 관리 책임은 학교에 있습니다.</li>
-        <li>불러온 자료는 이 브라우저에만 남습니다. 상단 <strong class="text-ink">전체 지우기</strong>로 언제든 지웁니다.</li>
-      </ul>
+      <div class="card mt-6 px-6 py-5 text-base leading-relaxed text-ink-soft">
+        <p class="font-semibold text-ink">이 도구가 지키는 약속</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li><strong class="text-ink">이름과 학번은 보관하지 않습니다.</strong> 익명 ID를 만드는 순간에만 쓰고 그 자리에서 버립니다.</li>
+          <li><strong class="text-ink">서버로 아무것도 보내지 않습니다.</strong> 모든 처리는 이 브라우저 안에서 끝납니다.</li>
+          <li><strong class="text-ink">내보내기 기능이 없습니다.</strong> 원본 엑셀 관리 책임은 학교에 있습니다.</li>
+          <li>불러온 자료는 이 브라우저에만 남습니다. 상단 <strong class="text-ink">전체 지우기</strong>로 언제든 지웁니다.</li>
+        </ul>
+      </div>
     </div>
   </section>
 
-  <!-- 자료가 있을 때: 조건 좁히기 + 표 -->
-  <main id="본화면" class="hidden">
-    <div class="flex items-start">
-      <aside id="필터판" class="no-print sticky top-[3.75rem] hidden h-[calc(100vh-3.75rem)] w-80 shrink-0 overflow-y-auto border-r border-line bg-surface px-4 py-5 lg:block"></aside>
+  <!-- 자료가 있을 때: 필터 + 표 -->
+  <main id="본화면" class="hidden min-h-0 flex-1">
+    <div class="relative flex h-full min-h-0">
+      <!--
+        좁은 화면에서는 표 위로 덮어 연다. 나란히 두면 320px을 떼어 주느라
+        정작 읽어야 할 표가 한 열만 남는다.
 
-      <div class="min-w-0 flex-1 px-4 py-4 lg:px-6">
-        <div class="no-print flex flex-wrap items-center gap-3">
-          <button type="button" id="필터토글" class="btn btn-sm lg:hidden">조건</button>
-          <div class="relative min-w-0 flex-1 sm:max-w-md">
-            <input type="search" id="검색" class="field pl-11" placeholder="대학·학과·전형 검색 (여러 낱말은 모두 포함)"
+        **덮어 열면 닫는 길을 반드시 함께 둔다.** 패널이 「필터」 단추를 가려 버리므로,
+        연 단추를 다시 눌러 닫는 길은 없는 셈이다. 뒤를 덮는 막과 패널 안의 「닫기」,
+        그리고 Esc 셋을 둔다.
+      -->
+      <div id="필터막" class="no-print absolute inset-0 z-30 hidden bg-ink/40 lg:hidden"></div>
+      <aside id="필터판"
+             class="no-print absolute inset-y-0 left-0 z-40 hidden w-80 shrink-0 overflow-y-auto border-r border-line bg-surface px-4 py-4 shadow-xl lg:static lg:block lg:shadow-none"></aside>
+
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div class="no-print flex shrink-0 items-center gap-3 px-4 py-3 lg:px-5">
+          <button type="button" id="필터토글" class="btn btn-sm lg:hidden">필터</button>
+          <div class="relative min-w-0 flex-1">
+            <input type="search" id="검색" class="field pl-10" placeholder="대학·학과·전형 검색"
                    aria-label="검색" />
-            <span aria-hidden="true" class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-soft">⌕</span>
+            <span aria-hidden="true" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft">⌕</span>
           </div>
-          <p id="건수" class="text-base font-semibold" aria-live="polite"></p>
-          <div class="ml-auto flex items-center gap-2">
-            <button type="button" id="열고르기" class="btn btn-sm">열 고르기</button>
+        </div>
+
+        <!--
+          요약 띠. 상담에서 묻는 것은 "몇 건이냐"가 아니라 "몇이 붙었냐"다.
+          분모가 무엇인지는 아래 한 줄로 늘 밝힌다 (plan.md §6).
+        -->
+        <div id="요약띠" class="shrink-0 px-4 lg:px-5" aria-live="polite"></div>
+
+        <!--
+          이 줄은 **늘 자리를 지킨다.** 칩은 걸고 떼는 것이라 수가 들쭉날쭉한데,
+          그때마다 줄이 생겼다 사라지면 표가 위아래로 들썩이고 방금 읽던 행을 놓친다.
+          오른쪽의 세 단추가 줄의 높이를 늘 붙잡아 둔다.
+
+          칩은 **줄을 바꾸지 않고 옆으로 흐른다.** 줄바꿈을 허용하면 칩 하나를 더 걸 때
+          줄이 둘이 되면서 표가 통째로 내려앉는다. 옆으로 흐르면 화면 밖으로 나간 칩이
+          생기지만, 그 대가가 표가 들썩이는 것보다 싸다.
+        -->
+        <div class="no-print flex shrink-0 items-start gap-3 px-4 pt-3 lg:px-5">
+          <div id="칩줄" class="flex min-h-9 min-w-0 flex-1 items-center gap-2 overflow-x-auto"></div>
+          <div class="flex shrink-0 items-center gap-2">
+            <button type="button" id="열선택" class="btn btn-sm">열 선택</button>
             <button type="button" id="정렬해제" class="btn btn-sm">정렬 해제</button>
             <button type="button" id="인쇄" class="btn btn-sm">인쇄</button>
           </div>
         </div>
 
-        <div id="칩줄" class="no-print mt-3 flex flex-wrap items-center gap-2"></div>
-        <div id="알림줄" class="mt-3 space-y-2"></div>
+        <div id="알림줄" class="shrink-0 space-y-2 px-4 pt-3 empty:pt-0 lg:px-5"></div>
 
-        <div id="표" tabindex="-1" class="card table-scroll mt-3 overflow-auto">
-          <table class="grid-table">
-            <colgroup id="열너비"></colgroup>
-            <thead><tr id="헤더행"></tr></thead>
-            <tbody id="본문행"></tbody>
-          </table>
+        <div class="min-h-0 flex-1 px-4 pb-4 pt-3 lg:px-5">
+          <div id="표" tabindex="-1" class="card print-open h-full overflow-auto">
+            <table class="grid-table">
+              <colgroup id="열너비"></colgroup>
+              <thead><tr id="헤더행"></tr></thead>
+              <tbody id="본문행"></tbody>
+            </table>
+          </div>
+          <p id="표없음" class="hidden px-2 py-10 text-center text-lg text-ink-soft"></p>
         </div>
-        <p id="표없음" class="hidden px-2 py-10 text-center text-lg text-ink-soft"></p>
       </div>
     </div>
   </main>
 
   <!-- 밀어 넣기 대화상자들 -->
-  <dialog id="확인상자" class="w-[min(56rem,92vw)] rounded-2xl p-0 backdrop:bg-ink/40"></dialog>
-  <dialog id="파일상자" class="w-[min(48rem,92vw)] rounded-2xl p-0 backdrop:bg-ink/40"></dialog>
-  <dialog id="열상자" class="w-[min(52rem,92vw)] rounded-2xl p-0 backdrop:bg-ink/40"></dialog>
-  <dialog id="학생상자" class="w-[min(64rem,94vw)] rounded-2xl p-0 backdrop:bg-ink/40"></dialog>
+  <dialog id="확인상자" class="w-[min(56rem,92vw)] rounded-xl p-0 backdrop:bg-ink/50"></dialog>
+  <dialog id="파일상자" class="w-[min(48rem,92vw)] rounded-xl p-0 backdrop:bg-ink/50"></dialog>
+  <dialog id="열상자" class="w-[min(58rem,94vw)] rounded-xl p-0 backdrop:bg-ink/50"></dialog>
+  <dialog id="학생상자" class="w-[min(64rem,94vw)] rounded-xl p-0 backdrop:bg-ink/50"></dialog>
 
   <div id="진행" class="fixed inset-0 z-50 hidden place-items-center bg-ink/40">
     <div class="card px-8 py-6 text-lg font-medium">불러오는 중…</div>

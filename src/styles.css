@@ -6,30 +6,47 @@
  * 본문 16px 이상, 표 행 높이 44px 이상, 클릭 대상 44px 이상.
  * 상담은 선생님과 학생이 한 화면을 **같이 들여다보는** 자리다.
  * 개발자 눈높이로 촘촘하게 짜면 둘 중 한 사람은 못 읽는다.
+ *
+ * 색을 쓰는 규칙이 하나 있다. **화면에서 채도가 높은 것은 합·불·충원뿐이다.**
+ * 그 셋만 뜻을 나르고 나머지는 전부 뜻이 없는 구조물이라, 틀·단추·강조까지
+ * 선명한 색을 쓰면 정작 읽어야 할 판정이 묻힌다. 그래서 브랜드색은 채도를 낮춰
+ * 깔고, 초록·노랑·빨강에만 채도를 남긴다.
  */
 
 @theme {
-  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
-    "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+  /*
+   * 한 벌만 쓴다. 제목용 서체를 따로 두면 글자 두 벌이 서로 밀어낸다.
+   *
+   * Pretendard를 묶어 넣지 않는다 — 배포가 단일 HTML이라 서체 파일 하나가
+   * 결과물을 두 배로 불린다(§8). 설치돼 있으면 쓰고, 없으면 OS 기본을 쓴다.
+   */
+  --font-sans: Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
 
-  --color-canvas: oklch(0.985 0.002 250);
+  /* 종이빛. 흰색이 아니라 아주 옅은 중성 회색이라 흰 카드가 떠 보인다 */
+  --color-canvas: oklch(0.972 0.003 250);
   --color-surface: oklch(1 0 0);
-  --color-line: oklch(0.9 0.005 250);
-  --color-ink: oklch(0.28 0.015 260);
-  --color-ink-soft: oklch(0.52 0.012 260);
+  --color-line: oklch(0.885 0.006 250);
+  --color-line-soft: oklch(0.945 0.004 250);
 
-  --color-brand: oklch(0.52 0.16 265);
-  --color-brand-soft: oklch(0.955 0.02 265);
+  /* 글자는 검정이 아니라 짙은 청먹이다. 종이빛 바탕과 같은 계열이라 눈이 덜 찌른다 */
+  --color-ink: oklch(0.255 0.021 253);
+  --color-ink-soft: oklch(0.505 0.016 253);
 
-  /* 결과 색. 색만으로 구분하지 않는다 — 모양(●△✕)이 늘 함께 붙는다 */
-  --color-pass: oklch(0.55 0.13 155);
-  --color-pass-soft: oklch(0.96 0.03 155);
-  --color-wait: oklch(0.62 0.14 75);
-  --color-wait-soft: oklch(0.96 0.04 85);
-  --color-fail: oklch(0.58 0.16 20);
-  --color-fail-soft: oklch(0.96 0.02 20);
+  /* 구조색. 채도를 낮게 묶어 둔다 — 판정색과 겨루면 안 된다 */
+  --color-brand: oklch(0.455 0.096 253);
+  --color-brand-soft: oklch(0.955 0.017 253);
+
+  /* 판정색. 색만으로 구분하지 않는다 — 모양(●△✕)이 늘 함께 붙는다 */
+  --color-pass: oklch(0.515 0.139 153);
+  --color-pass-soft: oklch(0.955 0.035 153);
+  --color-wait: oklch(0.585 0.132 72);
+  --color-wait-soft: oklch(0.958 0.044 82);
+  --color-fail: oklch(0.535 0.181 26);
+  --color-fail-soft: oklch(0.957 0.028 26);
 
   --spacing-row: 2.75rem; /* 44px */
+  --spacing-bar: 3.5rem;  /* 머리줄 높이. 사이드바·표가 이 값을 빼서 자리를 잡는다 */
 }
 
 @layer base {
@@ -37,8 +54,15 @@
     font-size: 17px;
   }
 
+  /*
+   * 화면이 통째로 스크롤되지 않는다.
+   *
+   * 페이지가 밀리면 머리줄과 필터가 화면 밖으로 나가고, 그 순간 "지금 무엇을
+   * 보고 있는지"가 사라진다. 스크롤하는 것은 표 하나뿐이고, 표가 남은 높이를
+   * 전부 가져간다 — 뺄셈으로 높이를 어림하면 알림이 하나 뜰 때마다 어긋난다.
+   */
   body {
-    @apply bg-canvas text-ink font-sans antialiased;
+    @apply flex h-screen flex-col overflow-hidden bg-canvas text-ink font-sans antialiased;
   }
 
   /* 키보드로 다니는 사람에게 지금 어디인지 늘 보이게 한다 */
@@ -49,40 +73,42 @@
 
 @layer components {
   .btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line
-      bg-surface px-4 text-base font-medium text-ink transition
-      hover:bg-brand-soft hover:border-brand/40 disabled:opacity-40 disabled:pointer-events-none;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line
+      bg-surface px-4 text-base font-medium text-ink transition-colors
+      hover:border-ink-soft/40 hover:bg-canvas
+      disabled:pointer-events-none disabled:opacity-40;
   }
 
   .btn-primary {
-    @apply border-transparent bg-brand text-white hover:bg-brand/90 hover:border-transparent;
+    @apply border-transparent bg-brand text-white hover:border-transparent hover:bg-brand/90;
   }
 
   .btn-danger {
-    @apply border-fail/30 text-fail hover:bg-fail-soft hover:border-fail/50;
+    @apply border-fail/30 text-fail hover:border-fail/50 hover:bg-fail-soft;
   }
 
   .btn-sm {
-    @apply min-h-9 rounded-lg px-3 text-sm;
+    @apply min-h-9 rounded-md px-3 text-sm;
   }
 
   .card {
-    @apply rounded-2xl border border-line bg-surface;
+    @apply rounded-xl border border-line bg-surface;
   }
 
   .field {
-    @apply min-h-11 w-full rounded-xl border border-line bg-surface px-4 text-base
+    @apply min-h-11 w-full rounded-lg border border-line bg-surface px-4 text-base
       text-ink placeholder:text-ink-soft/60 focus:border-brand focus:outline-none;
   }
 
-  /* 활성 필터 칩. 하나씩 눌러 뗄 수 있어야 한다 (§7) */
+  /* 걸려 있는 필터 하나. 눌러서 하나씩 뗄 수 있어야 한다 (§7) */
+  /* `shrink-0`은 칩줄이 옆으로 흐르기 때문이다 — 좁다고 글자를 눌러 찌그러뜨리지 않는다 */
   .chip {
-    @apply inline-flex min-h-9 items-center gap-2 rounded-full border border-brand/30
-      bg-brand-soft px-3 text-sm font-medium text-brand;
+    @apply inline-flex min-h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-md
+      border border-brand/25 bg-brand-soft px-3 text-sm font-medium text-brand;
   }
 
   .tag {
-    @apply inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-sm font-semibold;
+    @apply inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-sm font-semibold;
   }
   .tag-pass { @apply bg-pass-soft text-pass; }
   .tag-wait { @apply bg-wait-soft text-wait; }
@@ -90,6 +116,22 @@
   .tag-none { @apply bg-canvas text-ink-soft; }
   /* 못 읽은 표기. 조용히 넘어가지 않고 눈에 띄어야 한다 */
   .tag-unknown { @apply bg-wait-soft text-wait ring-1 ring-wait/40; }
+
+  /*
+   * 요약 띠의 칸 하나.
+   *
+   * 숫자를 크게 두고 이름을 그 위에 작게 둔다 — 상담 중에 읽는 것은 숫자이고,
+   * 이름은 한 번 익히면 다시 읽지 않는다.
+   */
+  .stat {
+    @apply flex min-w-0 flex-col justify-center px-4 py-2;
+  }
+  .stat-name {
+    @apply truncate text-sm text-ink-soft;
+  }
+  .stat-value {
+    @apply text-2xl font-bold tabular-nums;
+  }
 }
 
 @layer utilities {
@@ -100,30 +142,46 @@
    * 유틸리티 클래스로 표현할 수 없는 유일한 값이다.
    * 고정 열의 left도 앞선 열들의 실제 너비 합이라 같은 이유로 인라인이다.
    */
-  /* 표만 스크롤한다. 페이지가 통째로 밀리면 머리글과 조건이 화면 밖으로 나간다 */
-  .table-scroll {
-    max-height: calc(100vh - 12rem);
-  }
-
   .grid-table {
     @apply w-full border-collapse text-base;
     table-layout: fixed;
   }
 
   /*
-   * 한 줄로 자른다. 줄바꿈을 허용하면 행 높이가 들쭉날쭉해지고,
-   * 그러면 열 너비 조정이 무슨 뜻인지 알 수 없게 된다.
-   * 잘린 값은 셀에 마우스를 올리면 전부 보인다.
+   * **머리 칸과 몸 칸은 같은 쪽으로 선다. 지금은 왼쪽뿐이다.**
+   *
+   * 정렬을 양쪽에서 따로 정하면 한쪽만 고쳐도 아무것도 울지 않고 갈린다.
+   * 그래서 자리를 하나로 묶어 여기서만 정한다 — 숫자 열이라고 오른쪽으로
+   * 보내지 않는다. 자릿수는 `tabular-nums`가 맞춰 준다.
+   * `tests/table-align.spec.js`가 이 규칙을 지킨다.
    */
   .grid-table th,
   .grid-table td {
-    @apply overflow-hidden text-ellipsis whitespace-nowrap border-b border-line px-3 text-left align-middle;
+    @apply overflow-hidden border-b border-line-soft px-3 align-middle;
     height: var(--spacing-row);
+    text-align: left;
+    text-overflow: ellipsis;
+    /*
+     * 한 줄로 자른다. 줄바꿈을 허용하면 행 높이가 들쭉날쭉해지고,
+     * 그러면 열 너비 조정이 무슨 뜻인지 알 수 없게 된다.
+     * 잘린 값은 셀에 마우스를 올리면 전부 보인다.
+     */
+    white-space: nowrap;
   }
 
+  /*
+   * 머리줄은 짙은 띠다.
+   *
+   * 흰 바탕에 흰 머리줄을 얹으면 가로로 밀 때 머리와 몸이 한 덩어리로 보인다.
+   * 이 도구에서 가장 오래 보는 것이 표이므로, 눈에 드는 자리를 여기 하나에 쓴다.
+   */
   .grid-table thead th {
-    @apply sticky top-0 z-20 bg-surface text-sm font-semibold text-ink-soft select-none;
-    box-shadow: inset 0 -1px 0 var(--color-line);
+    @apply sticky top-0 z-20 select-none bg-ink text-sm font-semibold tracking-tight text-white;
+  }
+
+  /* 줄무늬. 14열을 가로로 훑을 때 행을 놓치지 않게 한다 */
+  .grid-table tbody tr:nth-child(even) td {
+    @apply bg-canvas/60;
   }
 
   /* 좌측 고정. 대교협 81열을 펼치면 익명 ID와 대학이 화면 밖으로 나간다 */
@@ -131,21 +189,32 @@
     @apply sticky bg-surface;
     z-index: 10;
   }
+  .grid-table tbody tr:nth-child(even) td.pinned {
+    @apply bg-canvas;
+  }
   .grid-table thead .pinned {
+    @apply bg-ink;
     z-index: 30;
   }
+  /* 끌어 온 열이 어디에 떨어질지. 선이 없으면 손을 떼고 나서야 알 수 있다 */
+  .grid-table thead th.drop-mark {
+    box-shadow: inset 3px 0 0 0 var(--color-wait);
+  }
+
+  /* 고정 열이 어디서 끝나는지. 그림자가 없으면 겹쳐 가린 것인지 빈칸인지 모른다 */
   .grid-table .pin-edge {
-    box-shadow: 6px 0 8px -6px oklch(0 0 0 / 0.18);
+    box-shadow: 8px 0 10px -8px oklch(0 0 0 / 0.35);
   }
   .grid-table tbody tr:hover td {
-    @apply bg-brand-soft/50;
+    @apply bg-brand-soft;
   }
   .grid-table tbody tr:hover td.pinned {
     @apply bg-brand-soft;
   }
 
-  .num {
-    @apply text-right tabular-nums;
+  /* 자릿수를 맞춘다. 정렬은 건드리지 않는다 — 표의 정렬은 한 자리에서만 정한다 */
+  .figure {
+    @apply tabular-nums;
   }
 
   /*
@@ -175,11 +244,23 @@
   .dual-range::-moz-range-track {
     @apply h-1 bg-transparent;
   }
+
+  /* 대화상자는 화면 가운데 선다. 브라우저 기본은 위쪽에 붙는다 */
+  dialog[open] {
+    @apply fixed m-auto;
+  }
 }
 
 @media print {
   /* 상담 자료를 출력해 쓰는 수요가 실재한다 (§7). 출력물도 익명 상태다 */
   .no-print { display: none !important; }
   html { font-size: 12px; }
-  .grid-table thead th { position: static; }
+  /* 화면에서는 표만 스크롤하지만, 종이에는 전부 펼쳐 나와야 한다 */
+  body { display: block; height: auto; overflow: visible; }
+  .print-open { display: block !important; height: auto !important; overflow: visible !important; }
+  .grid-table thead th {
+    position: static;
+    @apply bg-surface text-ink;
+    border-bottom: 2px solid var(--color-ink);
+  }
 }

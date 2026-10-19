@@ -19,7 +19,7 @@ export function yearLooksSane(value, currentYear) {
 }
 
 /**
- * 고른 파일들을 바이트로 읽는다.
+ * 선택한 파일들을 바이트로 읽는다.
  * @param {FileList|File[]} files
  */
 export async function readFiles(files) {
@@ -27,6 +27,64 @@ export async function readFiles(files) {
     name: file.name,
     bytes: new Uint8Array(await file.arrayBuffer())
   })));
+}
+
+/**
+ * 이 시트가 파일 단위 고3 년도를 요구하는지.
+ *
+ * 여러 해가 섞인 누적 파일은 행마다 연도가 실려 있어 파일 연도가 없어도 된다.
+ *
+ * @param {object} sheet
+ */
+export function needsFileYear(sheet) {
+  const perRowYear = sheet?.profile?.columns?.sourceYear !== undefined && Boolean(sheet?.profile?.yearBasis);
+  return !perRowYear;
+}
+
+/**
+ * 지금 상태로 불러올 수 없는 이유들.
+ *
+ * **넣지 않기로 한 시트는 아무것도 막지 않는다.** 체크를 끈 시트의 문제가 단추를
+ * 잠그면, 사람은 자기가 선택한 것이 멀쩡한데도 왜 안 되는지 알 길이 없다.
+ * 읽지 못한 시트를 섞어 올리는 일은 드물지 않아서, 이 구멍은 반드시 밟힌다.
+ *
+ * 화면을 그리지 않고 따로 셈한다 — 화면이 바뀌어도 이 규칙은 그대로여야 한다.
+ *
+ * @param {object[]} sheets
+ * @param {Map<string, {cohortYear: number|null, include: boolean}>|Record<string, object>} decisions
+ * @returns {string[]} 사람이 읽을 이유. 막을 것이 없으면 빈 배열
+ */
+export function uploadBlockers(sheets, decisions) {
+  const lookup = decisions instanceof Map
+    ? (id) => decisions.get(id)
+    : (id) => decisions[id];
+
+  const problems = [];
+  for (const sheet of sheets ?? []) {
+    const decision = lookup(sheet.id);
+    if (!decision?.include) continue;
+    if (!sheet.profile) {
+      problems.push(`${sheet.fileName}: 열 구성을 알아보지 못했습니다`);
+      continue;
+    }
+    if (decision.cohortYear === null && needsFileYear(sheet)) {
+      problems.push(`${sheet.fileName}: 고3 년도를 넣어 주세요`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * 넣기로 한 시트 수. 하나도 없으면 불러올 것이 없다.
+ *
+ * @param {object[]} sheets
+ * @param {Map<string, {include: boolean}>|Record<string, object>} decisions
+ */
+export function chosenCount(sheets, decisions) {
+  const lookup = decisions instanceof Map
+    ? (id) => decisions.get(id)
+    : (id) => decisions[id];
+  return (sheets ?? []).filter((sheet) => lookup(sheet.id)?.include).length;
 }
 
 /**
@@ -39,41 +97,32 @@ export async function readFiles(files) {
  */
 export function confirmUploads(dialog, prepared, currentYear) {
   return new Promise((resolve) => {
-    /** @type {Map<string, {cohortYear: number|null, include: boolean}>} */
+    /**
+     * @type {Map<string, {cohortYear: number|null, include: boolean}>}
+     *
+     * **읽지 못한 시트는 꺼진 채로 시작한다.** 켜 둬 봐야 불러올 수 없는데,
+     * 켜져 있으면 그것이 단추를 잠그고 사람은 멀쩡한 자기 파일을 의심하게 된다.
+     */
     const decisions = new Map(prepared.sheets.map((sheet) => [
       sheet.id,
-      { cohortYear: sheet.yearGuess.cohortYear, include: true }
+      { cohortYear: sheet.yearGuess.cohortYear, include: Boolean(sheet.profile) }
     ]));
 
     const finish = (value) => { dialog.close(); resolve(value); };
-
-    /** 넣을 수 있는 상태인지. 넣기로 한 시트마다 프로파일과 연도가 있어야 한다. */
-    function blockers() {
-      const problems = [];
-      for (const sheet of prepared.sheets) {
-        const decision = decisions.get(sheet.id);
-        if (!decision.include) continue;
-        if (!sheet.profile) { problems.push(`${sheet.fileName}: 열 구성을 알아보지 못했습니다`); continue; }
-        // 여러 해가 섞인 누적 파일은 행마다 연도가 실려 있어 파일 연도가 없어도 된다
-        const perRowYear = sheet.profile.columns.sourceYear !== undefined && Boolean(sheet.profile.yearBasis);
-        if (decision.cohortYear === null && !perRowYear) {
-          problems.push(`${sheet.fileName}: 고3 년도를 넣어 주세요`);
-        }
-      }
-      return problems;
-    }
 
     let footerNote;
     let submitButton;
 
     function refreshFooter() {
-      const problems = blockers();
-      const chosen = [...decisions.values()].filter((decision) => decision.include).length;
+      const problems = uploadBlockers(prepared.sheets, decisions);
+      const chosen = chosenCount(prepared.sheets, decisions);
       submitButton.disabled = problems.length > 0 || chosen === 0;
       footerNote.textContent = problems.length > 0
         ? problems[0]
-        : `${chosen}장을 불러옵니다.`;
-      footerNote.className = problems.length > 0
+        : chosen === 0
+          ? '불러올 시트를 하나 이상 선택해 주세요.'
+          : `${chosen}장을 불러옵니다.`;
+      footerNote.className = problems.length > 0 || chosen === 0
         ? 'mr-auto text-base font-medium text-fail'
         : 'mr-auto text-base text-ink-soft';
     }
@@ -84,7 +133,7 @@ export function confirmUploads(dialog, prepared, currentYear) {
 
       const yearEcho = el('p', { class: 'mt-2 text-sm text-ink-soft' });
       const yearInput = el('input', {
-        class: 'field mt-1 min-h-12 w-40 text-center text-lg num',
+        class: 'field mt-1 min-h-12 w-40 text-center text-lg figure',
         attrs: {
           type: 'number', min: 1990, max: currentYear + 1, step: 1,
           placeholder: '예: 2025',
@@ -102,7 +151,7 @@ export function confirmUploads(dialog, prepared, currentYear) {
         }
       });
 
-      const perRowYear = sheet.profile?.columns?.sourceYear !== undefined && Boolean(sheet.profile?.yearBasis);
+      const perRowYear = !needsFileYear(sheet);
 
       function echoYear() {
         if (decision.cohortYear !== null) {
@@ -153,19 +202,19 @@ export function confirmUploads(dialog, prepared, currentYear) {
         ]),
 
         sheet.duplicate
-          ? el('p', { class: 'mt-3 rounded-xl bg-wait-soft px-4 py-2 text-base text-wait' }, [
+          ? el('p', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-2 text-base text-wait' }, [
               `같은 내용을 이미 불러왔습니다. 다시 넣으면 그 파일이 넣었던 기록을 갈아 끼웁니다 — 건수가 두 배로 늘지는 않습니다.`
             ])
           : null,
 
         !sheet.profile
-          ? el('p', { class: 'mt-3 rounded-xl bg-fail-soft px-4 py-2 text-base text-fail' }, [
-              '어느 열이 무엇인지 알 수 없어 넣지 않습니다. 헤더가 바뀐 새 양식이라면 프로파일을 추가해야 합니다.'
+          ? el('p', { class: 'mt-3 rounded-lg bg-fail-soft px-4 py-2 text-base text-fail' }, [
+              '어느 열이 무엇인지 알 수 없어 체크를 꺼 두었습니다. 나머지만 불러오면 됩니다. 헤더가 바뀐 새 양식이라면 프로파일을 추가해야 합니다.'
             ])
           : null,
 
         perRowYear
-          ? el('div', { class: 'mt-4 rounded-xl bg-brand-soft px-4 py-3' }, [
+          ? el('div', { class: 'mt-4 rounded-lg bg-brand-soft px-4 py-3' }, [
               el('p', { class: 'text-base font-medium text-brand', text: '이 파일은 행마다 연도가 실려 있습니다.' }),
               el('p', { class: 'mt-1 text-sm text-ink-soft', text: '비워 두면 행의 연도를 그대로 씁니다. 값을 넣으면 파일 전체를 그 해로 봅니다.' }),
               yearInput, yearEcho
@@ -225,12 +274,12 @@ export function confirmUploads(dialog, prepared, currentYear) {
 }
 
 /**
- * 끌어다 놓기와 파일 고르기를 한 곳으로 모은다.
+ * 끌어다 놓기와 파일 선택을 한 곳으로 모은다.
  *
  * @param {object} options
  * @param {HTMLElement} options.zone
  * @param {HTMLInputElement} options.input
- * @param {HTMLElement[]} options.triggers 누르면 파일 고르기가 열리는 것들
+ * @param {HTMLElement[]} options.triggers 누르면 파일 선택이 열리는 것들
  * @param {(files: File[]) => void} options.onFiles
  */
 export function bindDropzone({ zone, input, triggers = [], onFiles }) {

@@ -13,7 +13,7 @@ import { isBlank, valueLabel } from './registry.js';
  * @typedef {object} Filter
  * @property {string} key 어느 열인지
  * @property {'in'|'range'|'blank'|'filled'} op
- * @property {unknown[]} [values] `in`일 때 고른 값들
+ * @property {unknown[]} [values] `in`일 때 선택한 값들
  * @property {number|null} [min] `range`일 때 하한 (포함)
  * @property {number|null} [max] `range`일 때 상한 (포함)
  */
@@ -42,7 +42,7 @@ export function matchesFilter(row, filter) {
     return true;
   }
 
-  // `in`. 고른 것이 없으면 아무것도 거르지 않는다 —
+  // `in`. 선택한 것이 없으면 아무것도 거르지 않는다 —
   // 빈 목록을 "전부 제외"로 읽으면 체크를 다 풀었을 때 화면이 갑자기 빈다
   const chosen = filter.values ?? [];
   if (chosen.length === 0) return true;
@@ -133,20 +133,35 @@ export function sortRows(rows, sorts = []) {
  * 헤더를 눌렀을 때 정렬 목록이 어떻게 바뀌는지.
  *
  * 한 번 누르면 오름차순 → 다시 누르면 내림차순 → 또 누르면 해제.
- * Shift 없이 누르면 다른 정렬은 모두 걷어낸다 (가장 흔한 뜻은 "이것만 보고 싶다").
+ *
+ * **그냥 누르면 쌓인다.** 먼저 누른 열이 1순위, 그다음이 2순위다. 쌓는 데 Shift를
+ * 요구하면 그런 조작이 있다는 것을 아무도 모르고, 그러면 다중 정렬은 없는 기능이다.
+ * Shift는 반대로 "이 열만 보고 싶다"에 쓴다.
  *
  * @param {Sort[]} sorts 지금 정렬 목록
  * @param {string} key 누른 열
- * @param {boolean} additive Shift를 누른 채 눌렀는지
+ * @param {boolean} only Shift를 누른 채였는지 — 이 열만 남긴다
  * @returns {Sort[]}
  */
-export function toggleSort(sorts, key, additive = false) {
-  const current = sorts.find((sort) => sort.key === key);
-  const others = additive ? sorts.filter((sort) => sort.key !== key) : [];
+export function toggleSort(sorts, key, only = false) {
+  if (only) {
+    const current = sorts.find((sort) => sort.key === key);
+    if (!current) return [{ key, dir: 'asc' }];
+    return current.dir === 'asc' ? [{ key, dir: 'desc' }] : [];
+  }
 
-  if (!current) return [...others, { key, dir: 'asc' }];
-  if (current.dir === 'asc') return [...others, { key, dir: 'desc' }];
-  return others;
+  const at = sorts.findIndex((sort) => sort.key === key);
+  // 처음 누른 열이 1순위, 그다음이 2순위다. 새 열은 늘 맨 뒤에 붙는다
+  if (at === -1) return [...sorts, { key, dir: 'asc' }];
+
+  if (sorts[at].dir === 'asc') {
+    // **자리를 지킨 채 방향만 뒤집는다.** 뒤로 밀어내면 방향 하나를 바꿨을 뿐인데
+    // 정렬 순위가 통째로 달라져서, 표가 왜 저렇게 섞였는지 설명할 수 없게 된다
+    const next = [...sorts];
+    next[at] = { key, dir: 'desc' };
+    return next;
+  }
+  return sorts.filter((sort) => sort.key !== key);
 }
 
 /**
@@ -174,7 +189,7 @@ export function applyQuery(rows, { filters = [], search = '', sorts = [], search
 /**
  * 어떤 열의 값마다 지금 몇 건이 남는지 센다.
  *
- * **그 열에 걸린 필터는 빼고** 센다. 빼지 않으면 이미 고른 값만 건수가 남고
+ * **그 열에 걸린 필터는 빼고** 센다. 빼지 않으면 이미 선택한 값만 건수가 남고
  * 나머지가 전부 0으로 보여서, 조건을 넓히려는 사람이 갈 곳을 잃는다.
  *
  * @param {object[]} rows

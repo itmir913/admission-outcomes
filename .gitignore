@@ -20,3 +20,10 @@ coverage/
 .DS_Store
 Thumbs.db
 *.log
+
+# --- 에이전트 스킬 ---
+# 내려받은 스킬 본문(11MB)은 커밋하지 않는다. skills-lock.json 하나로 복원된다:
+#   npx skills add https://github.com/anthropics/skills --skill frontend-design
+#   npx skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+.agents/
+.claude/skills/
