@@ -53,6 +53,53 @@ export function isSpreadsheetBytes(bytes) {
 }
 
 /**
+ * zip 항목 이름의 글자 인코딩을 알아낸다.
+ *
+ * zip은 이름 바이트가 어떤 인코딩인지를 **플래그 한 비트로만** 밝힌다(범용 플래그 11번).
+ * 그런데 국내에서 흔히 쓰는 압축 도구 상당수가 그 비트를 세우지 않은 채 CP949로 적는다.
+ * 그러면 읽는 쪽은 규격대로 바이트를 latin1로 받아 `ÁøÇÐ°á°ú.xlsx` 같은 이름을 얻는다.
+ *
+ * **바이트 자체는 그대로 남아 있다.** latin1은 바이트와 글자가 1:1이라 되읽을 수 있다.
+ *
+ * 순서가 중요하다. **엄격한 UTF-8을 먼저 시도한다** — 성공하면 그것이 UTF-8이 맞다.
+ * 잘못된 바이트열은 엄격 모드가 거절하므로, 성공 자체가 근거가 된다.
+ * 거절당하면 CP949로 읽고, 그것도 대체 문자가 나오면 **원래 이름을 그대로 둔다**(§5).
+ *
+ * CP949 이름이 우연히 올바른 UTF-8이기도 한 경우는 막지 못한다. 한글 구간의 바이트 조합이
+ * UTF-8 규칙과 어긋나는 쪽이 대부분이라 드물고, 틀렸을 때 손해는 이름 한 줄이 이상해지는 것뿐이다.
+ *
+ * @param {string} name fflate가 돌려준 이름
+ * @returns {string}
+ */
+export function decodeEntryName(name) {
+  let hasHighByte = false;
+  for (let index = 0; index < name.length; index += 1) {
+    const code = name.charCodeAt(index);
+    // 0xFF를 넘는 글자가 있으면 이미 제대로 읽힌 이름이다 (UTF-8 플래그가 서 있었다)
+    if (code > 0xff) return name;
+    if (code >= 0x80) hasHighByte = true;
+  }
+  // 순 ASCII면 어느 인코딩으로 읽어도 같다
+  if (!hasHighByte) return name;
+
+  const bytes = new Uint8Array(name.length);
+  for (let index = 0; index < name.length; index += 1) bytes[index] = name.charCodeAt(index);
+
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    // UTF-8이 아니다. 다음 후보로 넘어간다
+  }
+  try {
+    const decoded = new TextDecoder('euc-kr').decode(bytes);
+    if (!decoded.includes('�')) return decoded;
+  } catch {
+    // 이 실행 환경에 euc-kr 표가 없다. 원래 이름을 그대로 둔다
+  }
+  return name;
+}
+
+/**
  * zip 항목 이름에서 파일명만 남긴다.
  * 폴더 구조는 쓰지 않으므로 경로 순회(`../`)가 끼어들 여지를 없앤다.
  * @param {string} entryName
@@ -129,7 +176,7 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
           if (isNoise(entry.name)) return false;
           const inner = baseName(entry.name);
           if (!isExcelName(inner)) {
-            if (inner.toLowerCase().endsWith('.zip')) nested.push(inner);
+            if (inner.toLowerCase().endsWith('.zip')) nested.push(decodeEntryName(inner));
             return false;
           }
           declaredBytes += entry.originalSize ?? 0;
@@ -154,7 +201,7 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
     let found = 0;
     for (const [entryName, innerBytes] of Object.entries(entries)) {
       if (!innerBytes?.length) continue;
-      files.push({ name: baseName(entryName), bytes: innerBytes, container: name });
+      files.push({ name: decodeEntryName(baseName(entryName)), bytes: innerBytes, container: name });
       found += 1;
     }
     if (found === 0 && !tooLarge) {

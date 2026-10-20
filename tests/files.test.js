@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { zipSync } from 'fflate';
-import {
-  isExcelName, isZipBytes, isSpreadsheetBytes, expandUploads, normalizeCell, readSheets, loadUploads
-} from '../src/ingest/files.js';
-import { makeWorkbook, makeZip, senjinhakGrid, kcueGrid } from './helpers/workbook.js';
+import { isExcelName, isZipBytes, isSpreadsheetBytes, expandUploads, normalizeCell, readSheets, loadUploads, decodeEntryName } from '../src/ingest/files.js';
+import { makeWorkbook, makeZip, senjinhakGrid, kcueGrid, makeLegacyZip, toCp949 } from './helpers/workbook.js';
 
 const encoder = new TextEncoder();
 const upload = (name, bytes) => ({ name, bytes });
@@ -274,5 +272,49 @@ describe('업로드 전체 경로', () => {
 
   it('아무것도 올리지 않아도 터지지 않는다', async () => {
     expect(await loadUploads([])).toEqual({ sheets: [], skipped: [] });
+  });
+});
+
+describe('zip 항목 이름의 인코딩', () => {
+  /*
+   * zip은 이름 바이트의 인코딩을 플래그 한 비트로만 밝힌다. 국내 압축 도구 상당수가
+   * 그 비트를 세우지 않고 CP949로 적어서, 규격대로 읽으면 한글이 통째로 깨진다.
+   */
+  it('CP949로 적힌 이름을 되읽는다', () => {
+    const mojibake = 'ÁøÇÐ°á°ú_2025.xlsx';
+    expect(decodeEntryName(mojibake)).toBe('진학결과_2025.xlsx');
+  });
+
+  it('UTF-8로 적힌 이름을 CP949로 잘못 읽지 않는다', () => {
+    // 플래그를 안 세운 채 UTF-8로 적는 도구도 있다. 엄격 UTF-8이 먼저 걸러 준다
+    const bytes = new TextEncoder().encode('진학결과.xlsx');
+    const asLatin1 = String.fromCharCode(...bytes);
+    expect(decodeEntryName(asLatin1)).toBe('진학결과.xlsx');
+  });
+
+  it('이미 제대로 읽힌 이름은 건드리지 않는다', () => {
+    expect(decodeEntryName('진학결과.xlsx')).toBe('진학결과.xlsx');
+  });
+
+  it('순 ASCII 이름은 그대로 둔다', () => {
+    expect(decodeEntryName('result_2025.xlsx')).toBe('result_2025.xlsx');
+  });
+
+  it('어느 쪽으로도 읽히지 않으면 원래 이름을 그대로 둔다', () => {
+    // 지어낸 이름을 돌려주느니 깨진 채로 두는 편이 낫다 (§5)
+    const nonsense = String.fromCharCode(0xff, 0xfe, 0xff);
+    expect(decodeEntryName(nonsense)).toBe(nonsense);
+  });
+
+  it('CP949 이름이 든 zip에서 한글 이름을 되살린다', () => {
+    const name = '2025년 진학결과.xlsx';
+    const inner = makeWorkbook({ result: senjinhakGrid(2026) });
+    const zip = makeLegacyZip(toCp949(name), inner);
+
+    const { files, skipped } = expandUploads([{ name: '묶음.zip', bytes: zip }]);
+    expect(skipped).toEqual([]);
+    expect(files).toHaveLength(1);
+    expect(files[0].name).toBe(name);
+    expect(files[0].container).toBe('묶음.zip');
   });
 });

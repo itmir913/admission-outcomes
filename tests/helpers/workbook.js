@@ -53,3 +53,99 @@ export function kcueGrid() {
     [3, 2, 4, '정하람', '중앙대학교', '수시', '논술위주', '경영학부', '합격', '불합격', 4.21, 4, '언어와 매체', 102, 68, 4]
   ];
 }
+
+/**
+ * CP949로 적은 바이트열.
+ *
+ * 표준에는 euc-kr **디코더**만 있고 인코더가 없다. 그래서 디코더로 표를 거꾸로 만들어 쓴다.
+ * 시험용이라 느려도 된다 — 한 번 만들어 두고 다시 쓴다.
+ *
+ * @param {string} text
+ * @returns {Uint8Array}
+ */
+let cp949Table = null;
+export function toCp949(text) {
+  if (!cp949Table) {
+    const decoder = new TextDecoder('euc-kr');
+    cp949Table = new Map();
+    for (let high = 0x81; high <= 0xfe; high += 1) {
+      for (let low = 0x41; low <= 0xfe; low += 1) {
+        const char = decoder.decode(new Uint8Array([high, low]));
+        if (char.length === 1 && char !== '�' && !cp949Table.has(char)) {
+          cp949Table.set(char, [high, low]);
+        }
+      }
+    }
+  }
+  const out = [];
+  for (const char of text) {
+    const code = char.charCodeAt(0);
+    if (code < 0x80) out.push(code);
+    else out.push(...(cp949Table.get(char) ?? [0x3f]));
+  }
+  return new Uint8Array(out);
+}
+
+/**
+ * 항목 하나짜리 zip을 손으로 만든다 — **이름 바이트를 날것 그대로 넣고 UTF-8 플래그를 세우지 않는다.**
+ *
+ * `zipSync`는 늘 UTF-8 플래그를 세우므로 국내 압축 도구가 내놓는 모양을 만들 수 없다.
+ * 그 모양이 바로 한글 이름이 깨지는 자리라, 시험하려면 직접 만들어야 한다.
+ *
+ * @param {Uint8Array} nameBytes
+ * @param {Uint8Array} content 무압축으로 담는다
+ * @returns {Uint8Array}
+ */
+export function makeLegacyZip(nameBytes, content) {
+  const table = [];
+  for (let n = 0; n < 256; n += 1) {
+    let c = n;
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c >>> 0;
+  }
+  let crc = 0xffffffff;
+  for (const byte of content) crc = table[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  crc = (crc ^ 0xffffffff) >>> 0;
+
+  const width = nameBytes.length;
+  const local = new Uint8Array(30 + width + content.length);
+  const localView = new DataView(local.buffer);
+  localView.setUint32(0, 0x04034b50, true);
+  localView.setUint16(4, 20, true);
+  localView.setUint16(6, 0, true);   // 범용 플래그 — 11번 비트(UTF-8)를 세우지 않는다
+  localView.setUint16(8, 0, true);   // 저장(무압축)
+  localView.setUint32(14, crc, true);
+  localView.setUint32(18, content.length, true);
+  localView.setUint32(22, content.length, true);
+  localView.setUint16(26, width, true);
+  local.set(nameBytes, 30);
+  local.set(content, 30 + width);
+
+  const central = new Uint8Array(46 + width);
+  const centralView = new DataView(central.buffer);
+  centralView.setUint32(0, 0x02014b50, true);
+  centralView.setUint16(4, 20, true);
+  centralView.setUint16(6, 20, true);
+  centralView.setUint16(8, 0, true);
+  centralView.setUint16(10, 0, true);
+  centralView.setUint32(16, crc, true);
+  centralView.setUint32(20, content.length, true);
+  centralView.setUint32(24, content.length, true);
+  centralView.setUint16(28, width, true);
+  centralView.setUint32(42, 0, true);
+  central.set(nameBytes, 46);
+
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(8, 1, true);
+  endView.setUint16(10, 1, true);
+  endView.setUint32(12, central.length, true);
+  endView.setUint32(16, local.length, true);
+
+  const out = new Uint8Array(local.length + central.length + end.length);
+  out.set(local, 0);
+  out.set(central, local.length);
+  out.set(end, local.length + central.length);
+  return out;
+}
