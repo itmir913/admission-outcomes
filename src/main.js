@@ -273,7 +273,11 @@ function 필터판보이기(on) {
   document.body.classList.toggle('filters-off', !on);
   // 막은 좁은 화면에서만 뜻이 있다. 넓은 화면에서는 패널이 표를 덮지 않는다
   dom.필터막.classList.toggle('hidden', !on);
-  pick('#필터토글').setAttribute('aria-expanded', String(on));
+  const 토글 = pick('#필터토글');
+  토글.setAttribute('aria-expanded', String(on));
+  토글.setAttribute('aria-label', on ? '필터 패널 숨기기' : '필터 패널 표시');
+  // 접혀 있다는 것을 단추 자신이 보여 준다. 글자가 ☰ 하나뿐이라 색으로 구분한다
+  토글.classList.toggle('btn-primary', !on);
   if (state.view.filtersOpen !== on) updateView({ filtersOpen: on });
 }
 

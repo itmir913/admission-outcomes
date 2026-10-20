@@ -31,6 +31,13 @@
     이 도구에서 세로 한 줄은 지원 기록 한 건이다.
   -->
   <header class="no-print flex h-bar shrink-0 items-center gap-4 border-b border-line bg-surface px-5">
+    <!--
+      필터 패널의 표시를 전환하는 단추 (#1). 참고 UI처럼 머리줄 맨 앞에 둔다 —
+      화면 어디를 보고 있든 눈이 먼저 닿는 자리다.
+    -->
+    <button type="button" id="필터토글"
+            class="btn btn-sm shrink-0 px-2.5 text-lg leading-none"
+            aria-controls="필터판" aria-expanded="true" aria-label="필터 패널 숨기기">☰</button>
     <h1 class="shrink-0 whitespace-nowrap text-lg font-bold tracking-tight">진학결과 분석</h1>
     <p id="요약" class="min-w-0 truncate text-sm text-ink-soft"></p>
 
@@ -92,8 +99,6 @@
         -->
         <div class="no-print shrink-0 border-b border-line px-4 py-3 lg:px-5">
           <div class="flex items-center gap-3">
-            <button type="button" id="필터토글" class="btn btn-sm shrink-0"
-                    aria-controls="필터판" aria-expanded="true">필터</button>
             <div class="relative min-w-0 flex-1">
               <input type="search" id="검색" class="field pl-10" placeholder="대학·학과·전형 검색"
                      aria-label="검색" />
