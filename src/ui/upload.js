@@ -213,7 +213,7 @@ export function confirmUploads(dialog, prepared, currentYear) {
 
         !reading?.readable
           ? el('p', { class: 'mt-3 rounded-lg bg-fail-soft px-4 py-2 text-base text-fail' }, [
-              '대학명 열을 찾지 못해 체크를 꺼 두었습니다. 나머지만 불러오면 됩니다. 대학 이름이 든 열의 머리글을 「대학명」으로 고쳐 다시 올리면 읽힙니다.'
+              '대학명 열을 찾지 못해 체크를 꺼 두었습니다. 나머지만 불러오면 됩니다. 대학 이름이 든 열의 머리글을 「대학명」으로 고쳐 다시 올리면 해석됩니다.'
             ])
           : null,
 

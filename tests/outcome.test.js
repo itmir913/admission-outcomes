@@ -108,7 +108,7 @@ describe('못 읽은 표기 모으기', () => {
     ]);
   });
 
-  it('전부 읽히면 아무것도 알리지 않는다', () => {
+  it('전부 해석되면 아무것도 알리지 않는다', () => {
     expect(unknownOutcomeTerms([{ final: '합', stage1: '합', register: '등록' }])).toEqual([]);
   });
 });

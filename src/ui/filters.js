@@ -63,7 +63,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
 
   const commit = (filters) => onChange(filters.filter(isMeaningful));
 
-  /** 아무것도 안 거르는 필터는 목록에서 뺀다. 칩이 늘어지면 읽히지 않는다 */
+  /** 아무것도 안 거르는 필터는 목록에서 뺀다. 칩이 늘어지면 한눈에 안 들어온다 */
   function isMeaningful(filter) {
     if (filter.op === 'in') return (filter.values ?? []).length > 0;
     if (filter.op === 'range') return filter.min !== null || filter.max !== null;

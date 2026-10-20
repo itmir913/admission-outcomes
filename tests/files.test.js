@@ -292,7 +292,7 @@ describe('zip 항목 이름의 인코딩', () => {
     expect(decodeEntryName(asLatin1)).toBe('진학결과.xlsx');
   });
 
-  it('이미 제대로 읽힌 이름은 건드리지 않는다', () => {
+  it('이미 제대로 해석된 이름은 건드리지 않는다', () => {
     expect(decodeEntryName('진학결과.xlsx')).toBe('진학결과.xlsx');
   });
 
@@ -300,7 +300,7 @@ describe('zip 항목 이름의 인코딩', () => {
     expect(decodeEntryName('result_2025.xlsx')).toBe('result_2025.xlsx');
   });
 
-  it('어느 쪽으로도 읽히지 않으면 원래 이름을 그대로 둔다', () => {
+  it('어느 쪽으로도 해석되지 않으면 원래 이름을 그대로 둔다', () => {
     // 지어낸 이름을 돌려주느니 깨진 채로 두는 편이 낫다 (§5)
     const nonsense = String.fromCharCode(0xff, 0xfe, 0xff);
     expect(decodeEntryName(nonsense)).toBe(nonsense);

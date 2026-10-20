@@ -75,7 +75,7 @@ export function decodeEntryName(name) {
   let hasHighByte = false;
   for (let index = 0; index < name.length; index += 1) {
     const code = name.charCodeAt(index);
-    // 0xFF를 넘는 글자가 있으면 이미 제대로 읽힌 이름이다 (UTF-8 플래그가 서 있었다)
+    // 0xFF를 넘는 글자가 있으면 이미 제대로 해석된 이름이다 (UTF-8 플래그가 서 있었다)
     if (code > 0xff) return name;
     if (code >= 0x80) hasHighByte = true;
   }

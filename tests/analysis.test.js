@@ -280,7 +280,7 @@ describe('헤더 클릭', () => {
 });
 
 describe('필터를 문장으로', () => {
-  it('무엇이 걸려 있는지 읽히게 적는다', () => {
+  it('무엇이 걸려 있는지 알아보게 적는다', () => {
     expect(describeFilter({ key: 'univ', op: 'in', values: ['가온대학교'] }, '대학명'))
       .toBe('대학명: 가온대학교');
     expect(describeFilter({ key: 'univ', op: 'in', values: ['가', '나', '다', '라'] }, '대학명'))
