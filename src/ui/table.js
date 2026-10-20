@@ -11,7 +11,7 @@
  * 다 그리면 필터를 건드릴 때마다 화면이 멈춘다.
  */
 
-import { el, clear, formatNumber } from './dom.js';
+import { el, clear, formatNumber, debounce } from './dom.js';
 import { valueLabel, isBlank } from '../analysis/registry.js';
 import { toggleSort } from '../analysis/query.js';
 
@@ -82,7 +82,7 @@ export function cellText(key, value) {
  * @param {(row: object) => void} [options.onRowOpen]
  * @param {(state: object) => void} [options.onStateChange] 정렬·너비가 바뀔 때
  */
-export function createTable({ scroller, colgroup, headRow, body, empty, onRowOpen, onStateChange }) {
+export function createTable({ scroller, colgroup, headRow, searchRow, body, empty, onRowOpen, onStateChange, onColumnSearch, columnSearch = () => '' }) {
   /** @type {object[]} */
   let rows = [];
   /** @type {Map<string, object>} */
@@ -117,6 +117,7 @@ export function createTable({ scroller, colgroup, headRow, body, empty, onRowOpe
   function renderHead() {
     const offsets = pinOffsets();
     clear(headRow);
+    if (searchRow) clear(searchRow);
 
     state.columns.forEach((key, index) => {
       const field = fields.get(key);
@@ -125,7 +126,7 @@ export function createTable({ scroller, colgroup, headRow, body, empty, onRowOpe
       const pinned = index < state.pinned;
 
       const label = el('span', { class: 'truncate', text: field?.label ?? key });
-      const marks = el('span', { class: 'shrink-0', text: sort ? (sort.dir === 'asc' ? '▲' : '▼') : '' });
+      const marks = el('span', { class: 'sort-mark shrink-0', text: sort ? (sort.dir === 'asc' ? '▲' : '▼') : '' });
       // 여러 열로 정렬 중일 때만 순번을 붙인다. 하나뿐이면 ①이 군더더기다
       const badge = state.sorts.length > 1 && rank !== -1
         ? el('span', { class: 'shrink-0 text-xs font-bold', text: ORDER_BADGE[rank] ?? `${rank + 1}` })
@@ -159,8 +160,26 @@ export function createTable({ scroller, colgroup, headRow, body, empty, onRowOpe
         }
       });
 
+      searchRow?.append(el('th', {
+        class: `${pinned ? 'pinned' : ''} ${pinned && index === state.pinned - 1 ? 'pin-edge' : ''}`,
+        style: pinned ? { left: `${offsets[index]}px` } : {}
+      }, [
+        el('input', {
+          class: 'min-h-9 w-full border-0 bg-transparent px-2 text-sm text-white placeholder:text-white/40 focus:outline-none',
+          attrs: {
+            type: 'search', value: columnSearch(key), placeholder: '검색',
+            'aria-label': `${field?.label ?? key} 안에서 검색`
+          },
+          /*
+           * 글자마다 다시 계산하지 않는다. 열이 80개인 표에서 한 글자마다 전체를
+           * 다시 거르면 손가락이 멈출 때까지 화면이 따라오지 못한다.
+           */
+          on: { input: debounce((event) => onColumnSearch?.(key, event.target.value), 220) }
+        })
+      ]));
+
       headRow.append(el('th', {
-        class: `relative ${pinned ? 'pinned' : ''} ${pinned && index === state.pinned - 1 ? 'pin-edge' : ''}`,
+        class: `relative ${sort ? 'sorted' : ''} ${pinned ? 'pinned' : ''} ${pinned && index === state.pinned - 1 ? 'pin-edge' : ''}`,
         attrs: {
           scope: 'col',
           'data-key': key,

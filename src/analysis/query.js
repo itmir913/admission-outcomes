@@ -42,6 +42,19 @@ export function matchesFilter(row, filter) {
     return true;
   }
 
+  /*
+   * `contains`. 머리줄의 열별 검색칸이 쓴다.
+   *
+   * 화면에 보이는 글자로 찾는다 — `outcome`처럼 저장값(`pass`)과 화면 글자(`합격`)가
+   * 다른 열이 있어서, 저장값으로 찾으면 사람이 본 적 없는 말을 적어야 한다.
+   */
+  if (filter.op === 'contains') {
+    const needle = String(filter.text ?? '').trim().toLowerCase();
+    if (needle === '') return true;
+    if (isBlank(value)) return false;
+    return valueLabel(filter.key, value).toLowerCase().includes(needle);
+  }
+
   // `in`. 선택한 것이 없으면 아무것도 거르지 않는다 —
   // 빈 목록을 "전부 제외"로 읽으면 체크를 다 해제했을 때 화면이 갑자기 빈다
   const chosen = filter.values ?? [];
@@ -226,6 +239,7 @@ export function facetCounts(rows, filters, key, { search = '', searchKeys } = {}
  * @param {string} label 열 이름
  */
 export function describeFilter(filter, label) {
+  if (filter.op === 'contains') return `${label}: "${String(filter.text ?? '').trim()}" 포함`;
   if (filter.op === 'blank') return `${label}: 빈칸만`;
   if (filter.op === 'filled') return `${label}: 값 있는 것만`;
   if (filter.op === 'range') {

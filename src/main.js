@@ -74,8 +74,22 @@ const table = createTable({
   scroller: dom.표,
   colgroup: pick('#열너비'),
   headRow: pick('#헤더행'),
+  searchRow: pick('#검색행'),
   body: pick('#본문행'),
   empty: dom.표없음,
+  /** 머리줄 검색칸에 지금 무엇이 적혀 있는지. 다시 그려도 글자가 남아야 한다 */
+  columnSearch: (key) => {
+    const found = state.view.filters.find((filter) => filter.key === key && filter.op === 'contains');
+    return found?.text ?? '';
+  },
+  onColumnSearch: (key, text) => {
+    const rest = state.view.filters.filter(
+      (filter) => !(filter.key === key && filter.op === 'contains'));
+    const next = String(text ?? '').trim() === '' ? rest : [...rest, { key, op: 'contains', text }];
+    state.view = { ...state.view, filters: next };
+    saveView(state.view);
+    refresh({ keepScroll: true });
+  },
   onRowOpen: (row) => {
     // 지금 걸린 조건과 무관하게 그 학생의 **전체** 이력을 보여 준다.
     // 상담에서 알고 싶은 것은 "이 학생이 어디에 어떻게 지원했나" 전부다
@@ -181,9 +195,37 @@ function paintSummary(visible, total) {
   ]));
 }
 
-/** 걸려 있는 필터 칩. 하나씩 뗄 수 있고 전체 해제도 있다 (§7). */
+/**
+ * 칩 줄 — 지금 걸려 있는 **정렬과 필터**를 한 줄에 늘어놓는다 (§7, 참고 UI).
+ *
+ * 정렬을 먼저 둔다. 표가 왜 이 차례로 보이는지를 먼저 파악해야 하고,
+ * 그다음이 무엇을 걸러 냈는지다. 둘 다 칩 하나씩 눌러 뗄 수 있다.
+ */
 function paintChips() {
   clear(dom.칩줄);
+
+  state.view.sorts.forEach((sort, rank) => {
+    dom.칩줄.append(el('span', {
+      class: 'chip border-pass/30 bg-pass-soft text-pass'
+    }, [
+      el('span', {
+        class: 'rounded bg-pass px-1.5 text-xs font-bold text-white',
+        text: String(rank + 1)
+      }),
+      el('span', { text: `${fieldLabel(sort.key)} ${sort.dir === 'asc' ? '▲' : '▼'}` }),
+      el('button', {
+        class: 'text-pass/70',
+        text: '✕',
+        attrs: { type: 'button', 'aria-label': `${fieldLabel(sort.key)} 정렬 해제` },
+        on: {
+          click: () => updateView({
+            sorts: state.view.sorts.filter((item) => item.key !== sort.key)
+          })
+        }
+      })
+    ]));
+  });
+
   if (state.view.filters.length === 0) return;
 
   for (const filter of state.view.filters) {

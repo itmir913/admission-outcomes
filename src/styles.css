@@ -75,16 +75,29 @@
   .btn {
     @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line
       bg-surface px-4 text-base font-medium text-ink transition-colors
-      hover:border-ink-soft/40 hover:bg-canvas
       disabled:pointer-events-none disabled:opacity-40;
+
+    /*
+     * **hover 는 마우스가 있는 기기에서만.** 손가락으로 누르는 화면에서는 hover 가
+     * 누른 뒤에도 남아서, 방금 누른 것이 아직 눌려 있는 것처럼 보인다.
+     */
+    @media (hover: hover) {
+      &:hover { @apply border-ink-soft/40 bg-canvas; }
+    }
   }
 
   .btn-primary {
-    @apply border-transparent bg-brand text-white hover:border-transparent hover:bg-brand/90;
+    @apply border-transparent bg-brand text-white;
+    @media (hover: hover) {
+      &:hover { @apply border-transparent bg-brand/90; }
+    }
   }
 
   .btn-danger {
-    @apply border-fail/30 text-fail hover:border-fail/50 hover:bg-fail-soft;
+    @apply border-fail/30 text-fail;
+    @media (hover: hover) {
+      &:hover { @apply border-fail/50 bg-fail-soft; }
+    }
   }
 
   .btn-sm {
@@ -179,6 +192,31 @@
     @apply sticky top-0 z-20 select-none bg-ink text-sm font-semibold tracking-tight text-white;
   }
 
+  /*
+   * 머리줄 둘째 칸 — 열별 검색 (참고 UI).
+   *
+   * 첫 칸 바로 아래에 붙는다. 높이를 직접 적는 대신 행 높이를 그대로 쓴다 —
+   * 두 값이 어긋나면 스크롤할 때 첫 칸과 둘째 칸 사이가 벌어진다.
+   */
+  .grid-table thead tr + tr th {
+    top: var(--spacing-row);
+    @apply bg-ink/95 p-0;
+  }
+
+  /*
+   * 정렬이 걸린 열 (참고 UI).
+   *
+   * 짙은 머리줄 위라 글자색을 바꿔서는 눈에 안 든다. 아래에 선을 긋는다.
+   * 판정색(합격)과 같은 초록이지만, 판정은 늘 모양(●△✕)을 함께 달고 다니고
+   * 여기는 머리줄이라 섞일 자리가 없다.
+   */
+  .grid-table thead th.sorted {
+    box-shadow: inset 0 -3px 0 var(--color-pass);
+  }
+  .grid-table thead th.sorted .sort-mark {
+    color: oklch(0.82 0.14 153);
+  }
+
   /* 줄무늬. 14열을 가로로 훑을 때 행을 놓치지 않게 한다 */
   .grid-table tbody tr:nth-child(even) td {
     @apply bg-canvas/60;
@@ -205,11 +243,11 @@
   .grid-table .pin-edge {
     box-shadow: 8px 0 10px -8px oklch(0 0 0 / 0.35);
   }
-  .grid-table tbody tr:hover td {
-    @apply bg-brand-soft;
-  }
-  .grid-table tbody tr:hover td.pinned {
-    @apply bg-brand-soft;
+  @media (hover: hover) {
+    .grid-table tbody tr:hover td,
+    .grid-table tbody tr:hover td.pinned {
+      @apply bg-brand-soft;
+    }
   }
 
   /* 자릿수를 맞춘다. 정렬은 건드리지 않는다 — 표의 정렬은 한 자리에서만 정한다 */

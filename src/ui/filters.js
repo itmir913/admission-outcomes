@@ -65,14 +65,22 @@ export function createFilters({ mount, read, onChange, onClose }) {
 
   /** 아무것도 안 거르는 필터는 목록에서 뺀다. 칩이 늘어지면 한눈에 안 들어온다 */
   function isMeaningful(filter) {
+    if (filter.op === 'contains') return String(filter.text ?? '').trim() !== '';
     if (filter.op === 'in') return (filter.values ?? []).length > 0;
     if (filter.op === 'range') return filter.min !== null || filter.max !== null;
     return true;
   }
 
+  /**
+   * 이 패널이 맡은 필터만 갈아 끼운다.
+   *
+   * **같은 열의 머리줄 검색(`contains`)은 건드리지 않는다.** 둘은 다른 조작이고
+   * 다른 자리에 있다. 여기서 함께 지우면, 왼쪽에서 값을 하나 선택했을 뿐인데
+   * 머리줄에 적어 둔 검색어가 소리 없이 사라진다.
+   */
   function setFilter(key, next) {
     const { filters } = read();
-    const rest = filters.filter((filter) => filter.key !== key);
+    const rest = filters.filter((filter) => filter.key !== key || filter.op === 'contains');
     commit(next ? [...rest, next] : rest);
   }
 
