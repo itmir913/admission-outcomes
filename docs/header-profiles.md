@@ -13,12 +13,12 @@
 
 ```json
 {
-  "id": "kcue-2024",
+  "id": "kcue-2026",
   "program": "kcue",
   "programLabel": "대교협 수시진학관리",
-  "year": 2024,
+  "year": 2026,
   "headerRows": 2,
-  "fingerprint": "3ae3b901…",
+  "fingerprint": "599fa761…",
   "yearBasis": "admission",
   "columns": {
     "univ": 6,

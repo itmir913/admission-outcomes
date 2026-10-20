@@ -7,7 +7,8 @@
  * 사용자가 수동 매핑으로 만든 프로파일은 IndexedDB에 쌓이고, 같은 id면 이쪽을 덮는다.
  */
 
-import kcue2024 from './kcue-2024.json' with { type: 'json' };
+import kcue2025 from './kcue-2025.json' with { type: 'json' };
+import kcue2026 from './kcue-2026.json' with { type: 'json' };
 import senjinhak2026 from './senjinhak-2026.json' with { type: 'json' };
 
-export const bundledProfiles = [kcue2024, senjinhak2026];
+export const bundledProfiles = [kcue2025, kcue2026, senjinhak2026];

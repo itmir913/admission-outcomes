@@ -231,10 +231,10 @@ sid는 자료를 전부 지우고 다시 올리면 달라질 수 있다. 외부�
 ### 프로파일
 
 ```json
-{ "id": "kcue-2024", "program": "kcue", "programLabel": "대교협 수시진학관리",
-  "year": 2024, "headerRows": 2,
-  "fingerprint": "3ae3b901…", "yearBasis": "admission",
-  "columns": { "univ": 6, "dept": 12, "gpa.전교과": 37, "suneung.국어.grade": 64 } }
+{ "id": "kcue-2026", "program": "kcue", "programLabel": "대교협 수시진학관리",
+  "year": 2026, "headerRows": 2,
+  "fingerprint": "599fa761…",
+  "columns": { "univ": 6, "dept": 12, "gpa.전교과": 38, "suneung.국어.grade": 65 } }
 ```
 
 - `fingerprint` — 정규화한 헤더 시퀀스 **전체**의 해시. 열이 하나라도 바뀌면 달라진다
