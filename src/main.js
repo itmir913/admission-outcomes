@@ -41,6 +41,7 @@ const dom = {
   필터막: pick('#필터막'),
   검색: /** @type {HTMLInputElement} */ (pick('#검색')),
   칩줄: pick('#칩줄'),
+  고정수: pick('#고정수'),
   알림줄: pick('#알림줄'),
   표: pick('#표'),
   표없음: pick('#표없음'),
@@ -106,16 +107,6 @@ const filters = createFilters({
   },
   onClose: () => 필터판보이기(false)
 });
-
-/**
- * 좁은 화면에서 필터 패널을 열고 닫는다.
- *
- * 넓은 화면에서는 `lg:block`이 늘 켜 두므로 여기서 할 일이 없다 — `hidden`만 다룬다.
- */
-function 필터판보이기(on) {
-  dom.필터판.classList.toggle('hidden', !on);
-  dom.필터막.classList.toggle('hidden', !on);
-}
 
 // ── 다시 그리기 ───────────────────────────────────────────────────────────────
 
@@ -212,16 +203,6 @@ function paintChips() {
       })
     ]));
   }
-  dom.칩줄.append(el('button', {
-    class: 'btn btn-sm shrink-0', text: '필터 전체 해제', attrs: { type: 'button' },
-    on: {
-      click: () => {
-        state.view = { ...state.view, filters: [] };
-        saveView(state.view);
-        refresh();
-      }
-    }
-  }));
 }
 
 /** 사람이 점검해야 할 것을 알린다. 조용히 넘어가면 틀린 자료가 그대로 상담에 쓰인다. */
@@ -249,6 +230,60 @@ function paintNotices() {
   }
 }
 
+/** 고정할 수 있는 열 수의 상한. 여섯을 넘기면 가로로 볼 것이 남지 않는다. */
+const MAX_PINNED = 6;
+
+/**
+ * 툴바의 상태를 맞춘다 (#3).
+ *
+ * **쓸 수 없는 단추도 자리를 지킨다**(D15). 값에 따라 단추가 생겼다 사라지면
+ * 그 줄의 높이가 바뀌고, 그때마다 표가 위아래로 들썩인다.
+ */
+function paintToolbar() {
+  const pinned = Math.min(state.view.pinned, state.view.columns.length, MAX_PINNED);
+  dom.고정수.textContent = String(pinned);
+
+  const disable = (selector, off) => {
+    const node = pick(selector);
+    node.disabled = off;
+    node.setAttribute('aria-disabled', String(off));
+  };
+  disable('#고정줄이기', pinned <= 0);
+  disable('#고정늘리기', pinned >= Math.min(MAX_PINNED, state.view.columns.length));
+  disable('#정렬초기화', state.view.sorts.length === 0);
+  disable('#필터초기화', state.view.filters.length === 0);
+  disable('#열초기화', false);
+}
+
+/** 보존할 것만 남기고 화면 상태를 바꾼다. */
+function updateView(patch) {
+  state.view = { ...state.view, ...patch };
+  saveView(state.view);
+  refresh({ keepScroll: true });
+}
+
+/**
+ * 필터 패널의 표시를 전환한다 (#1).
+ *
+ * 기본값은 화면 폭이 정한다. 사람이 한 번이라도 전환하면 그 선택이 `body`의 클래스로
+ * 올라와 기본값을 덮고, 그 뒤로는 화면 폭이 바뀌어도 사람의 선택이 이긴다.
+ */
+function 필터판보이기(on) {
+  document.body.classList.toggle('filters-on', on);
+  document.body.classList.toggle('filters-off', !on);
+  // 막은 좁은 화면에서만 뜻이 있다. 넓은 화면에서는 패널이 표를 덮지 않는다
+  dom.필터막.classList.toggle('hidden', !on);
+  pick('#필터토글').setAttribute('aria-expanded', String(on));
+  if (state.view.filtersOpen !== on) updateView({ filtersOpen: on });
+}
+
+/** 지금 패널이 떠 있는가. 클래스가 없으면 화면 폭이 정한 기본값을 본다. */
+function 필터판열림() {
+  if (document.body.classList.contains('filters-on')) return true;
+  if (document.body.classList.contains('filters-off')) return false;
+  return globalThis.matchMedia?.('(min-width: 64rem)').matches ?? false;
+}
+
 function refresh({ keepScroll = false } = {}) {
   const hasData = state.rows.length > 0;
   dom.시작화면.classList.toggle('hidden', hasData);
@@ -269,6 +304,7 @@ function refresh({ keepScroll = false } = {}) {
 
   dom.표없음.textContent = '걸려 있는 필터에 맞는 지원 기록이 없습니다. 위 칩에서 필터를 하나씩 떼어 보세요.';
 
+  paintToolbar();
   paintSummary(visible, state.rows.length);
   paintChips();
   paintNotices();
@@ -358,9 +394,7 @@ dom.검색.addEventListener('input', debounce((event) => {
   refresh();
 }, 180));
 
-pick('#필터토글').addEventListener('click', () => {
-  필터판보이기(dom.필터판.classList.contains('hidden'));
-});
+pick('#필터토글').addEventListener('click', () => 필터판보이기(!필터판열림()));
 
 // 뒤를 덮은 막을 누르면 닫는다. 덮개를 눌러 닫는 것은 사람이 먼저 해 보는 동작이다
 dom.필터막.addEventListener('click', () => 필터판보이기(false));
@@ -372,10 +406,21 @@ globalThis.addEventListener('keydown', (event) => {
   필터판보이기(false);
 });
 
-pick('#정렬해제').addEventListener('click', () => {
-  state.view = { ...state.view, sorts: [] };
-  saveView(state.view);
-  refresh();
+// ── 툴바 (#3) ────────────────────────────────────────────────────────────────
+
+const 고정조정 = (step) => updateView({
+  pinned: Math.max(0, Math.min(MAX_PINNED, state.view.columns.length, state.view.pinned + step))
+});
+pick('#고정줄이기').addEventListener('click', () => 고정조정(-1));
+pick('#고정늘리기').addEventListener('click', () => 고정조정(1));
+
+pick('#정렬초기화').addEventListener('click', () => updateView({ sorts: [] }));
+pick('#필터초기화').addEventListener('click', () => updateView({ filters: [] }));
+
+// 열 구성·차례·너비를 한꺼번에 되돌린다. 하나씩 되돌리게 하면 아무도 안 쓴다
+pick('#열초기화').addEventListener('click', () => {
+  const base = emptyView();
+  updateView({ columns: defaultColumns(state.registry), widths: {}, pinned: base.pinned });
 });
 
 pick('#인쇄').addEventListener('click', () => globalThis.print());
@@ -434,6 +479,8 @@ pick('#전체지우기').addEventListener('click', wipe);
 
 async function start() {
   state.view = loadView();
+  // 사람이 한 번이라도 전환했으면 그 선택을 되살린다. 아니면 화면 폭이 정한 기본값이다
+  if (typeof state.view.filtersOpen === 'boolean') 필터판보이기(state.view.filtersOpen);
   try {
     state.db = await openDatabase();
   } catch (error) {

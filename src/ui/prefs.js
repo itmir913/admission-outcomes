@@ -9,7 +9,7 @@
 
 const KEY = 'admission-outcomes:view';
 
-/** @typedef {{columns: string[], widths: Record<string, number>, pinned: number, sorts: object[], filters: object[]}} ViewState */
+/** @typedef {{columns: string[], widths: Record<string, number>, pinned: number, sorts: object[], filters: object[], filtersOpen: boolean|null}} ViewState */
 
 /**
  * 처음 상태.
@@ -20,7 +20,8 @@ const KEY = 'admission-outcomes:view';
  * @returns {ViewState}
  */
 export function emptyView() {
-  return { columns: [], widths: {}, pinned: 3, sorts: [], filters: [] };
+  // `filtersOpen`이 null이면 화면 폭이 정한다. 사람이 한 번 전환하면 그 선택이 남는다
+  return { columns: [], widths: {}, pinned: 3, sorts: [], filters: [], filtersOpen: null };
 }
 
 /**
@@ -41,7 +42,8 @@ export function loadView() {
       widths: saved.widths && typeof saved.widths === 'object' ? saved.widths : base.widths,
       pinned: Number.isInteger(saved.pinned) ? saved.pinned : base.pinned,
       sorts: Array.isArray(saved.sorts) ? saved.sorts.filter((sort) => sort?.key) : base.sorts,
-      filters: Array.isArray(saved.filters) ? saved.filters.filter((filter) => filter?.key && filter?.op) : base.filters
+      filters: Array.isArray(saved.filters) ? saved.filters.filter((filter) => filter?.key && filter?.op) : base.filters,
+      filtersOpen: typeof saved.filtersOpen === 'boolean' ? saved.filtersOpen : base.filtersOpen
     };
   } catch {
     return base;
@@ -56,7 +58,8 @@ export function saveView(view) {
       widths: view.widths,
       pinned: view.pinned,
       sorts: view.sorts,
-      filters: view.filters
+      filters: view.filters,
+      filtersOpen: view.filtersOpen
     }));
   } catch {
     // 저장 자리가 없거나 시크릿 모드다. 화면은 그대로 돌아가야 하므로 삼킨다

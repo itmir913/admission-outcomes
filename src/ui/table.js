@@ -280,7 +280,17 @@ export function createTable({ scroller, colgroup, headRow, body, empty, onRowOpe
     announce();
   }
 
-  const windowRange = () => visibleWindow(scroller.scrollTop, scroller.clientHeight, rows.length);
+  /**
+   * 행이 시작하는 자리. 스크롤 상자 안에서 표 위에 놓인 것들의 높이다.
+   *
+   * 요약 띠가 같은 상자 안에서 스크롤되므로(#2) `scrollTop`이 그만큼 더 크다.
+   * 빼지 않으면 창이 아래로 밀려 윗행이 빈 채로 남는다.
+   */
+  const rowsTop = () =>
+    body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+
+  const windowRange = () =>
+    visibleWindow(scroller.scrollTop - rowsTop(), scroller.clientHeight, rows.length);
 
   function renderBody(force = false) {
     const { start, end } = windowRange();
