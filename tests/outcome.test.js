@@ -23,7 +23,7 @@ describe('최종 결과 읽기', () => {
     const outcome = classifyOutcome({ final: '충원합격' });
     expect(outcome.code).toBe(OUTCOME.waitPass);
     expect(outcome.passed).toBe(true);
-    // 최초합격과 갈라 볼 수 있어야 하므로 code는 남는다
+    // 최초합격과 구분해 볼 수 있어야 하므로 code는 남는다
     expect(outcome.code).not.toBe(OUTCOME.pass);
   });
 
@@ -61,7 +61,7 @@ describe('최종 결과 읽기', () => {
     expect(outcome.code).toBe(OUTCOME.none);
   });
 
-  it('색 말고 모양으로도 갈린다', () => {
+  it('색 말고 모양으로도 구분된다', () => {
     const marks = ['합격', '충원합격', '불합격'].map((final) => classifyOutcome({ final }).mark);
     expect(new Set(marks).size).toBe(3);
   });

@@ -48,7 +48,7 @@ const HINTS = [
 ];
 
 const GPA_LABELS = ['전교과', '전과목', '국영수사/과', '국수영사과', '국수영사/과', '국영수과', '국수영과', '국영수사', '국수영사', '국영수', '국영사', '국수영사과', '수영과', '국영수사과'];
-// 내신 구역에 있는 과목별 등급. 수능 구역의 같은 이름과는 구역 판정으로 이미 갈렸다
+// 내신 구역에 있는 과목별 등급. 수능 구역의 같은 이름과는 구역 판정으로 이미 구분했다
 const GPA_SUBJECTS = ['국어', '영어', '수학', '사회', '과학', '한국사'];
 const SUNEUNG_AREAS = ['한국사', '국어', '수학', '영어', '탐구1', '탐구2', '제2외국어'];
 const SUNEUNG_PART_BY_LABEL = { 과목: 'subject', 과목명: 'subject', 표점: 'stdScore', 표준점수: 'stdScore', 백분위: 'percentile', 등급: 'grade' };
@@ -87,7 +87,7 @@ function draftColumns(labels) {
     taken.add(index);
   };
 
-  // 수능 구역: 한국사 앵커 이후 (§4). 내신의 국어·수학·영어와 갈라내기 위함이다
+  // 수능 구역: 한국사 앵커 이후 (§4). 내신의 국어·수학·영어와 구분하기 위함이다
   const suneungStart = labels.findIndex((item) => compact(item.top) === '한국사');
   labels.forEach((item, index) => {
     if (suneungStart < 0 || index < suneungStart) return;
@@ -154,7 +154,7 @@ async function main() {
 
   const columns = draftColumns(labels);
 
-  // `학년` 헤더 아래에 연도가 든 파일이 있다. 이름이 아니라 값으로 가른다.
+  // `학년` 헤더 아래에 연도가 든 파일이 있다. 이름이 아니라 값으로 구별한다.
   // 대교협은 3(학년)이, 센진학은 2026(연도)이 같은 이름 아래 들어 있다.
   if ('schoolYear' in columns) {
     const found = findYearColumn(grid, { headerRows });

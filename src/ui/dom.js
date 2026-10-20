@@ -60,7 +60,7 @@ export function clear(node) {
 export function openDialog(dialog, content) {
   clear(dialog).append(content);
   if (!dialog.open) dialog.showModal();
-  // 바깥(backdrop)을 누르면 닫는다. 안쪽 클릭과 갈라내야 한다
+  // 바깥(backdrop)을 누르면 닫는다. 안쪽 클릭과 구분해야 한다
   dialog.onclick = (event) => {
     if (event.target === dialog) dialog.close();
   };
@@ -104,7 +104,7 @@ export function debounce(run, delay = 180) {
   };
 }
 
-/** 숫자를 화면용으로 다듬는다. */
+/** 숫자를 화면용으로 정리한다. */
 export function formatNumber(value) {
   if (typeof value !== 'number' || !Number.isFinite(value)) return String(value ?? '');
   return Number.isInteger(value) ? String(value) : value.toFixed(2);

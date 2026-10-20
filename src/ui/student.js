@@ -101,7 +101,7 @@ function applicationCard(row) {
 }
 
 /**
- * 학생 한 명을 펼친다.
+ * 학생 한 명을 연다.
  *
  * @param {HTMLDialogElement} dialog
  * @param {object} options

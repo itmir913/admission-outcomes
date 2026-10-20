@@ -2,7 +2,7 @@
  * 업로드 처리 (§3).
  *
  * 엑셀 여러 개를 한꺼번에 올리거나, 그것들을 담은 zip 하나를 올린다.
- * **zip은 압축을 푸는 단계가 하나 더 있을 뿐, 그 뒤로는 완전히 같은 경로를 탄다.**
+ * **zip은 압축을 해제하는 단계가 하나 더 있을 뿐, 그 뒤로는 완전히 같은 경로를 탄다.**
  * 분기를 만들면 zip 경로만 조용히 낡는다.
  */
 
@@ -73,9 +73,9 @@ function isNoise(entryName) {
  */
 
 /**
- * 업로드된 것들을 엑셀 파일 목록으로 펼친다.
+ * 업로드된 것들을 엑셀 파일 목록으로 전개한다.
  *
- * zip 안의 zip은 풀지 않는다. 자료 정리에 필요한 구조가 아니고,
+ * zip 안의 zip은 해제하지 않는다. 자료 정리에 필요한 구조가 아니고,
  * 중첩 압축은 압축 폭탄의 통로가 된다.
  *
  * @param {SourceFile[]} uploads
@@ -98,12 +98,12 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
     }
 
     // xlsx 자체가 zip이므로 먼저 오피스 문서인지 본다.
-    // 이 조회는 작은 파일 하나만 펼치므로 값이 싸다
+    // 이 조회는 작은 파일 하나만 해제하므로 값이 싸다
     let officeMarker;
     try {
       officeMarker = unzipSync(bytes, { filter: (entry) => entry.name === '[Content_Types].xml' });
     } catch {
-      skipped.push({ name, reason: '압축을 풀 수 없습니다.' });
+      skipped.push({ name, reason: '압축을 해제할 수 없습니다.' });
       continue;
     }
     if (Object.keys(officeMarker).length > 0) {
@@ -112,8 +112,8 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
       continue;
     }
 
-    // **펼치기 전에 걸러낸다.** 다 펼쳐 놓고 크기를 재면 그때는 이미 늦다 —
-    // 압축 폭탄은 펼치는 순간 메모리를 삼킨다
+    // **해제하기 전에 걸러낸다.** 다 해제해 놓고 크기를 재면 그때는 이미 늦다 —
+    // 압축 폭탄은 해제하는 순간 메모리를 삼킨다
     let seen = 0;
     let declaredBytes = 0;
     let tooManyEntries = false;
@@ -138,7 +138,7 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
         }
       });
     } catch {
-      skipped.push({ name, reason: '압축을 풀 수 없습니다.' });
+      skipped.push({ name, reason: '압축을 해제할 수 없습니다.' });
       continue;
     }
 
@@ -148,7 +148,7 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
     }
     if (tooLarge) skipped.push({ name, reason: '전체 용량이 너무 큽니다.' });
     for (const inner of nested) {
-      skipped.push({ name: inner, reason: '압축 안의 압축은 풀지 않습니다.' });
+      skipped.push({ name: inner, reason: '압축 안의 압축은 해제하지 않습니다.' });
     }
 
     let found = 0;
@@ -166,7 +166,7 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
 }
 
 /**
- * 셀 값을 다듬는다. 빈 셀은 null로 통일한다.
+ * 셀 값을 정리한다. 빈 셀은 null로 통일한다.
  *
  * 엑셀에서 텍스트로 강제된 셀은 `'-` 처럼 앞에 작은따옴표가 붙어 나온다.
  * 그대로 두면 대학명·결과 값에 섞여 들어간다.
@@ -191,7 +191,7 @@ export function normalizeCell(value) {
  */
 
 /**
- * 엑셀 파일들을 시트 단위 격자로 펼친다.
+ * 엑셀 파일들을 시트 단위 격자로 전개한다.
  *
  * 비어 있는 시트는 버린다. 양식 파일에는 빈 시트가 흔히 붙어 있다.
  *

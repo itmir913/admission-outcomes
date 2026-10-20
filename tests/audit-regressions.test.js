@@ -130,7 +130,7 @@ describe('이름이 같다고 합쳐 버리던 문제', () => {
     expect(result.sids[0]).not.toBe(result.sids[1]);
   });
 
-  it('문자열과 숫자로 적힌 같은 학생을 갈라놓지 않는다', async () => {
+  it('문자열과 숫자로 적힌 같은 학생을 나누지 않는다', async () => {
     const result = await assignStudentIds([
       { cohortYear: 2025, identity: { classNo: '01', number: '07' } },
       { cohortYear: 2025, identity: { classNo: 1, number: 7 } }
@@ -207,8 +207,8 @@ describe('재업로드가 지원 기록을 두 배로 쌓던 문제', () => {
   });
 });
 
-describe('압축을 다 펼친 뒤에야 크기를 재던 문제', () => {
-  it('펼치기 전에 선언된 크기로 걸러낸다', () => {
+describe('압축을 다 푼 뒤에야 크기를 재던 문제', () => {
+  it('해제하기 전에 선언된 크기로 걸러낸다', () => {
     const archive = makeZip({
       'a.xlsx': makeWorkbook({ s: senjinhakGrid(2026) }),
       'b.xlsx': makeWorkbook({ s: senjinhakGrid(2026) })
@@ -220,7 +220,7 @@ describe('압축을 다 펼친 뒤에야 크기를 재던 문제', () => {
     expect(result.skipped.some((item) => item.reason.includes('용량'))).toBe(true);
   });
 
-  it('항목 수 상한도 펼치기 전에 본다', () => {
+  it('항목 수 상한도 해제하기 전에 본다', () => {
     const entries = {};
     for (let index = 0; index < 6; index += 1) {
       entries[`f${index}.xlsx`] = makeWorkbook({ s: [['대학'], ['서울대학교']] });

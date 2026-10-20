@@ -37,7 +37,7 @@ describe('파일 종류 판별', () => {
   });
 });
 
-describe('업로드 펼치기', () => {
+describe('업로드 전개', () => {
   it('엑셀 여러 개를 그대로 통과시킨다', () => {
     const result = expandUploads([
       upload('2024.xlsx', makeWorkbook({ result: senjinhakGrid(2024) })),
@@ -47,7 +47,7 @@ describe('업로드 펼치기', () => {
     expect(result.skipped).toEqual([]);
   });
 
-  it('zip을 풀어 안의 엑셀을 꺼낸다', () => {
+  it('zip을 해제해 안의 엑셀을 꺼낸다', () => {
     const archive = makeZip({
       '2024.xlsx': makeWorkbook({ result: senjinhakGrid(2024) }),
       '2025.xlsx': makeWorkbook({ result: senjinhakGrid(2025) })
@@ -57,7 +57,7 @@ describe('업로드 펼치기', () => {
   });
 
   it('zip으로 올린 것과 여러 개로 올린 것이 같은 결과를 낸다', () => {
-    // 두 경로가 갈라지면 zip 쪽만 조용히 낡는다
+    // 두 경로가 나뉘면 zip 쪽만 조용히 낡는다
     const a = makeWorkbook({ result: senjinhakGrid(2024) });
     const b = makeWorkbook({ result: senjinhakGrid(2025) });
     const direct = expandUploads([upload('2024.xlsx', a), upload('2025.xlsx', b)]);
@@ -86,7 +86,7 @@ describe('업로드 펼치기', () => {
   });
 
   it('xlsx도 zip이지만 압축 파일로 취급하지 않는다', () => {
-    // xlsx의 실체는 zip이라 매직 바이트만 보면 갈리지 않는다
+    // xlsx의 실체는 zip이라 매직 바이트만 보면 구분되지 않는다
     const result = expandUploads([upload('결과.xlsx', makeWorkbook({ result: senjinhakGrid() }))]);
     expect(result.files).toHaveLength(1);
     expect(result.files[0].name).toBe('결과.xlsx');
@@ -108,7 +108,7 @@ describe('업로드 펼치기', () => {
     expect(result.files.map((file) => file.name)).toEqual(['2024.xlsx']);
   });
 
-  it('압축 안의 압축은 풀지 않고 알린다', () => {
+  it('압축 안의 압축은 해제하지 않고 알린다', () => {
     const inner = makeZip({ '2024.xlsx': makeWorkbook({ result: senjinhakGrid(2024) }) });
     const outer = makeZip({ '안쪽.zip': inner, '2025.xlsx': makeWorkbook({ result: senjinhakGrid(2025) }) });
     const result = expandUploads([upload('바깥.zip', outer)]);
@@ -150,7 +150,7 @@ describe('업로드 펼치기', () => {
   it('깨진 압축 파일을 알린다', () => {
     const broken = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0]);
     const result = expandUploads([upload('깨짐.zip', broken)]);
-    expect(result.skipped[0].reason).toMatch(/압축을 풀 수 없습니다/);
+    expect(result.skipped[0].reason).toMatch(/압축을 해제할 수 없습니다/);
   });
 });
 
@@ -184,7 +184,7 @@ describe('셀 정규화', () => {
 });
 
 describe('시트 읽기', () => {
-  it('격자로 펼치고 파일 해시를 붙인다', async () => {
+  it('격자로 전개하고 파일 해시를 붙인다', async () => {
     const bytes = makeWorkbook({ result: senjinhakGrid(2026) });
     const { sheets } = await readSheets([{ name: '2026.xlsx', bytes }]);
     expect(sheets).toHaveLength(1);
@@ -200,7 +200,7 @@ describe('시트 읽기', () => {
     expect(second.sheets[0].fileHash).toBe(first.sheets[0].fileHash);
   });
 
-  it('시트 여러 개를 각각 펼친다', async () => {
+  it('시트 여러 개를 각각 전개한다', async () => {
     const bytes = makeWorkbook({ '2024': senjinhakGrid(2024), '2025': senjinhakGrid(2025) });
     const { sheets } = await readSheets([{ name: '통합.xlsx', bytes }]);
     expect(sheets.map((sheet) => sheet.sheetName)).toEqual(['2024', '2025']);

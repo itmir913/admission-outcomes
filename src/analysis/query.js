@@ -43,7 +43,7 @@ export function matchesFilter(row, filter) {
   }
 
   // `in`. 선택한 것이 없으면 아무것도 거르지 않는다 —
-  // 빈 목록을 "전부 제외"로 읽으면 체크를 다 풀었을 때 화면이 갑자기 빈다
+  // 빈 목록을 "전부 제외"로 읽으면 체크를 다 해제했을 때 화면이 갑자기 빈다
   const chosen = filter.values ?? [];
   if (chosen.length === 0) return true;
   // 빈칸을 고를 수 있어야 한다. `null`과 `''`을 한 가지로 본다
@@ -52,7 +52,7 @@ export function matchesFilter(row, filter) {
 }
 
 /**
- * 검색어를 낱말로 가른다. 여러 낱말은 모두 포함(AND)이다.
+ * 검색어를 낱말로 나눈다. 여러 낱말은 모두 포함(AND)이다.
  * @param {string} text
  */
 export function searchTokens(text) {
@@ -112,7 +112,7 @@ export function sortRows(rows, sorts = []) {
         const leftValue = left.row[sort.key];
         const rightValue = right.row[sort.key];
 
-        // 빈칸은 언제나 뒤로 보낸다. **방향을 뒤집기 전에** 가른다 —
+        // 빈칸은 언제나 뒤로 보낸다. **방향을 뒤집기 전에** 나눈다 —
         // 뒤집는 쪽에 빈칸 처리를 맡기면 내림차순에서 빈칸이 맨 위를 덮는다
         const leftBlank = isBlank(leftValue);
         const rightBlank = isBlank(rightValue);

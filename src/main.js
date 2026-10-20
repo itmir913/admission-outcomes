@@ -224,7 +224,7 @@ function paintChips() {
   }));
 }
 
-/** 사람이 손봐야 할 것을 알린다. 조용히 넘어가면 틀린 자료가 그대로 상담에 쓰인다. */
+/** 사람이 점검해야 할 것을 알린다. 조용히 넘어가면 틀린 자료가 그대로 상담에 쓰인다. */
 function paintNotices() {
   clear(dom.알림줄);
   const notices = [];

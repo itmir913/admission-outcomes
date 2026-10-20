@@ -30,7 +30,7 @@ export async function sha256(bytes) {
  */
 export async function sha256Text(text) {
   // 한글은 입력기에 따라 자모 분리형(NFD)으로 들어올 수 있다.
-  // 정규화하지 않으면 눈에 같은 이름이 다른 해시가 되어 같은 학생이 둘로 갈라진다.
+  // 정규화하지 않으면 눈에 같은 이름이 다른 해시가 되어 같은 학생이 둘로 나뉜다.
   return sha256(textEncoder.encode(text.normalize('NFC')));
 }
 

@@ -196,7 +196,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
   }
 
   // 좁은 화면에서 좌우로 나누면 「자료에 있는 열」이 접혀 내려가 안 보인다.
-  // 그 목록이 이 화면에 오는 이유 자체라, 768px부터 갈라 둘 다 한눈에 둔다
+  // 그 목록이 이 화면에 오는 이유 자체라, 768px부터 나누어 둘 다 한눈에 둔다
   const body = el('div', { class: 'grid gap-5 md:grid-cols-2' }, [
     el('section', {}, [
       el('h3', { class: 'text-lg font-bold tracking-tight', text: '보이는 열' }),

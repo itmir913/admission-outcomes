@@ -56,7 +56,7 @@ function alignTokensIn(node) {
 /**
  * 규칙마다 **쉼표로 나눈 선택자 하나씩**과 그 규칙이 직접 적은 속성들.
  *
- * **주석은 CSS 파서가 가른다.** 중괄호를 글자로 세면 주석 속 `}` 하나에 끊겨
+ * **주석은 CSS 파서가 구분한다.** 중괄호를 글자로 세면 주석 속 `}` 하나에 끊겨
  * 그 뒤의 규칙이 통째로 검사 밖으로 빠지는데, 빠졌다는 사실은 초록불에 안 적힌다.
  */
 function rulesOf(css) {
@@ -86,7 +86,7 @@ describe('정렬을 정하는 자리는 하나다', () => {
   const inTable = alignRules(CSS).filter((rule) => rule.selector.includes('grid-table'));
 
   /**
-   * 파서가 쉼표로 묶인 선택자를 하나씩 풀어 주므로, 한 규칙에 적은 `th, td`는
+   * 파서가 쉼표로 묶인 선택자를 하나씩 분리해 주므로, 한 규칙에 적은 `th, td`는
    * 여기서 둘로 보인다. 그래서 세는 것은 규칙 수가 아니라 **가리키는 자리**다.
    */
   it('표의 정렬은 머리 칸과 몸 칸 두 자리만 가리킨다', () => {
@@ -110,7 +110,7 @@ describe('정렬을 정하는 자리는 하나다', () => {
 });
 
 describe('그려 놓은 표에서 머리와 칸이 같은 쪽을 본다', () => {
-  /** 숫자 열과 글자 열을 섞는다. 갈리는 것은 늘 숫자 열이었다 */
+  /** 숫자 열과 글자 열을 섞는다. 어긋나는 것은 늘 숫자 열이었다 */
   const registry = [
     { key: 'sid', label: '익명 ID', group: 'student', type: 'text', numeric: false, filled: 2, cardinality: 2 },
     { key: 'cohortYear', label: '고3 년도', group: 'student', type: 'year', numeric: true, filled: 2, cardinality: 2 },
@@ -191,7 +191,7 @@ describe('그려 놓은 표에서 머리와 칸이 같은 쪽을 본다', () => 
     expect(cells[0].classList.contains('figure')).toBe(false);
   });
 
-  it('검사기가 갈린 정렬을 실제로 잡는다', () => {
+  it('검사기가 어긋난 정렬을 실제로 잡는다', () => {
     // 이 검사가 0을 세고 통과하면 초록불이 "깨끗하다"가 아니라 "안 봤다"를 뜻한다
     const cells = [...body.querySelectorAll('tr')]
       .filter((tr) => tr.children.length > 0)[0].children;

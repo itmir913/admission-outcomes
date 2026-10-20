@@ -12,7 +12,7 @@ import { el, clear, formatNumber, debounce } from './dom.js';
 import { valueLabel, isBlank, GROUP_LABEL, GROUP_ORDER, primaryGpaField } from '../analysis/registry.js';
 import { facetCounts } from '../analysis/query.js';
 
-/** 처음부터 펼쳐 두는 필터. 상담에서 가장 먼저 거는 것들이다. */
+/** 처음부터 열어 두는 필터. 상담에서 가장 먼저 거는 것들이다. */
 const OPENING = ['cohortYear', 'outcome', 'univ', 'track', 'admType', 'period', 'region'];
 
 /** 값이 이보다 많으면 목록 안에 검색칸을 둔다. */
@@ -54,7 +54,7 @@ export function entryOrder(field) {
  * @param {() => void} [options.onClose] 좁은 화면에서 패널을 닫는다
  */
 export function createFilters({ mount, read, onChange, onClose }) {
-  /** 펼쳐 둔 열. 필터가 걸려 있지 않아도 자리는 지킨다 */
+  /** 열어 둔 열. 필터가 걸려 있지 않아도 자리는 지킨다 */
   let open = [];
   /** 값 목록 안 검색어 */
   const localSearch = new Map();
@@ -230,7 +230,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const head = el('div', { class: 'flex min-h-9 items-center gap-1' }, [
       el('h3', { class: 'min-w-0 flex-1 truncate text-base font-semibold', text: field.label, attrs: { title: field.label } }),
       /*
-       * 두 단추가 하는 일이 다르다. 하나는 선택한 값을 풀고, 하나는 이 열을 목록에서 뺀다.
+       * 두 단추가 하는 일이 다르다. 하나는 선택한 값을 해제하고, 하나는 이 열을 목록에서 뺀다.
        *
        * **「해제」는 쓸 수 없을 때도 자리를 지킨다.** 값을 선택하는 순간 단추가 생기면
        * 머리줄이 그만큼 높아져서 카드가 들썩이고, 그러면 방금 누른 체크박스가
@@ -246,8 +246,8 @@ export function createFilters({ mount, read, onChange, onClose }) {
           disabled: !active,
           'aria-hidden': active ? null : 'true',
           tabindex: active ? null : '-1',
-          'aria-label': `${field.label}에서 선택한 값 풀기`,
-          title: '선택한 값만 푼다 — 열은 그대로 둔다'
+          'aria-label': `${field.label}에서 선택한 값 해제`,
+          title: '선택한 값만 해제한다 — 열은 그대로 둔다'
         },
         on: { click: () => setFilter(field.key, null) }
       }),
@@ -265,7 +265,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
       })
     ]);
 
-    // 숫자여도 값이 몇 가지뿐이면 목록에서 짚는 편이 낫다.
+    // 숫자여도 값이 몇 가지뿐이면 목록에서 선택하는 편이 낫다.
     // 고3 년도·수능 등급은 다중 선택이, 내신·백분위는 범위가 자연스럽다
     const body = field.numeric && field.cardinality > SEARCHABLE_AT
       ? rangeBlock(field, filter)
@@ -276,7 +276,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
     }, [head, body]);
   }
 
-  /** 아직 안 펼친 열을 묶음별로 선택해 넣는 칸. */
+  /** 아직 열지 않은 열을 묶음별로 선택해 넣는 칸. */
   function adder(registry) {
     const shown = new Set(open);
     const options = [el('option', { text: '필터 추가…', attrs: { value: '' } })];

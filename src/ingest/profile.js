@@ -115,7 +115,7 @@ export class ProfileSet {
    * 어느 학년도에 만든 프로파일이든 그대로 쓸 수 있다. 양식이 바뀌지 않은 해는 여기서 걸린다.
    *
    * 후보가 여럿이면 가장 최근에 만든 것을 쓴다. 지문이 같은데 매핑이 다르다면 둘 중 하나가
-   * 틀린 것이고, 나중에 손본 쪽이 맞을 가능성이 높다.
+   * 틀린 것이고, 나중에 수정한 쪽이 맞을 가능성이 높다.
    *
    * @param {{fingerprint: string}} input
    * @returns {{ profile: object } | null}

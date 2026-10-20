@@ -36,12 +36,12 @@ import { buildDataset } from './buildRecords.js';
 
 /**
  * @typedef {object} Reading
- * @property {'profile'|'names'} source 지문이 맞은 프로파일로 읽었는지, 이름으로 풀었는지
+ * @property {'profile'|'names'} source 지문이 맞은 프로파일로 읽었는지, 이름으로 해석했는지
  * @property {Record<string, number>} columns 논리 키 → 열 번호
  * @property {number} headerRows
  * @property {number} headerStart 헤더가 시작하는 행
- * @property {string|null} yearBasis 연도 열의 기준. 이름으로 풀었으면 모른다
- * @property {{index: number, label: string, reason: string}[]} unresolved 짚지 못한 열
+ * @property {string|null} yearBasis 연도 열의 기준. 이름으로 해석했으면 모른다
+ * @property {{index: number, label: string, reason: string}[]} unresolved 해석하지 못한 열
  * @property {string[]} notes 사람이 읽을 설명
  * @property {string|null} profileId
  * @property {string|null} label 화면에 보일 양식 이름
@@ -52,8 +52,8 @@ import { buildDataset } from './buildRecords.js';
  * 시트 하나의 열을 읽어 낸다 (§4).
  *
  * **이름 매칭이 주 경로다.** 지문이 맞는 프로파일이 있으면 이미 사람이 확인해 둔
- * 답이므로 그것을 쓰고, 없으면 이름으로 푼다. 지문이 어긋났다는 것은
- * "읽을 수 없다"가 아니라 "다시 풀어야 한다"는 뜻이다.
+ * 답이므로 그것을 쓰고, 없으면 이름으로 해석한다. 지문이 어긋났다는 것은
+ * "읽을 수 없다"가 아니라 "다시 해석해야 한다"는 뜻이다.
  *
  * @param {unknown[][]} grid
  * @param {object} match
@@ -236,7 +236,7 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
       warnings.push({
         type: 'columns-unresolved',
         sheet: sheet.id,
-        message: `${sheet.fileName}에서 열 ${reading.unresolved.length}개를 짚지 못해 원본 이름 그대로 보존했습니다: ${reading.unresolved.slice(0, 5).map((item) => item.label).join(', ')}${reading.unresolved.length > 5 ? ' …' : ''}`
+        message: `${sheet.fileName}에서 열 ${reading.unresolved.length}개를 해석하지 못해 원본 이름 그대로 보존했습니다: ${reading.unresolved.slice(0, 5).map((item) => item.label).join(', ')}${reading.unresolved.length > 5 ? ' …' : ''}`
       });
     }
     for (const note of reading.notes) {

@@ -169,8 +169,8 @@ describe('확정하고 넣기', () => {
     expect(dumped).not.toContain('30101');
   });
 
-  it('프로파일이 없어도 이름으로 풀어 넣는다', async () => {
-    // 지문이 어긋났다는 것은 "읽을 수 없다"가 아니라 "다시 풀어야 한다"는 뜻이다 (§4)
+  it('프로파일이 없어도 이름으로 해석해 넣는다', async () => {
+    // 지문이 어긋났다는 것은 "읽을 수 없다"가 아니라 "다시 해석해야 한다"는 뜻이다 (§4)
     const { sheets } = await prepareUploads(
       [upload('a.xlsx', makeWorkbook({ result: senjinhakGrid(2026) }))],
       { profiles: new ProfileSet([]), currentYear: NOW }

@@ -29,7 +29,7 @@ function typeOf(key) {
 }
 
 /**
- * 셀 값을 필드 타입에 맞게 다듬는다.
+ * 셀 값을 필드 타입에 맞게 정리한다.
  * @param {string} key
  * @param {unknown} raw
  */
@@ -49,7 +49,7 @@ export function coerce(key, raw) {
 }
 
 /**
- * 한 행을 논리 필드별로 갈라 읽는다.
+ * 한 행을 논리 필드별로 나누어 읽는다.
  * @param {unknown[]} row
  * @param {Record<string, number>} columns
  */

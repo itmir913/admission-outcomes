@@ -1,7 +1,7 @@
 /**
  * 불러오기 화면 (§1, §3).
  *
- * 엑셀 여러 개든 zip 하나든 **같은 경로**로 들어온다. 화면에서도 갈라놓지 않는다.
+ * 엑셀 여러 개든 zip 하나든 **같은 경로**로 들어온다. 화면에서도 나누지 않는다.
  *
  * 파일을 읽은 뒤 곧바로 저장하지 않고 확인 화면을 한 번 세운다.
  * **고3 년도는 사람이 확정한다** — 추론은 입력란을 미리 채우는 제안일 뿐이다.
@@ -223,12 +223,12 @@ export function confirmUploads(dialog, prepared, currentYear) {
          */
         reading?.readable && reading.source === 'names'
           ? el('div', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-3 text-base text-wait' }, [
-              el('p', { class: 'font-semibold', text: '등록된 양식과 달라 열 이름으로 풀었습니다. 한 번 확인해 주세요.' }),
-              el('p', { class: 'mt-1 text-sm' , text: `열 ${reading.columnCount}개 중 ${Object.keys(reading.columns).length}개를 짚었습니다.` }),
+              el('p', { class: 'font-semibold', text: '등록된 양식과 달라 열 이름으로 해석했습니다. 한 번 확인해 주세요.' }),
+              el('p', { class: 'mt-1 text-sm' , text: `열 ${reading.columnCount}개 중 ${Object.keys(reading.columns).length}개를 해석했습니다.` }),
               reading.unresolved.length > 0
                 ? el('p', {
                     class: 'mt-1 text-sm',
-                    text: `짚지 못한 ${reading.unresolved.length}개는 원본 이름 그대로 보존합니다 — ${reading.unresolved.slice(0, 6).map((item) => item.label).join(', ')}${reading.unresolved.length > 6 ? ' …' : ''}`
+                    text: `해석하지 못한 ${reading.unresolved.length}개는 원본 이름 그대로 보존합니다 — ${reading.unresolved.slice(0, 6).map((item) => item.label).join(', ')}${reading.unresolved.length > 6 ? ' …' : ''}`
                   })
                 : null,
               ...reading.notes.map((note) => el('p', { class: 'mt-1 text-sm', text: note }))

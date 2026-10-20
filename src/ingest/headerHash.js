@@ -14,7 +14,7 @@
 
 import { sha256Text, toHex } from '../core/hash.js';
 
-/** 헤더 칸 하나를 지문용으로 다듬는다. */
+/** 헤더 칸 하나를 지문용으로 정리한다. */
 export function normalizeHeaderCell(value) {
   if (value === null || value === undefined) return '';
   return String(value)

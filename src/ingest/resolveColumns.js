@@ -1,5 +1,5 @@
 /**
- * 열 해석의 주 경로 — 이름으로 푼다 (§4).
+ * 열 해석의 주 경로 — 이름으로 해석한다 (§4).
  *
  * 엑셀에서 믿을 수 있는 것은 **열 이름**이지 열 번호가 아니다. 번호는 양식이
  * 조금만 달라져도 통째로 밀린다 — 실제로 대교협 양식에 5등급제 열 하나가
@@ -32,7 +32,7 @@ export const MAX_HEADER_ROWS = 3;
 export const MAX_HEADER_START = 5;
 
 /**
- * 라벨을 견주기 좋게 다듬는다.
+ * 라벨을 견주기 좋게 정리한다.
  *
  * 두 가지를 돌려주는 이유가 있다. `전형명(대)`는 괄호를 통째로 걷어내야 `전형명`과
  * 만나는데, `전교과(2/4/4)`는 괄호 안이 **뜻을 나르는 값**이라 걷어내면 네 열이 한 열이 된다.
@@ -107,7 +107,7 @@ export function namesAScalar(label) {
 }
 
 /**
- * 열들을 세 구역으로 가른다.
+ * 열들을 세 구역으로 구분한다.
  *
  * 수능 구역을 먼저 찾고, 그다음 내신 구역을 찾는다. 수능이 뒤쪽에 있어서
  * 내신 구역의 오른쪽 끝을 수능의 시작이 정해 주기 때문이다.
@@ -140,7 +140,7 @@ export function findSections(labels) {
     /*
      * 오른쪽 끝은 수능 구역이 정해 준다. **다만 수능 구역이 없는 양식이 있다** —
      * 등급만 싣고 한국사를 안 싣는 양식이 그렇다. 그때 내신 구역을 줄 끝까지 두면
-     * `1단계`·`최종`까지 내신으로 삼키고, 값 검증이 뒤늦게 물러 주는 대신
+     * `1단계`·`최종`까지 내신으로 삼키고, 값 검증이 뒤늦게 취소해 주는 대신
      * 그 열들이 통째로 미해결로 남는다.
      *
      * 그래서 사전에 이름이 있는 열을 만나면 거기서 끊는다. 내신 조합 이름은
@@ -187,7 +187,7 @@ export function suneungKeyOf(label) {
 /**
  * 논리 필드마다 값이 어느 범위에 있어야 하는지.
  *
- * 이름이 맞아 보여도 값이 전혀 다른 범위면 잘못 짚은 것이다.
+ * 이름이 맞아 보여도 값이 전혀 다른 범위면 잘못 배정한 것이다.
  * **배정을 지우고 비워 둔다** — 조용히 틀린 값이 이 시스템에서 가장 위험하다(§5).
  */
 const VALUE_RANGE = {
@@ -222,7 +222,7 @@ export function fitRatio(values, range) {
   return seen === 0 ? null : inside / seen;
 }
 
-/** 이보다 적게 맞으면 잘못 짚은 것으로 본다. */
+/** 이보다 적게 맞으면 잘못 배정한 것으로 본다. */
 const FIT_FLOOR = 0.6;
 
 // ── 해석 ────────────────────────────────────────────────────────────────────
@@ -232,13 +232,13 @@ const FIT_FLOOR = 0.6;
  * @property {number} headerStart 헤더가 시작하는 행
  * @property {number} headerRows 헤더 줄 수
  * @property {Record<string, number>} columns 논리 키 → 열 번호
- * @property {{index: number, label: string, reason: string}[]} unresolved 짚지 못한 열
+ * @property {{index: number, label: string, reason: string}[]} unresolved 해석하지 못한 열
  * @property {string[]} notes 사람이 읽을 설명
  * @property {import('./headerBlock.js').HeaderLabel[]} labels
  */
 
 /**
- * 헤더 블록이 정해졌다는 전제에서 열을 푼다.
+ * 헤더 블록이 정해졌다는 전제에서 열을 해석한다.
  *
  * @param {unknown[][]} grid 헤더가 첫 줄에 오도록 이미 잘라 둔 격자
  * @param {number} headerRows
@@ -255,7 +255,7 @@ export function resolveColumns(grid, headerRows = 1, sampleRows = 200) {
   const taken = new Map();
   /** @type {Map<string, number>} 논리 키 → 열 번호 */
   const columns = new Map();
-  /** @type {Map<number, string>} 짚지 못한 이유 */
+  /** @type {Map<number, string>} 해석하지 못한 이유 */
   const why = new Map();
 
   const claim = (index, key) => {
@@ -277,7 +277,7 @@ export function resolveColumns(grid, headerRows = 1, sampleRows = 200) {
     if (!claim(index, key)) why.set(index, `${key}는 앞선 열이 이미 차지했습니다`);
   }
 
-  // 2. 나머지는 이름으로 겨룬다. 점수가 높은 짝부터 확정하고, 한 열에 한 필드만 준다
+  // 2. 나머지는 이름으로 경쟁한다. 점수가 높은 짝부터 확정하고, 한 열에 한 필드만 준다
   const bids = [];
   for (let index = 0; index < labels.length; index += 1) {
     if (taken.has(index)) continue;
@@ -302,11 +302,11 @@ export function resolveColumns(grid, headerRows = 1, sampleRows = 200) {
     columns.delete(key);
     taken.delete(index);
     why.set(index, `${labels[index].label}의 값이 ${range.label}에 맞지 않아 ${key}로 보지 않았습니다`);
-    notes.push(`${labels[index].label} 열을 ${key}로 짚었다가 값이 ${range.label} 밖이라 물렀습니다.`);
+    notes.push(`${labels[index].label} 열은 값이 ${range.label} 밖이라 ${key}로 배정하지 않았습니다.`);
   }
 
   // 4. `학년` 열에 학년(3)이 아니라 연도(2026)가 들어 있는 양식이 있다 (§3의 함정).
-  //    이름으로는 갈리지 않으므로 값으로 판별해 승격시킨다
+  //    이름으로는 구분되지 않으므로 값으로 판별해 승격시킨다
   const schoolYearAt = columns.get('schoolYear');
   if (schoolYearAt !== undefined && !columns.has('sourceYear')) {
     const asYear = fitRatio(body.map((row) => row?.[schoolYearAt]), VALUE_RANGE.sourceYear);
@@ -337,7 +337,7 @@ export function resolveColumns(grid, headerRows = 1, sampleRows = 200) {
 }
 
 /**
- * 헤더가 몇 번째 줄에서 몇 줄인지까지 알아내 푼다.
+ * 헤더가 몇 번째 줄에서 몇 줄인지까지 알아내 해석한다.
  *
  * 줄 수를 눈으로 정하는 규칙을 쌓는 대신 **해 보고 가장 잘 풀린 것을 남긴다.**
  * 규칙은 양식 하나를 볼 때마다 늘어나지만, 결과를 견주는 것은 양식이 몇이든 같다.

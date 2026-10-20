@@ -8,7 +8,7 @@
  * 그래서 여기서 재는 것은 두 가지다.
  *
  * 1. 열이 끼어들거나 빠져도 **이름이 같으면 같은 답**이 나오는가
- * 2. 이름이 같아도 **뜻이 다른 자리**를 가르는가 (내신 국어 ≠ 수능 국어)
+ * 2. 이름이 같아도 **뜻이 다른 자리**를 구별하는가 (내신 국어 ≠ 수능 국어)
  *
  * plan.md §10의 2단계 완료 기준이 1번이다 — "샘플 파일의 헤더를 한 열만 바꿔 넣었을 때
  * 조용히 틀린 값을 읽으면 실패다."
@@ -50,7 +50,7 @@ function twoRowGrid({ insertAt = null, insertLabel = '(5등급)·일반등급' }
   return [top, sub, body, body];
 }
 
-describe('라벨 다듬기', () => {
+describe('라벨 정리', () => {
   it('괄호를 걷어낸 모양과 글자만 지운 모양을 함께 돌려준다', () => {
     expect(normalizeLabel('전형명(대)')).toEqual({ tight: '전형명대', base: '전형명' });
   });
@@ -86,7 +86,7 @@ describe('이름 점수 매기기', () => {
 describe('구역 판정', () => {
   const labelsOf = (grid, rows) => buildHeaderLabels(grid, rows);
 
-  it('내신 구역과 수능 구역을 가른다', () => {
+  it('내신 구역과 수능 구역을 구분한다', () => {
     const sections = findSections(labelsOf(twoRowGrid(), 2));
     expect(sections.gpa).toEqual({ start: 17, end: 23 });
     expect(sections.suneung).toEqual({ start: 23, end: 29 });
@@ -100,7 +100,7 @@ describe('구역 판정', () => {
     expect(sections.gpa.end).toBe(10);
   });
 
-  it('사전에 있는 이름인지 가려낸다', () => {
+  it('사전에 있는 이름인지 구별한다', () => {
     expect(namesAScalar({ top: '1단계', sub: '', label: '1단계' })).toBe(true);
     expect(namesAScalar({ top: '전교과', sub: '100', label: '전교과·100' })).toBe(false);
   });
@@ -134,7 +134,7 @@ describe('값으로 교차검증', () => {
   });
 });
 
-describe('두 줄 헤더를 푼다', () => {
+describe('두 줄 헤더를 해석한다', () => {
   const resolved = resolveSheet(twoRowGrid());
 
   it('머리글이 두 줄인 것을 알아낸다', () => {
@@ -143,7 +143,7 @@ describe('두 줄 헤더를 푼다', () => {
   });
 
   it('내신 국어와 수능 국어를 다른 열로 둔다', () => {
-    // 구역을 안 가르면 둘 중 하나가 다른 하나를 덮는다. 이게 이 파일의 핵심이다
+    // 구역을 구분하지 않으면 둘 중 하나가 다른 하나를 덮는다. 이게 이 파일의 핵심이다
     expect(resolved.columns['gpa.국어']).toBe(17);
     expect(resolved.columns['suneung.국어.grade']).toBe(27);
     expect(resolved.columns['suneung.국어.percentile']).toBe(26);
@@ -159,7 +159,7 @@ describe('두 줄 헤더를 푼다', () => {
     expect(resolved.unresolved.map((item) => item.label)).toContain('최종발표일');
   });
 
-  it('짚지 못한 열을 버리지 않고 이유와 함께 들고 온다', () => {
+  it('해석하지 못한 열을 버리지 않고 이유와 함께 들고 온다', () => {
     const 최종발표일 = resolved.unresolved.find((item) => item.label === '최종발표일');
     expect(최종발표일.reason).toBeTruthy();
     expect(최종발표일.index).toBe(16);
@@ -202,10 +202,10 @@ describe('열이 끼어들어도 같은 답이 나온다', () => {
 
 describe('이름 매칭과 손으로 적은 프로파일이 같은 답을 낸다', () => {
   /**
-   * 두 경로가 갈리면 **어느 쪽이 맞는지 알 방법이 없다.** 지문이 맞는 날은 프로파일이,
+   * 두 경로가 어긋나면 **어느 쪽이 맞는지 알 방법이 없다.** 지문이 맞는 날은 프로파일이,
    * 어긋나는 날은 이름 매칭이 읽으므로, 둘이 다르면 같은 자료가 날에 따라 달라진다.
    */
-  it('대교협 계열 표본에서 갈리지 않는다', () => {
+  it('대교협 계열 표본에서 어긋나지 않는다', () => {
     const resolved = resolveSheet(kcueGrid());
     expect(resolved.headerRows).toBe(2);
     expect(resolved.columns.univ).toBe(4);
@@ -215,7 +215,7 @@ describe('이름 매칭과 손으로 적은 프로파일이 같은 답을 낸다
     expect(resolved.columns['suneung.국어.stdScore']).toBe(13);
   });
 
-  it('센진학 계열 표본에서 갈리지 않는다', () => {
+  it('센진학 계열 표본에서 어긋나지 않는다', () => {
     const resolved = resolveSheet(senjinhakGrid(2026));
     expect(resolved.headerRows).toBe(1);
     expect(resolved.columns.univ).toBe(4);
@@ -226,7 +226,7 @@ describe('이름 매칭과 손으로 적은 프로파일이 같은 답을 낸다
 
   it('`학년` 열에 연도가 실린 것을 값으로 알아챈다', () => {
     // 대교협의 `학년`에는 3이, 센진학의 같은 이름 열에는 2026이 들어 있다 (§3의 함정).
-    // 이름으로는 갈리지 않으므로 값으로 가른다
+    // 이름으로는 구분되지 않으므로 값으로 구별한다
     expect(resolveSheet(senjinhakGrid(2026)).columns.sourceYear).toBe(0);
     expect(resolveSheet(senjinhakGrid(2026)).columns.schoolYear).toBeUndefined();
     expect(resolveSheet(kcueGrid()).columns.schoolYear).toBe(0);
@@ -234,7 +234,7 @@ describe('이름 매칭과 손으로 적은 프로파일이 같은 답을 낸다
   });
 });
 
-describe('짚었다가 무르는 자리', () => {
+describe('배정하지 않고 넘어가는 자리', () => {
   it('이름이 맞아도 값이 딴 세상이면 배정을 지운다', () => {
     // `모집인원` 자리에 연도가 들어 있는 양식을 가정한다
     const grid = [
@@ -244,10 +244,10 @@ describe('짚었다가 무르는 자리', () => {
     ];
     const resolved = resolveColumns(grid, 1);
     expect(resolved.columns.quota).toBeUndefined();
-    expect(resolved.notes.join(' ')).toContain('물렀습니다');
+    expect(resolved.notes.join(' ')).toContain('배정하지 않았습니다');
   });
 
-  it('값이 비어 있으면 무르지 않는다 - 검증할 거리가 없는 것과 틀린 것은 다르다', () => {
+  it('값이 비어 있으면 취소하지 않는다 - 검증할 거리가 없는 것과 틀린 것은 다르다', () => {
     const grid = [['대학명', '모집인원'], ['서울대학교', null]];
     expect(resolveColumns(grid, 1).columns.quota).toBe(1);
   });

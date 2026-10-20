@@ -19,7 +19,7 @@ describe('식별 키 만들기', () => {
   });
 
   it('주키에는 이름을 넣지 않는다', () => {
-    // 넣으면 같은 학번인데 표기가 다른 것만으로 한 학생이 둘로 갈라진다
+    // 넣으면 같은 학번인데 표기가 다른 것만으로 한 학생이 둘로 나뉜다
     const withName = identityKeys(2025, { hakbun: '30101', name: '김가온' });
     const withoutName = identityKeys(2025, { hakbun: '30101' });
     expect(withoutName[0].text).toBe(withName[0].text);
@@ -79,7 +79,7 @@ describe('식별 키 만들기', () => {
   });
 
   it('이름의 사이 공백을 무시한다', () => {
-    // 파일마다 `홍 길동`, `홍길동`으로 다르게 적혀 있으면 한 사람이 둘로 갈라진다
+    // 파일마다 `홍 길동`, `홍길동`으로 다르게 적혀 있으면 한 사람이 둘로 나뉜다
     const spaced = identityKeys(2025, { name: '김 가 온', hakbun: '30101' });
     const plain = identityKeys(2025, { name: '김가온', hakbun: '30101' });
     expect(spaced[0].text).toBe(plain[0].text);

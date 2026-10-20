@@ -21,7 +21,7 @@ function simpleSheet(cohortYear = 2025) {
   };
 }
 
-describe('셀 값 다듬기', () => {
+describe('셀 값 정리', () => {
   it('숫자 필드를 숫자로 바꾼다', () => {
     expect(coerce('gpa.전교과', '1.82')).toBe(1.82);
     expect(coerce('quota', '1,200')).toBe(1200);
@@ -57,7 +57,7 @@ describe('셀 값 다듬기', () => {
   });
 });
 
-describe('헤더 블록 펴기', () => {
+describe('헤더 블록 전개', () => {
   it('병합셀을 오른쪽으로 흘려 채운다', () => {
     expect(fillMergedRow(['국어', null, null, null], 4)).toEqual(['국어', '국어', '국어', '국어']);
   });
@@ -80,7 +80,7 @@ describe('헤더 블록 펴기', () => {
 });
 
 describe('행 읽기', () => {
-  it('논리 필드별로 갈라 담는다', () => {
+  it('논리 필드별로 나누어 담는다', () => {
     const row = ['30101', '김가온', '서울대학교', 1.82, '2', '언어와매체'];
     const parsed = readRow(row, {
       'identity.hakbun': 0, 'identity.name': 1, univ: 2,
@@ -92,7 +92,7 @@ describe('행 읽기', () => {
     expect(parsed.suneung).toEqual({ 국어: { grade: 2, subject: '언어와매체' } });
   });
 
-  it('반영비가 붙은 내신 조합도 갈라 담는다', () => {
+  it('반영비가 붙은 내신 조합도 나누어 담는다', () => {
     const parsed = readRow([6.36, 6.34], { 'gpa.전교과': 0, 'gpa.전교과(2/4/4)': 1 });
     expect(parsed.gpa).toEqual({ 전교과: 6.36, '전교과(2/4/4)': 6.34 });
   });
