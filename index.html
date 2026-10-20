@@ -95,6 +95,13 @@
 
       <div id="표" tabindex="-1" class="print-open min-h-0 min-w-0 flex-1 overflow-auto">
         <!--
+          요약 띠. **맨 위에 둔다** — 조건을 걸고 나서 가장 먼저 확인하는 것이
+          "그래서 몇 건이 남았나"이기 때문이다. 조작 수단은 그 아래에 둔다.
+          함께 스크롤된다. 분모가 무엇인지는 한 줄로 늘 밝힌다 (plan.md §6).
+        -->
+        <div id="요약띠" class="summary-rail" aria-live="polite"></div>
+
+        <!--
           조작 띠. **고정하지 않는다** — 내려 보는 동안 자리를 양보하고,
           그 자리를 표가 쓴다. 상단에 남아야 하는 것은 표 머리줄 하나다.
 
@@ -145,10 +152,6 @@
 
         <div id="알림줄" class="sticky left-0 w-full space-y-2 px-4 pt-3 empty:pt-0 lg:px-5"></div>
 
-        <!--
-          요약 띠도 함께 스크롤된다. 분모가 무엇인지는 한 줄로 늘 밝힌다 (plan.md §6).
-        -->
-        <div id="요약띠" class="summary-rail" aria-live="polite"></div>
         <table class="grid-table">
               <colgroup id="열너비"></colgroup>
               <thead>

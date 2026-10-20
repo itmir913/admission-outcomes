@@ -136,8 +136,12 @@
    * 숫자를 크게 두고 이름을 그 위에 작게 둔다 — 상담 중에 읽는 것은 숫자이고,
    * 이름은 한 번 익히면 다시 읽지 않는다.
    */
+  /*
+   * 칸이 **너비를 나눠 가진다.** 왼쪽에 몰아 두었더니 오른쪽이 통째로 비어
+   * 카드만 길쭉했다. basis 로 최소 너비를 주어 좁은 화면에서는 줄을 바꾼다.
+   */
   .stat {
-    @apply flex min-w-0 flex-col justify-center px-4 py-2;
+    @apply flex min-w-0 flex-1 basis-28 flex-col justify-center px-4 py-2;
   }
   .stat-name {
     @apply truncate text-sm text-ink-soft;
