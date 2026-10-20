@@ -10,6 +10,16 @@
   -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'" />
+
+  <!--
+    스타일은 **자바스크립트를 타지 않는다.**
+
+    `main.js`에서 import하면 개발 서버에서 CSS가 모듈 그래프를 타고 들어온다.
+    그러면 스크립트가 늦거나 막히는 순간 화면이 통째로 민짜가 되고,
+    보는 사람은 "CSS가 안 됐다"고 읽는다 — 실제로는 JS가 안 온 것인데도.
+    여기 링크로 두면 둘이 갈라져서, 서식은 뜨고 기능만 안 되는 모습이 된다.
+  -->
+  <link rel="stylesheet" href="./src/styles.css" />
 </head>
 <body>
   <a href="#표" class="sr-only focus:not-sr-only focus:absolute focus:m-3 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-white">

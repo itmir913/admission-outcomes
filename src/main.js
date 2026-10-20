@@ -9,8 +9,6 @@
  * 자료가 1만 행 내외라 이 단순함이 성능 기준(재계산 100ms) 안에 들어온다(§6).
  */
 
-import './styles.css';
-
 import { prepareUploads, commitSheets } from './ingest/pipeline.js';
 import { ProfileSet } from './ingest/profile.js';
 import { bundledProfiles } from './dict/header-profiles/index.js';
