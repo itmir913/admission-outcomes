@@ -11,7 +11,7 @@
  *     → 이름 매칭 → 값으로 교차검증 → 확정된 열 번호
  *
  * 열 번호는 **이 과정의 결과물**이다. 번호를 먼저 믿고 읽는 일은 없다.
- * 한 번 푼 답은 지문과 함께 프로파일로 저장되어, 같은 양식이 다시 오면 그대로 쓰인다.
+ * 한 번 해석한 답은 지문과 함께 프로파일로 저장되어, 같은 양식이 다시 오면 그대로 쓰인다.
  *
  * 구역 판정이 이름 매칭보다 먼저인 이유는 §4에 적힌 그대로다. 대교협 양식에는
  * `국어`·`영어`·`수학`이 내신 구역과 수능 구역에 각각 한 번씩 나오고,
@@ -357,7 +357,7 @@ export function resolveSheet(grid, { sampleRows = 200 } = {}) {
       if (start + headerRows >= rows.length) break;
       const attempt = resolveColumns(rows.slice(start), headerRows, sampleRows);
       attempt.headerStart = start;
-      // 많이 푼 쪽이 이기고, 같으면 머리줄이 짧은 쪽·위쪽에서 시작한 쪽이 이긴다
+      // 많이 해석한 쪽이 이기고, 같으면 머리줄이 짧은 쪽·위쪽에서 시작한 쪽이 이긴다
       const size = Object.keys(attempt.columns).length;
       const bestSize = best ? Object.keys(best.columns).length : -1;
       if (size > bestSize

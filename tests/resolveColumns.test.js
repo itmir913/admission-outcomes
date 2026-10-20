@@ -184,7 +184,7 @@ describe('열이 끼어들어도 같은 답이 나온다', () => {
     expect(밀린것).toEqual([]);
   });
 
-  it('푼 필드의 목록 자체는 똑같다', () => {
+  it('해석한 필드의 목록 자체는 똑같다', () => {
     expect(Object.keys(after.columns).sort()).toEqual(Object.keys(before.columns).sort());
   });
 

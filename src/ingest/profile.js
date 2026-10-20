@@ -15,6 +15,11 @@
  * 이걸 빠뜨리면 자료 전체가 한 해씩 밀린 채로 멀쩡해 보인다.
  * ```
  *
+ * **`year`는 이름표일 뿐 매칭 키가 아니다.** 고르는 기준은 지문 하나다.
+ * 머리글 줄 수(`headerRows`)도 연도가 아니라 **지문에 딸린 속성**이다 —
+ * 같은 프로그램이라도 내보내기 양식이 바뀌면 줄 수가 달라지고, 그것은 해와 무관하다.
+ * 실제로 같은 프로그램의 두 양식이 1줄과 2줄로 나뉘었다(decisions.md D23).
+ *
  * `columns`는 **논리 키 → 열 인덱스**의 평평한 맵이다.
  * 되풀이되는 묶음(내신 반영조합, 수능 영역)은 점으로 이어 붙인 키로 표현한다.
  * 구조를 하나로 유지해야 새 양식이 들어와도 스키마가 흔들리지 않는다.
@@ -82,6 +87,23 @@ export function validateProfile(profile) {
 }
 
 /**
+ * 두 프로파일이 같은 답을 내는가.
+ *
+ * 지문이 같으면 머리글이 글자 하나까지 같다는 뜻이고, 그러면 매핑도 같아야 한다.
+ * 다르다면 둘 중 하나가 틀린 것이다.
+ *
+ * @param {object} left
+ * @param {object} right
+ */
+export function sameMapping(left, right) {
+  if (left.headerRows !== right.headerRows) return false;
+  if ((left.yearBasis ?? null) !== (right.yearBasis ?? null)) return false;
+  const keys = Object.keys(left.columns ?? {});
+  if (keys.length !== Object.keys(right.columns ?? {}).length) return false;
+  return keys.every((key) => left.columns[key] === right.columns[key]);
+}
+
+/**
  * 프로파일 묶음. 저장소에 동봉된 것과 사용자가 만든 것을 함께 담는다.
  */
 export class ProfileSet {
@@ -112,18 +134,27 @@ export class ProfileSet {
    * 이 시트에 쓸 프로파일을 정한다 (§4 해석 순서).
    *
    * **지문이 맞는 것만 후보다.** 지문이 같다는 것은 헤더가 글자 하나까지 같다는 뜻이므로,
-   * 어느 학년도에 만든 프로파일이든 그대로 쓸 수 있다. 양식이 바뀌지 않은 해는 여기서 걸린다.
+   * 어느 해에 만든 프로파일이든 그대로 쓸 수 있다. 양식이 바뀌지 않은 해는 여기서 걸린다.
    *
-   * 후보가 여럿이면 가장 최근에 만든 것을 쓴다. 지문이 같은데 매핑이 다르다면 둘 중 하나가
-   * 틀린 것이고, 나중에 수정한 쪽이 맞을 가능성이 높다.
+   * **지문이 같은데 매핑이 다르면 어느 쪽도 쓰지 않는다.** 둘 중 하나는 틀렸는데
+   * 어느 쪽인지 알 방법이 없다. 나중에 만든 쪽을 조용히 고르면, 틀린 프로파일로 읽은
+   * 상담 자료가 멀쩡한 얼굴로 나온다 — 이 시스템에서 가장 위험한 것이다(§5).
+   * 그때는 `conflict`를 돌려주고, 부르는 쪽이 이름 매칭으로 내려간다.
    *
    * @param {{fingerprint: string}} input
-   * @returns {{ profile: object } | null}
+   * @returns {{ profile: object, conflict?: undefined } | { profile: null, conflict: string[] } | null}
    */
   select({ fingerprint }) {
     const matching = this.profiles.filter((profile) => profile.fingerprint === fingerprint);
     if (matching.length === 0) return null;
-    return { profile: [...matching].sort((left, right) => right.year - left.year)[0] };
+
+    const [first, ...rest] = matching;
+    const disagreeing = rest.filter((profile) => !sameMapping(first, profile));
+    if (disagreeing.length > 0) {
+      return { profile: null, conflict: [first.id, ...disagreeing.map((profile) => profile.id)] };
+    }
+    // 여기 왔다면 매핑이 모두 같다. 어느 것을 선택해도 결과가 같다
+    return { profile: first };
   }
 
   /** 지문과 무관하게 이름만으로 찾는다. 수동 매핑 화면에서 참고용으로 쓴다. */
@@ -160,6 +191,13 @@ export async function matchProfile(profileSet, { grid }) {
   for (const headerRows of attempts) {
     const fingerprint = await headerFingerprint(grid, headerRows);
     const found = profileSet.select({ fingerprint });
+    if (found?.conflict) {
+      // 지문이 같은데 매핑이 다르다. 어느 쪽도 쓰지 않고 이름 매칭으로 내려간다
+      return {
+        profile: null, match: 'conflict', conflict: found.conflict,
+        profileYear: null, fingerprint, needsFallback: true
+      };
+    }
     if (found) {
       return {
         profile: found.profile,

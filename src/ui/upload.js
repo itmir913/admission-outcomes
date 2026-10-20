@@ -218,7 +218,7 @@ export function confirmUploads(dialog, prepared, currentYear) {
           : null,
 
         /*
-         * 이름으로 푼 시트는 **한 번은 눈으로 보게 한다.**
+         * 이름으로 해석한 시트는 **한 번은 눈으로 보게 한다.**
          * 맞게 풀렸을 가능성이 높지만, 틀렸을 때 틀린 티가 안 나는 쪽이라 그렇다.
          */
         reading?.readable && reading.source === 'names'

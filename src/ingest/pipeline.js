@@ -26,7 +26,7 @@ import { buildDataset } from './buildRecords.js';
  * @property {string} [container] zip으로 올렸다면 그 zip 이름
  * @property {unknown[][]} grid
  * @property {Reading} reading 어느 열이 무엇인지, 그리고 그걸 어떻게 알아냈는지
- * @property {object|null} profile 지문이 맞은 헤더 프로파일 (없으면 이름으로 푼 것)
+ * @property {object|null} profile 지문이 맞은 헤더 프로파일 (없으면 이름으로 해석한 것)
  * @property {object} match 지문 대조 결과
  * @property {object} yearGuess 고3 년도 제안과 그 근거
  * @property {object|null} duplicate 이미 올린 적 있는 파일이면 그 기록
@@ -78,6 +78,11 @@ export function readSheetColumns(grid, match) {
   }
 
   const resolved = resolveSheet(grid);
+  const notes = [...resolved.notes];
+  if (match.match === 'conflict') {
+    notes.unshift(`지문이 같은 프로파일 ${match.conflict.join(' · ')}의 열 매핑이 서로 달라`
+      + ' 어느 쪽도 쓰지 않았습니다. 이름으로 해석합니다 — 프로파일을 수정해 주세요.');
+  }
   return {
     source: 'names',
     columns: resolved.columns,
@@ -86,7 +91,7 @@ export function readSheetColumns(grid, match) {
     // 이름으로는 연도 열의 기준을 알 수 없다. 기준을 모르면 값을 만들지 않는다 (§2)
     yearBasis: null,
     unresolved: resolved.unresolved,
-    notes: resolved.notes,
+    notes,
     profileId: null,
     label: '이름으로 알아냄',
     readable: resolved.columns.univ !== undefined,
@@ -119,7 +124,7 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
       grid: body,
       headerRows: reading.headerRows,
       // 연도 열과 그 기준을 짝으로 넘긴다. 짝을 깨면 엉뚱한 열에 기준이 적용된다.
-      // 이름으로 푼 시트는 기준이 null이라, 값이 올해를 넘지 않는 한 사람에게 묻는다
+      // 이름으로 해석한 시트는 기준이 null이라, 값이 올해를 넘지 않는 한 사람에게 묻는다
       yearColumn: reading.columns.sourceYear ?? null,
       columnBasis: reading.yearBasis,
       currentYear
@@ -150,7 +155,7 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
       duplicate: knownFiles.get(sheet.fileHash) ?? null,
       rowCount: Math.max(0, body.length - reading.headerRows),
       // 사람이 확인해 둔 프로파일로 읽었고 연도까지 확실할 때만 손댈 것이 없다.
-      // 이름으로 푼 것은 맞아 보여도 한 번은 눈으로 보게 한다
+      // 이름으로 해석한 것은 맞아 보여도 한 번은 눈으로 보게 한다
       ready: reading.source === 'profile' && reading.readable
         && !yearGuess.needsInput && yearGuess.cohortYear !== null
     });

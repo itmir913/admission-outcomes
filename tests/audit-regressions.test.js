@@ -207,7 +207,7 @@ describe('재업로드가 지원 기록을 두 배로 쌓던 문제', () => {
   });
 });
 
-describe('압축을 다 푼 뒤에야 크기를 재던 문제', () => {
+describe('압축을 다 해제한 뒤에야 크기를 재던 문제', () => {
   it('해제하기 전에 선언된 크기로 걸러낸다', () => {
     const archive = makeZip({
       'a.xlsx': makeWorkbook({ s: senjinhakGrid(2026) }),

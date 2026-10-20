@@ -177,7 +177,7 @@ describe('확정하고 넣기', () => {
     );
     expect(sheets[0].reading.source).toBe('names');
     expect(sheets[0].reading.readable).toBe(true);
-    // 이름으로 푼 것은 맞아 보여도 한 번은 눈으로 보게 한다
+    // 이름으로 해석한 것은 맞아 보여도 한 번은 눈으로 보게 한다
     expect(sheets[0].ready).toBe(false);
 
     const dataset = await commitSheets(sheets, { decisions: { [sheets[0].id]: { cohortYear: 2025, include: true } } });

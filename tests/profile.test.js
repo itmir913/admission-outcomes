@@ -212,12 +212,26 @@ describe('프로파일 선택', () => {
     expect(set.select({ fingerprint }).profile.year).toBe(2024);
   });
 
-  it('후보가 여럿이면 가장 나중에 만든 것을 쓴다', () => {
+  it('후보가 여럿이어도 매핑이 같으면 그냥 쓴다', () => {
+    // year는 이름표일 뿐이다. 매핑이 같으면 어느 것을 선택해도 결과가 같다
     const set = new ProfileSet([
       baseProfile({ id: 'a-2024', year: 2024, fingerprint }),
       baseProfile({ id: 'a-2025', year: 2025, fingerprint })
     ]);
-    expect(set.select({ fingerprint }).profile.year).toBe(2025);
+    const found = set.select({ fingerprint });
+    expect(found.profile).not.toBeNull();
+    expect(found.conflict).toBeUndefined();
+  });
+
+  it('매핑이 다르면 어느 쪽도 쓰지 않는다', () => {
+    // 둘 중 하나가 틀렸는데 어느 쪽인지 알 방법이 없다. 조용히 고르면 그 자료로 상담이 이뤄진다
+    const set = new ProfileSet([
+      baseProfile({ id: 'a-2024', year: 2024, fingerprint }),
+      baseProfile({ id: 'a-2025', year: 2025, fingerprint, columns: { univ: 9 } })
+    ]);
+    const found = set.select({ fingerprint });
+    expect(found.profile).toBeNull();
+    expect(found.conflict.sort()).toEqual(['a-2024', 'a-2025']);
   });
 
   it('지문이 다르면 고르지 않는다', () => {
