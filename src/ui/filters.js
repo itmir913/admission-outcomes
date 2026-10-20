@@ -85,7 +85,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
   }
 
   // ── 값 선택 (글자·enum 열) ─────────────────────────────────────────────
-  function valueBlock(field, filter, counts) {
+  function valueBlock(field, filter, counts, redraw) {
     const chosen = new Set((filter?.values ?? []).map((value) => (isBlank(value) ? null : value)));
     const needle = (localSearch.get(field.key) ?? '').trim().toLowerCase();
 
@@ -127,7 +127,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
           on: {
             input: debounce((event) => {
               localSearch.set(field.key, event.target.value);
-              render();
+              redraw();
             }, 150)
           }
         })
@@ -231,7 +231,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
     ]);
   }
 
-  function block(field, filters, rows, search) {
+  function block(field, filters, rows, search, { redraw = render, withHead = true } = {}) {
     const filter = filters.find((item) => item.key === field.key);
     const active = Boolean(filter);
 
@@ -277,7 +277,10 @@ export function createFilters({ mount, read, onChange, onClose }) {
     // 고3 년도·수능 등급은 다중 선택이, 내신·백분위는 범위가 자연스럽다
     const body = field.numeric && field.cardinality > SEARCHABLE_AT
       ? rangeBlock(field, filter)
-      : valueBlock(field, filter, facetCounts(rows, filters, field.key, { search }));
+      : valueBlock(field, filter, facetCounts(rows, filters, field.key, { search }), redraw);
+
+    // 팝오버에는 제목줄이 따로 있다. 여기서 또 그리면 같은 제목이 두 번 나온다
+    if (!withHead) return el('div', {}, [body]);
 
     return el('section', {
       class: `card px-3 py-3 ${active ? 'border-brand/40 ring-1 ring-brand/20' : ''}`
@@ -359,5 +362,23 @@ export function createFilters({ mount, read, onChange, onClose }) {
     );
   }
 
-  return { render, reset() { open = []; localSearch.clear(); gripped = null; } };
+  return {
+    render,
+    /**
+     * 열 하나의 조건 블록만 따로 그려 준다. 머리줄의 깔때기 단추가 쓴다.
+     *
+     * **왼쪽 패널과 같은 블록이다.** 둘을 따로 만들면 한쪽만 고쳐도 아무것도 울지 않고
+     * 조작이 어긋난다 — 같은 열인데 자리에 따라 다르게 거르는 표가 된다.
+     *
+     * @param {string} key
+     * @param {() => void} redraw 블록 안에서 상태가 바뀌었을 때 다시 그릴 함수
+     */
+    blockFor(key, redraw) {
+      const { rows, registry, filters, search } = read();
+      const field = registry.find((item) => item.key === key);
+      if (!field) return null;
+      return block(field, filters, rows, search, { redraw, withHead: false });
+    },
+    reset() { open = []; localSearch.clear(); gripped = null; }
+  };
 }

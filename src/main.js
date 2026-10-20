@@ -42,6 +42,7 @@ const dom = {
   검색: /** @type {HTMLInputElement} */ (pick('#검색')),
   칩줄: pick('#칩줄'),
   고정수: pick('#고정수'),
+  열팝오버: pick('#열팝오버'),
   알림줄: pick('#알림줄'),
   표: pick('#표'),
   표없음: pick('#표없음'),
@@ -82,6 +83,7 @@ const table = createTable({
     const found = state.view.filters.find((filter) => filter.key === key && filter.op === 'contains');
     return found?.text ?? '';
   },
+  onColumnFilter: (key, anchor) => 팝오버열기(key, anchor),
   onColumnSearch: (key, text) => {
     const rest = state.view.filters.filter(
       (filter) => !(filter.key === key && filter.op === 'contains'));
@@ -272,6 +274,76 @@ function paintNotices() {
   }
 }
 
+// ── 열별 값 목록 (참고 UI) ───────────────────────────────────────────────────
+
+/** 지금 값 목록이 떠 있는 열. 없으면 null. */
+let 열린열 = null;
+
+function 팝오버닫기() {
+  if (열린열 === null) return;
+  열린열 = null;
+  dom.열팝오버.classList.add('hidden');
+  clear(dom.열팝오버);
+  table.markOpenFilter(null);
+}
+
+/** 내용만 다시 그린다. 자리는 그대로 둔다 — 값을 선택할 때마다 창이 뛰면 다음 값을 누를 수 없다. */
+function 팝오버그리기() {
+  if (열린열 === null) return;
+  const field = state.registry.find((item) => item.key === 열린열);
+  const body = filters.blockFor(열린열, 팝오버그리기);
+  clear(dom.열팝오버).append(
+    el('div', { class: 'flex items-center gap-2 border-b border-line px-3 py-2' }, [
+      el('h3', {
+        class: 'min-w-0 flex-1 truncate text-base font-semibold',
+        text: field?.label ?? 열린열,
+        attrs: { title: field?.label ?? 열린열 }
+      }),
+      el('button', {
+        class: 'btn btn-sm px-2', text: '닫기',
+        attrs: { type: 'button' }, on: { click: 팝오버닫기 }
+      })
+    ]),
+    el('div', { class: 'max-h-80 overflow-y-auto px-3 py-2' }, [body].filter(Boolean))
+  );
+}
+
+/**
+ * 깔때기 단추가 가리키는 열의 값 목록을 연다.
+ *
+ * 자리는 자바스크립트가 잴 수밖에 없다 — 단추가 표와 함께 가로로 움직이므로
+ * 클래스로는 적을 수 없는 값이다(§9의 예외와 같은 까닭).
+ */
+function 팝오버열기(key, anchor) {
+  if (열린열 === key) { 팝오버닫기(); return; }
+  // **자리를 먼저 잰다.** markOpenFilter 가 머리줄을 다시 그리면서 이 단추를 갈아 끼우는데,
+  // 떨어져 나간 요소는 자리를 0으로 보고한다 — 그러면 창이 화면 왼쪽 위에 가서 붙는다
+  const box = anchor.getBoundingClientRect();
+
+  열린열 = key;
+  dom.열팝오버.classList.remove('hidden');
+  팝오버그리기();
+  table.markOpenFilter(key);
+  const 폭 = dom.열팝오버.offsetWidth;
+  const 높이 = dom.열팝오버.offsetHeight;
+  // 화면 밖으로 나가지 않게 가둔다. 오른쪽 끝 열에서 특히 자주 넘친다
+  const left = Math.max(8, Math.min(box.left, globalThis.innerWidth - 폭 - 8));
+  const 아래 = box.bottom + 4;
+  const top = 아래 + 높이 > globalThis.innerHeight - 8 ? Math.max(8, box.top - 높이 - 4) : 아래;
+  dom.열팝오버.style.left = `${left}px`;
+  dom.열팝오버.style.top = `${top}px`;
+}
+
+// 바깥을 누르면 닫는다. 깔때기 단추 자신은 스스로 토글하므로 여기서 빼낸다
+document.addEventListener('click', (event) => {
+  if (열린열 === null) return;
+  if (dom.열팝오버.contains(event.target)) return;
+  팝오버닫기();
+});
+
+// 표를 움직이면 단추가 제자리를 떠난다. 따라다니게 만들기보다 닫는 편이 솔직하다
+dom.표.addEventListener('scroll', 팝오버닫기, { passive: true });
+
 /** 고정할 수 있는 열 수의 상한. 여섯을 넘기면 가로로 볼 것이 남지 않는다. */
 const MAX_PINNED = 6;
 
@@ -351,6 +423,7 @@ function refresh({ keepScroll = false } = {}) {
   dom.표없음.textContent = '걸려 있는 필터에 맞는 지원 기록이 없습니다. 위 칩에서 필터를 하나씩 떼어 보세요.';
 
   paintToolbar();
+  팝오버그리기();
   paintSummary(visible, state.rows.length);
   paintChips();
   paintNotices();
@@ -448,6 +521,7 @@ dom.필터막.addEventListener('click', () => 필터판보이기(false));
 // Esc로도 닫는다. 대화상자가 열려 있으면 그쪽이 먼저 받는다
 globalThis.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
+  if (열린열 !== null) { 팝오버닫기(); return; }
   if (dom.필터막.classList.contains('hidden')) return;
   필터판보이기(false);
 });

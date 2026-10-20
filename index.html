@@ -42,9 +42,9 @@
     <p id="요약" class="min-w-0 truncate text-sm text-ink-soft"></p>
 
     <div class="ml-auto flex shrink-0 items-center gap-2">
-      <button type="button" id="파일열기" class="btn btn-sm">불러온 파일</button>
+      <button type="button" id="파일열기" class="btn btn-sm">현재 엑셀 파일</button>
       <!-- 「전체 지우기」는 화면 상단에 늘 보인다. 설정 깊숙이 숨기지 않는다 (§1) -->
-      <button type="button" id="전체지우기" class="btn btn-sm btn-danger">전체 지우기</button>
+      <button type="button" id="전체지우기" class="btn btn-sm btn-danger">자료 초기화</button>
     </div>
   </header>
 
@@ -71,7 +71,7 @@
           <li><strong class="text-ink">이름과 학번은 보관하지 않습니다.</strong> 익명 ID를 만드는 순간에만 쓰고 그 자리에서 버립니다.</li>
           <li><strong class="text-ink">서버로 아무것도 보내지 않습니다.</strong> 모든 처리는 이 브라우저 안에서 끝납니다.</li>
           <li><strong class="text-ink">내보내기 기능이 없습니다.</strong> 원본 엑셀 관리 책임은 학교에 있습니다.</li>
-          <li>불러온 자료는 이 브라우저에만 남습니다. 상단 <strong class="text-ink">전체 지우기</strong>로 언제든 지웁니다.</li>
+          <li>불러온 자료는 이 브라우저에만 남습니다. 상단 <strong class="text-ink">자료 초기화</strong>로 언제든 지웁니다.</li>
         </ul>
       </div>
     </div>
@@ -92,12 +92,16 @@
       <aside id="필터판"
              class="no-print absolute inset-y-0 left-0 z-40 w-80 shrink-0 overflow-y-auto border-r border-line bg-surface px-4 py-4 shadow-xl lg:static lg:shadow-none"></aside>
 
-      <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+
+      <div id="표" tabindex="-1" class="print-open min-h-0 min-w-0 flex-1 overflow-auto">
         <!--
-          조작 띠 (#2). 스크롤해도 늘 제자리에 있다 — 표를 아무리 내려도
-          검색과 조작 수단이 화면에서 사라지지 않아야 한다.
+          조작 띠. **고정하지 않는다** — 내려 보는 동안 자리를 양보하고,
+          그 자리를 표가 쓴다. 상단에 남아야 하는 것은 표 머리줄 하나다.
+
+          가로로만 왼쪽에 고정한다. 열이 80개 넘는 표를 옆으로 밀 때 검색칸까지
+          따라 나가면 다시 쓰려고 되돌아와야 한다.
         -->
-        <div class="no-print shrink-0 border-b border-line px-4 py-3 lg:px-5">
+        <div class="no-print sticky left-0 w-full px-4 pt-3 lg:px-5">
           <div class="flex items-center gap-3">
             <div class="relative min-w-0 flex-1">
               <input type="search" id="검색" class="field pl-10" placeholder="대학·학과·전형 검색"
@@ -139,17 +143,13 @@
           </div>
         </div>
 
-        <div id="알림줄" class="shrink-0 space-y-2 px-4 pt-3 empty:pt-0 lg:px-5"></div>
+        <div id="알림줄" class="sticky left-0 w-full space-y-2 px-4 pt-3 empty:pt-0 lg:px-5"></div>
 
-        <div class="min-h-0 flex-1 px-4 pb-4 pt-3 lg:px-5">
-          <div id="표" tabindex="-1" class="card print-open h-full overflow-auto">
-            <!--
-              요약 띠가 표와 같은 상자 안에 있다 (#2). 아래로 스크롤하면 위로 이동하여
-              자리를 양보하고, 그 자리를 표가 전부 쓴다. 분모가 무엇인지는
-              한 줄로 늘 밝힌다 (plan.md §6).
-            -->
-            <div id="요약띠" class="summary-rail" aria-live="polite"></div>
-            <table class="grid-table">
+        <!--
+          요약 띠도 함께 스크롤된다. 분모가 무엇인지는 한 줄로 늘 밝힌다 (plan.md §6).
+        -->
+        <div id="요약띠" class="summary-rail" aria-live="polite"></div>
+        <table class="grid-table">
               <colgroup id="열너비"></colgroup>
               <thead>
                 <tr id="헤더행"></tr>
@@ -157,13 +157,19 @@
                 <tr id="검색행"></tr>
               </thead>
               <tbody id="본문행"></tbody>
-            </table>
-          </div>
-          <p id="표없음" class="hidden px-2 py-10 text-center text-lg text-ink-soft"></p>
-        </div>
+        </table>
       </div>
+      <p id="표없음" class="hidden px-6 py-10 text-center text-lg text-ink-soft"></p>
     </div>
   </main>
+
+  <!--
+    열별 값 목록 (참고 UI). 표의 스크롤 상자 밖에 두어야 잘리지 않는다 —
+    안에 두면 가로로 밀 때 함께 밀려 나가고, 아래쪽 열에서는 상자에 가려 안 보인다.
+  -->
+  <div id="열팝오버"
+       class="no-print card fixed z-50 hidden w-72 shadow-xl"
+       role="dialog" aria-label="열 값 목록"></div>
 
   <!-- 밀어 넣기 대화상자들 -->
   <dialog id="확인상자" class="w-[min(56rem,92vw)] rounded-xl p-0 backdrop:bg-ink/50"></dialog>

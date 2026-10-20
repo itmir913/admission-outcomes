@@ -44,7 +44,7 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
             })
           ]),
           el('button', {
-            class: 'btn btn-sm btn-danger', text: '이 파일 되돌리기',
+            class: 'btn btn-sm btn-danger', text: '이 파일 제외',
             attrs: { type: 'button' },
             on: {
               click: () => {
@@ -68,17 +68,17 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
   ]);
 
   openDialog(dialog, dialogFrame({
-    title: '불러온 파일',
+    title: '현재 엑셀 파일',
     note: `${files.length}개`,
     body,
     onClose: () => dialog.close(),
     footer: el('div', { class: 'flex w-full items-center gap-3' }, [
       el('button', {
-        class: 'btn btn-danger mr-auto', text: '전체 지우기', attrs: { type: 'button' },
+        class: 'btn btn-danger mr-auto', text: '자료 초기화', attrs: { type: 'button' },
         on: { click: onClearAll }
       }),
       el('button', { class: 'btn', text: '닫기', attrs: { type: 'button' }, on: { click: () => dialog.close() } }),
-      el('button', { class: 'btn btn-primary', text: '파일 더 불러오기', attrs: { type: 'button' }, on: { click: onAdd } })
+      el('button', { class: 'btn btn-primary', text: '파일 추가', attrs: { type: 'button' }, on: { click: onAdd } })
     ])
   }));
 }

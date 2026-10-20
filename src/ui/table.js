@@ -82,7 +82,7 @@ export function cellText(key, value) {
  * @param {(row: object) => void} [options.onRowOpen]
  * @param {(state: object) => void} [options.onStateChange] 정렬·너비가 바뀔 때
  */
-export function createTable({ scroller, colgroup, headRow, searchRow, body, empty, onRowOpen, onStateChange, onColumnSearch, columnSearch = () => '' }) {
+export function createTable({ scroller, colgroup, headRow, searchRow, body, empty, onRowOpen, onStateChange, onColumnSearch, columnSearch = () => '', onColumnFilter }) {
   /** @type {object[]} */
   let rows = [];
   /** @type {Map<string, object>} */
@@ -94,6 +94,8 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
   let drawn = { start: -1, end: -1 };
   /** 열을 끌어 옮긴 직후인지. 뒤따라 오는 click 한 번을 정렬로 세지 않는다 */
   let swallowClick = false;
+  /** 지금 값 목록이 떠 있는 열. 깔때기 단추가 눌린 모양을 하게 한다 */
+  let openFilterKey = null;
 
   const announce = () => onStateChange?.(state);
 
@@ -152,7 +154,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
       }, [label, badge, marks]);
 
       const handle = el('span', {
-        class: 'absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-white/30',
+        class: 'absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-ink/10',
         attrs: { role: 'separator', 'aria-label': `${field?.label ?? key} 열 너비 조정`, title: '드래그로 너비 조정 · 더블클릭하면 내용에 맞춤' },
         on: {
           pointerdown: (event) => startResize(event, key),
@@ -164,18 +166,35 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
         class: `${pinned ? 'pinned' : ''} ${pinned && index === state.pinned - 1 ? 'pin-edge' : ''}`,
         style: pinned ? { left: `${offsets[index]}px` } : {}
       }, [
-        el('input', {
-          class: 'min-h-9 w-full border-0 bg-transparent px-2 text-sm text-white placeholder:text-white/40 focus:outline-none',
-          attrs: {
-            type: 'search', value: columnSearch(key), placeholder: '검색',
-            'aria-label': `${field?.label ?? key} 안에서 검색`
-          },
-          /*
-           * 글자마다 다시 계산하지 않는다. 열이 80개인 표에서 한 글자마다 전체를
-           * 다시 거르면 손가락이 멈출 때까지 화면이 따라오지 못한다.
-           */
-          on: { input: debounce((event) => onColumnSearch?.(key, event.target.value), 220) }
-        })
+        el('div', { class: 'col-search' }, [
+          el('input', {
+            attrs: {
+              type: 'search', value: columnSearch(key), placeholder: '검색',
+              'aria-label': `${field?.label ?? key} 안에서 검색`
+            },
+            /*
+             * 글자마다 다시 계산하지 않는다. 열이 80개인 표에서 한 글자마다 전체를
+             * 다시 거르면 손가락이 멈출 때까지 화면이 따라오지 못한다.
+             */
+            on: { input: debounce((event) => onColumnSearch?.(key, event.target.value), 220) }
+          }),
+          // 누르면 그 열의 값 목록이 뜬다. 글자로 찾는 것과 목록에서 선택하는 것은 다른 조작이다
+          el('button', {
+            text: '≡',
+            attrs: {
+              type: 'button',
+              'aria-label': `${field?.label ?? key} 값 목록`,
+              'aria-expanded': String(openFilterKey === key),
+              title: '값 목록에서 선택'
+            },
+            on: {
+              click: (event) => {
+                event.stopPropagation();
+                onColumnFilter?.(key, event.currentTarget);
+              }
+            }
+          })
+        ])
       ]));
 
       headRow.append(el('th', {
@@ -406,6 +425,12 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     },
     /** 자료는 그대로 두고 정렬·열만 다시 그린다. */
     repaint: paint,
+    /** 어느 열의 값 목록이 떠 있는지 알려 준다. 깔때기 단추의 모양이 따라간다. */
+    markOpenFilter(key) {
+      if (openFilterKey === key) return;
+      openFilterKey = key;
+      renderHead();
+    },
     get state() { return state; }
   };
 }
