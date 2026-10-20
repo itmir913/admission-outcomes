@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isKnownFieldKey, validateProfile, ProfileSet, matchProfile, buildProfile
 } from '../src/ingest/profile.js';
-import { headerSignature, headerFingerprint, normalizeHeaderCell } from '../src/ingest/fingerprint.js';
+import { headerSignature, headerFingerprint, normalizeHeaderCell } from '../src/ingest/headerHash.js';
 import { senjinhakGrid, kcueGrid } from './helpers/workbook.js';
 
 const baseProfile = (overrides = {}) => ({

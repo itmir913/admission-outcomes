@@ -21,7 +21,7 @@
  */
 
 import fields from '../dict/fields.json' with { type: 'json' };
-import { headerFingerprint } from './fingerprint.js';
+import { headerFingerprint } from './headerHash.js';
 
 const SCALAR_KEYS = new Set(fields.scalars.map((field) => field.key));
 const SUNEUNG_PARTS = new Set(fields.repeating.suneung.parts);

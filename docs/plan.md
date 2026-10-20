@@ -284,9 +284,16 @@ sid는 자료를 전부 지우고 다시 올리면 달라질 수 있다. 외부�
 **헤더가 몇 줄인지는 규칙으로 정하지 않는다.** 1~3줄을 다 해 보고 가장 많이 풀린 것을
 남긴다. 규칙은 양식을 볼 때마다 늘지만, 결과를 견주는 것은 양식이 몇이든 같다.
 
+**경로에 쓰면 안 되는 낱말이 있다.** 광고·추적 차단기의 기본 필터는 경로에
+`fingerprint`·`track`·`ads`·`analytics`·`pixel` 같은 낱말이 든 스크립트를 통째로 막는다.
+개발 서버는 모듈마다 요청을 하나씩 보내므로, 그중 하나가 막히면 **그걸 들여오는
+모듈 그래프 전체가 죽는다.** 실제로 `ingest/fingerprint.js`가 막혀 화면이 머리줄만 남았다.
+개념 이름은 그대로 쓰되(프로파일의 `fingerprint` 필드, 계열을 뜻하는 `track`),
+**파일·디렉터리 이름에는 두지 않는다.** 그래서 계열 규칙 파일은 `tracks.json`이다.
+
 동의어와 파생 규칙은 코드가 아니라 데이터다 — `field-synonyms.json`,
 `admission-types.json`(전형명→대분류), `fail-reasons.json`(불합격사유→퍼널 단계),
-`track-rules.json`(학과명→계열), `universities.json`(대학·캠퍼스·지역),
+`tracks.json`(학과명→계열), `universities.json`(대학·캠퍼스·지역),
 `outcome-vocab.json`(합/불/충원/예비/등록 어휘), `section-anchors.json`(구역 앵커).
 
 ### 프로파일은 어디에 사는가
@@ -554,7 +561,7 @@ profiles     [ 열 매핑 프로파일 ]
 │  │  └─ profiles.js       매핑 프로파일 저장·재사용
 │  ├─ store/
 │  │  └─ db.js             IndexedDB 보관 · 전체 지우기
-│  ├─ dict/                field-synonyms.json, universities.json, track-rules.json,
+│  ├─ dict/                field-synonyms.json, universities.json, tracks.json,
 │  │                       admission-types.json, fail-reasons.json,
 │  │                       outcome-vocab.json, section-anchors.json
 │  ├─ dict/header-profiles/ 학년도별 헤더 프로파일 (§4)

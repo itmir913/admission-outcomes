@@ -15,7 +15,7 @@ import { basename, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { read as readWorkbook, utils as sheetUtils } from 'xlsx';
 import { normalizeCell } from '../src/ingest/files.js';
-import { headerFingerprint } from '../src/ingest/fingerprint.js';
+import { headerFingerprint } from '../src/ingest/headerHash.js';
 import { validateProfile } from '../src/ingest/profile.js';
 import { findYearColumn } from '../src/ingest/year.js';
 
