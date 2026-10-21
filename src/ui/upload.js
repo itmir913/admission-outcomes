@@ -196,7 +196,11 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
 
       return el('section', { class: 'card px-5 py-4' }, [
         el('div', { class: 'flex flex-wrap items-start gap-3' }, [
-          el('label', { class: 'flex min-h-11 cursor-pointer items-center gap-3' }, [
+          /*
+           * `min-w-0` 가 없으면 이 상자는 **글자 길이만큼 버틴다.** 말줄임을 달아 두어도
+           * 줄어들 수 없어서, 긴 파일 이름이 카드를 넘어 화면 밖으로 나갔다.
+           */
+          el('label', { class: 'flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3' }, [
             el('input', {
               class: 'size-5 accent-brand',
               attrs: { type: 'checkbox', checked: decision.include, 'aria-label': `${sheet.fileName} 불러오기` },
@@ -204,8 +208,12 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
                 change: (event) => { decision.include = event.currentTarget.checked; refreshFooter(); }
               }
             }),
-            el('span', { class: 'min-w-0' }, [
-              el('span', { class: 'block truncate text-lg font-semibold', text: sheet.fileName }),
+            el('span', { class: 'min-w-0 flex-1' }, [
+              el('span', {
+                class: 'block truncate text-lg font-semibold',
+                text: sheet.fileName,
+                attrs: { title: sheet.fileName }
+              }),
               el('span', {
                 class: 'block text-base text-ink-soft',
                 text: [
@@ -290,11 +298,11 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
 
     footerNote = el('p', { class: 'mr-auto text-base text-ink-soft' });
     cancelButton = el('button', {
-      class: 'btn', text: '취소', attrs: { type: 'button' },
+      class: 'btn shrink-0', text: '취소', attrs: { type: 'button' },
       on: { click: () => finish(false) }
     });
     submitButton = el('button', {
-      class: 'btn btn-primary', text: '불러오기', attrs: { type: 'button' },
+      class: 'btn btn-primary shrink-0 whitespace-nowrap', text: '불러오기', attrs: { type: 'button' },
       on: {
         click: async () => {
           if (working) return;
@@ -320,11 +328,16 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
     });
 
     openDialog(dialog, dialogFrame({
-      title: '불러올 자료를 확인해 주세요',
+      title: '불러올 엑셀 파일을 확인해 주세요',
       note: '아래 고3 년도는 엑셀 파일에서 불러온 값입니다. 고3 실제 연도인지 학년도인지 확인해 주세요.',
       body,
       onClose: () => finish(false),
-      footer: el('div', { class: 'flex w-full items-center gap-3' }, [
+      /*
+       * 글귀와 단추를 **같은 줄에 묶어 두지 않는다.** 좁은 화면에서 글귀가 길어지면
+       * 단추가 눌려 글자가 한 줄에 한 자씩 세로로 섰다. 줄을 바꾸게 두고 단추는
+       * 제 너비를 지킨다.
+       */
+      footer: el('div', { class: 'flex w-full flex-wrap items-center gap-3' }, [
         footerNote,
         cancelButton,
         submitButton
