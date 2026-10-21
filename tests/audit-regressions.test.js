@@ -18,6 +18,7 @@ import { tallyOutcomes, passRate, rateNote } from '../src/ui/outcome.js';
 import { sortRows, searchHaystack } from '../src/analysis/query.js';
 import { visibleWindow } from '../src/ui/table.js';
 import { facetCounts, applyQuery } from '../src/analysis/query.js';
+import { bucketLabel } from '../src/analysis/registry.js';
 import { uploadBlockers, prefilledYear } from '../src/ui/upload.js';
 
 let counter = 0;
@@ -475,5 +476,49 @@ describe('5차 감사 — 미리 채운 연도가 거짓말하던 자리', () =>
     });
     const { files } = await loadDataset(db);
     expect(files[0].cohortYears).toEqual(expect.arrayContaining([2024, 2025]));
+  });
+});
+
+describe('7차 감사 — 조용히 묶이고 조용히 틀리던 자리', () => {
+  it('전각·사이 공백·0 같은 빈칸 표기를 식별 값으로 쓰지 않는다', async () => {
+    const 표기별 = async (mark) => {
+      const sheet = {
+        grid: [
+          ['학번', '이름', '대학명', '최종'],
+          [mark, '김가온', '가온대학교', '합격'],
+          [mark, '박서린', '한결대학교', '불합격']
+        ],
+        headerRows: 1,
+        columns: { 'identity.hakbun': 0, 'identity.name': 1, univ: 2, final: 3 },
+        cohortYear: 2025
+      };
+      const { students } = await buildDataset([sheet]);
+      return students.length;
+    };
+    // 학번 칸이 이 표기들이면 이름이 다른 두 학생이 한 익명 ID로 묶였다
+    for (const mark of ['Ｎ／Ａ', '없 음', 'NA', '－', '0', '000']) {
+      expect(await 표기별(mark), mark).toBe(2);
+    }
+    // 뜻이 있는 값은 그대로 쓴다
+    expect(await 표기별('30101')).toBe(1);
+  });
+
+  it('값 목록 한 줄이 무엇을 품었는지 적고, 접힌 표기도 찾을 수 있다', () => {
+    // 전부가 그 표기인 줄과 일부만 그런 줄을 다르게 적는다
+    const 일부 = bucketLabel('outcome', 'none', ['기록 없음', '1단계 불합격', '기록 없음']);
+    expect(일부.label).toBe('기록 없음(1단계 불합격 포함)');
+    const 전부 = bucketLabel('outcome', 'unknown', ['보류', '추후발표', '재검토', '보류']);
+    expect(전부.label).toBe('알 수 없음(보류·추후발표 외 1)');
+    // 「외 1」로 접힌 표기도 목록 안 찾기가 본다
+    expect(전부.terms).toContain('재검토');
+  });
+
+  it('값 목록을 고쳐 써도 거른 결과가 따라온다', () => {
+    const rows = [{ x: 'A' }, { x: 'B' }];
+    const filter = { key: 'x', op: 'in', values: ['A'] };
+    expect(applyQuery(rows, { filters: [filter] })).toHaveLength(1);
+    // 캐시가 옛 목록을 들고 있으면 여기서 1건이 남는다
+    filter.values = ['B'];
+    expect(applyQuery(rows, { filters: [filter] })[0].x).toBe('B');
   });
 });
