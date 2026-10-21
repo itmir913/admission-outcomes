@@ -434,6 +434,14 @@ async function reload() {
 
 async function handleFiles(files) {
   if (files.length === 0) return;
+  /*
+   * 파일 목록 상자는 **읽을 파일이 정해진 다음에** 닫는다.
+   *
+   * 열기 창을 띄우기 전에 닫아 두었더니, 창에서 취소만 눌러도 목록이 사라졌다 —
+   * 아무것도 하지 않았는데 보던 화면을 잃는다. 읽을 파일이 실제로 정해진
+   * 지금 닫는다. 그래야 다음에 설 확인 상자가 혼자 선다.
+   */
+  dom.파일상자.close();
   busy(true);
   try {
     const uploads = await readFiles(files);
@@ -542,7 +550,7 @@ pick('#파일열기').addEventListener('click', async () => {
       dom.파일상자.close();
     },
     onClearAll: () => { dom.파일상자.close(); wipe(); },
-    onAdd: () => { dom.파일상자.close(); dom.파일입력.click(); }
+    onAdd: () => dom.파일입력.click()
   });
 });
 
