@@ -109,7 +109,13 @@
              class="no-print absolute inset-y-0 left-0 z-40 w-80 max-w-[85vw] shrink-0 scroll-stable overflow-y-auto border-r border-line bg-surface px-4 py-4 shadow-xl lg:static lg:shadow-none"></aside>
 
 
-      <div id="표" tabindex="-1" class="print-open min-h-0 min-w-0 flex-1 scroll-stable overflow-auto">
+      <!--
+        표를 **한 겹으로 가둔다**(`isolate`). 안에는 붙어 다니는 칸들이 저마다
+        z를 들고 있는데, 가두지 않으면 그 z가 바깥의 덮개와 같은 판에서 경쟁한다.
+        좁은 화면에서 필터판을 열면 고정 열 머리가 덮개 위로 솟아, 거기만
+        덮이지 않은 채 남았다.
+      -->
+      <div id="표" tabindex="-1" class="isolate print-open min-h-0 min-w-0 flex-1 scroll-stable overflow-auto">
         <!--
           표 위에 얹히는 것들을 **한 더미로 묶는다.** 여백을 줄마다 따로 주면
           줄 하나를 고칠 때마다 다른 줄과 어긋나고, 그 어긋남은 눈에 먼저 띈다.
