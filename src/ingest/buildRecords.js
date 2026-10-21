@@ -64,7 +64,8 @@ export function coerce(key, raw) {
    * 판정은 키를 만드는 쪽과 **같은 함수**로 한다. 두 곳에 목록을 베껴 두면
    * 한쪽만 늘어나는 날 그 틈으로 같은 결함이 돌아온다.
    */
-  if (parts[0] === 'identity' && isBlankMark(normalizeIdentityText(text))) return null;
+  if (parts[0] === 'identity'
+    && isBlankMark(normalizeIdentityText(text), { nameField: parts[1] === 'name' })) return null;
   // 그 밖의 글자 필드에서는 `-`를 지우지 않는다. 불합격사유 같은 곳에 뜻이 있을 수 있다
   return text;
 }

@@ -74,12 +74,22 @@ const DASHES = /^[-‐‑‒–—―ー－]+$/;
  * 묶이고, 행 수는 맞으므로 화면에는 아무 표시도 나지 않는다 (§3·§5).
  *
  * @param {string} normalized NFKC로 고르고 공백을 없앤 글자
- * @param {{zeroIsBlank?: boolean}} [options] 식별 열이 아니면 0은 멀쩡한 값이다
+ * @param {{zeroIsBlank?: boolean, nameField?: boolean}} [options]
+ *   `zeroIsBlank` 주키가 아니면 0은 멀쩡한 값이다 (충원 0명, 내신 0)
+ *   `nameField` 이름 열이면 더 좁게 본다
  */
-export function isBlankMark(normalized, { zeroIsBlank = true } = {}) {
+export function isBlankMark(normalized, { zeroIsBlank = true, nameField = false } = {}) {
   if (normalized === '') return true;
-  if (BLANK_MARKS.has(normalized) || BLANK_MARKS.has(normalized.toUpperCase())) return true;
   if (DASHES.test(normalized)) return true;
+  /*
+   * **이름에는 좁은 잣대를 쓴다.**
+   *
+   * `NA`는 학번 칸에서는 「없음」이지만 **이름으로는 실재한다** — 「나」씨를 로마자로
+   * 적으면 `Na`다. 넓은 목록을 이름에 그대로 들이대면 그 학생의 행이 키를 얻지
+   * 못해 한 건도 저장되지 않고, 경고는 몇 행인지만 말한다 (§5의 데이터 누락).
+   */
+  if (nameField) return ['없음', '해당없음', '미해당', '.'].includes(normalized);
+  if (BLANK_MARKS.has(normalized) || BLANK_MARKS.has(normalized.toUpperCase())) return true;
   /*
    * **학번·반·번호에 0은 있을 수 없다.** 빈 숫자 칸을 0으로 내보내는 양식이 있고,
    * 그 0이 가장 강한 주키로 받아들여지면 그 해의 그 행들이 전부 한 학생이 된다.
@@ -95,9 +105,9 @@ export function normalizeIdentityText(value) {
   return String(value).normalize('NFKC').replace(/\s+/g, '').trim();
 }
 
-function normalizePart(value) {
+function normalizePart(value, options = {}) {
   const text = normalizeIdentityText(value);
-  if (isBlankMark(text)) return '';
+  if (isBlankMark(text, options)) return '';
   // 엑셀은 같은 반·번호·학번을 파일마다 문자열('01')로도 숫자(1)로도 담는다.
   // 앞의 0을 떼어 표기 차이를 흡수하지 않으면 한 학생이 둘로 나뉜다
   return /^\d+$/.test(text) ? String(Number(text)) : text;
@@ -113,7 +123,7 @@ function normalizePart(value) {
  * @returns {{kind: string, strength: number, text: string}[]} 강한 것부터
  */
 export function identityKeys(cohortYear, identity = {}) {
-  const name = normalizePart(identity.name);
+  const name = normalizePart(identity.name, { nameField: true });
   const hakbun = normalizePart(identity.hakbun);
   const classNo = normalizePart(identity.classNo);
   const number = normalizePart(identity.number);
