@@ -143,6 +143,13 @@ function paintSummary(visible, total) {
     el('p', { class: 'stat-value', text: value })
   ]);
 
+  /*
+   * **칸은 늘 여섯이다.** 2·3·6 어느 열수로 접어도 마지막 줄이 꽉 찬다.
+   *
+   * 판정 미상은 여기 일곱째 칸으로 두었다가 뺐다. 있는 해에만 생기는 칸이라
+   * 홀로 한 줄을 차지했고, 그 줄이 비어 보였다. 아래 띠의 범례가 건수와 비율을
+   * 그대로 적고 있어 수가 사라지지도 않는다.
+   */
   const cells = [
     // 거른 상태에서는 「전체」가 아니다. 그때는 분모를 괄호로 밝힌다
     cell(걸러짐 ? `지원 (전체 ${total}건 중)` : '전체 지원', tally.지원),
@@ -150,23 +157,8 @@ function paintSummary(visible, total) {
     cell('합격', tally.합격, 'text-pass'),
     cell('충원합격', tally.충원합격, 'text-wait'),
     cell('불합격', tally.불합격, 'text-fail'),
-    cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`),
-    tally.미상 > 0 ? cell('판정 미상', tally.미상, 'text-ink-soft') : null
-  ].filter(Boolean);
-
-  /*
-   * **마지막 칸이 혼자 남으면 그 줄을 다 쓴다.**
-   *
-   * 판정 미상이 있는 해는 칸이 일곱이라 2·3·6 어느 쪽으로도 나누어떨어지지 않는다.
-   * 좁은 칸 하나가 넓은 줄에 혼자 놓이면 옆이 비어, 세어 보지 않은 칸이 더 있는
-   * 것처럼 보인다. 혼자일 때만 늘린다 — 둘 이상 남으면 서로 짝이 되어 보인다.
-   */
-  const 남은칸 = (열수) => cells.length % 열수;
-  cells.at(-1).classList.add(
-    남은칸(2) === 1 ? 'col-span-2' : 'col-span-1',
-    남은칸(3) === 1 ? 'sm:col-span-3' : 'sm:col-span-1',
-    남은칸(6) === 1 ? 'lg:col-span-6' : 'lg:col-span-1'
-  );
+    cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`)
+  ];
 
   clear(dom.요약띠).append(el('div', { class: 'card overflow-hidden' }, [
     el('div', { class: 'stat-grid' }, cells),
