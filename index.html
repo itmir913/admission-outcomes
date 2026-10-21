@@ -63,9 +63,17 @@
         잘려 나가는데, §1 이 늘 보이라고 못 박은 것은 이 둘이다. 줄이는 것은
         이름이지 단추가 아니다.
       -->
-      <button type="button" id="파일열기" class="btn btn-sm"><span class="hidden sm:inline">현재 </span>엑셀 파일</button>
+      <!--
+        **이름 전체를 한 덩어리로 바꿔 끼운다.** 「현재 」만 감쌌더니 단추가 inline-flex라
+        그 조각과 남은 글자가 각각 칸이 되어, 사이에 gap(8px)이 끼어 공백 둘처럼 보였다.
+      -->
+      <button type="button" id="파일열기" class="btn btn-sm">
+        <span class="sm:hidden">엑셀 파일</span><span class="hidden sm:inline">현재 엑셀 파일</span>
+      </button>
       <!-- 「전체 지우기」는 화면 상단에 늘 보인다. 설정 깊숙이 숨기지 않는다 (§1) -->
-      <button type="button" id="전체지우기" class="btn btn-sm btn-danger"><span class="hidden sm:inline">데이터 </span>초기화</button>
+      <button type="button" id="전체지우기" class="btn btn-sm btn-danger">
+        <span class="sm:hidden">초기화</span><span class="hidden sm:inline">데이터 초기화</span>
+      </button>
       <!--
         오프라인 꾸러미. **고정 태그 `offline`을 가리킨다** — 판이 올라가도 주소가
         그대로라 이 줄을 다시 고칠 일이 없다. 내려받는 것은 이 화면과 같은 단일
