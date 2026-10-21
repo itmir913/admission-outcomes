@@ -41,13 +41,28 @@ export function tallyOutcomes(rows) {
  *
  * @returns {number|null} 셀 수 있는 건이 하나도 없으면 null
  */
+export function rateNote(tally) {
+  /*
+   * **분모를 숫자로 밝힌다.**
+   *
+   * 분모가 「최종 열에서 판정을 읽어 낸 건수」로 좁아졌는데 각주가 옛 식을 말하고
+   * 있었다. 칸에 적힌 합격·지원으로 되검산하면 숫자가 맞지 않고, 왜 맞지 않는지가
+   * 화면 어디에도 없었다 — 1단계 탈락만 적힌 건이 조용히 빠지기 때문이다 (§5).
+   */
+  const 최종 = tally.합격 + tally.충원합격 + tally.불합격;
+  const 바탕 = `합격률 = (합격 + 충원합격) ÷ 최종 판정이 나온 ${최종}건`;
+  return tally.미상 === 0
+    ? `${바탕}. 학생 수가 아니라 지원 건수 기준입니다.`
+    : `${바탕}. 판정 미상 ${tally.미상}건(최종 열이 비었거나 읽지 못한 표기)은 분모에서 빠집니다.`;
+}
+
 export function passRate(tally) {
   /*
    * 분모는 **최종 열에서 판정을 읽어 낸 건수**다. 1단계 탈락만 적힌 건은 빠진다 —
    * 같은 파일의 1단계 합격은 아직 합격이 아니라 분자에 들어갈 수 없으므로,
    * 분모에만 넣으면 발표 전 파일이 「합격률 0.0%」로 보인다 (§5).
    */
-  const judged = tally.최종판정 ?? (tally.합격 + tally.충원합격 + tally.불합격);
+  const judged = tally.합격 + tally.충원합격 + tally.불합격;
   return judged === 0 ? null : (tally.합격 + tally.충원합격) / judged;
 }
 

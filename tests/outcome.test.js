@@ -48,10 +48,19 @@ describe('최종 결과 읽기', () => {
     expect(classifyOutcome({ final: '  ' }).code).toBe(OUTCOME.none);
   });
 
-  it('최종이 비어도 1단계에서 탈락했으면 불합격이다', () => {
+  /*
+   * 1단계 탈락은 **떨어진 것은 맞지만 최종 판정은 아직 없다.**
+   *
+   * 「불합격」으로 세면 두 가지가 틀어진다. 같은 파일의 1단계 합격은 아직 합격이
+   * 아니라 분자에 못 들어가므로 발표 직후 파일이 합격률 0.0%가 되고, 분모에서만
+   * 빼면 화면의 칸을 더해도 합격률이 나오지 않는다. 미상과 같은 자리에 두되
+   * 이름표는 「1단계 불합격」으로 남겨 무슨 일이 있었는지 보이게 한다.
+   */
+  it('최종이 비어도 1단계에서 탈락했으면 최종 판정 없음으로 둔다', () => {
     const outcome = classifyOutcome({ final: null, stage1: '불합격' });
-    expect(outcome.code).toBe(OUTCOME.fail);
+    expect(outcome.code).toBe(OUTCOME.none);
     expect(outcome.label).toBe('1단계 불합격');
+    expect(outcome.final).toBe(false);
   });
 
   it('1단계 합격을 최종 합격으로 세지 않는다', () => {

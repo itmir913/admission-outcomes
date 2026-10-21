@@ -8,7 +8,7 @@
  */
 
 import { el, clear, openDialog, dialogFrame, formatNumber } from './dom.js';
-import { outcomeBar, passRate, tallyOutcomes } from './outcome.js';
+import { outcomeBar, passRate, rateNote, tallyOutcomes } from './outcome.js';
 import { fieldLabel, valueLabel, isBlank } from '../analysis/registry.js';
 
 /** 지원 카드를 늘어놓는 순서. */
@@ -57,7 +57,12 @@ function summaryCard(tally) {
       cell('불합격', tally.불합격, 'text-fail'),
       cell('판정 미상', tally.미상, 'text-ink-soft')
     ]),
-    el('div', { class: 'border-t border-line-soft px-4 py-3' }, [outcomeBar(tally)])
+    el('div', { class: 'border-t border-line-soft px-4 py-3' }, [outcomeBar(tally)]),
+    // 전체 화면과 같은 각주를 단다. 한 학생을 열었을 때만 분모를 숨기면 숫자를 되검산할 수 없다
+    el('p', {
+      class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-base text-ink-soft',
+      text: rateNote(tally)
+    })
   ]);
 }
 

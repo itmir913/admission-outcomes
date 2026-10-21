@@ -27,7 +27,7 @@ import { createTable } from './ui/table.js';
 import { createFilters } from './ui/filters.js';
 import { readFiles, confirmUploads, bindDropzone } from './ui/upload.js';
 import { openStudent } from './ui/student.js';
-import { outcomeBar, passRate, tallyOutcomes } from './ui/outcome.js';
+import { outcomeBar, passRate, rateNote, tallyOutcomes } from './ui/outcome.js';
 import { openFiles, openColumns } from './ui/panels.js';
 import { loadView, saveView, forgetView, pruneView, emptyView } from './ui/prefs.js';
 
@@ -168,9 +168,7 @@ function paintSummary(visible, total) {
     el('div', { class: 'border-t border-line-soft px-4 py-3' }, [outcomeBar(tally)]),
     el('p', {
       class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-base text-ink-soft',
-      text: tally.미상 > 0
-        ? '합격률 = (합격 + 충원합격) ÷ 판정을 읽어 낸 지원 건수. 판정 미상 건은 분모에서 빠집니다.'
-        : '합격률 = (합격 + 충원합격) ÷ 지원 건수. 학생 수가 아니라 지원 건수 기준입니다.'
+      text: rateNote(tally)
     })
   ]));
 }
