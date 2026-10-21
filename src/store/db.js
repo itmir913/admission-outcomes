@@ -112,15 +112,32 @@ export function listFiles(db) {
 }
 
 /**
- * 학생 하나를 합친다. 같은 사람이 여러 파일에 나뉘어 있으므로
- * 키와 내신을 모으고, 이미 있는 값은 덮어쓰지 않는다.
+ * 값이 있는 쪽만 덮는다.
+ *
+ * **방금 올린 값이 이긴다.** 양식마다 담는 항목이 달라(어떤 것은 등급만, 어떤 것은
+ * 표점·백분위까지) 빠진 항목은 먼저 넣은 값을 그대로 둬야 하지만, 같은 항목이
+ * 둘 다 있으면 새것이 맞다 — 값을 고쳐 다시 올린 사람은 고친 값을 보려고 올린 것이다.
+ * 거꾸로 두었더니 등급을 바로잡아 다시 올려도 옛 등급이 화면에 남았다.
+ */
+function 새값우선(existing = {}, incoming = {}) {
+  const merged = { ...existing };
+  for (const [key, value] of Object.entries(incoming)) {
+    if (value === null || value === undefined) continue;
+    merged[key] = value;
+  }
+  return merged;
+}
+
+/**
+ * 학생 하나를 합친다. 같은 사람이 여러 파일에 나뉘어 있으므로 키와 내신을 모은다.
  */
 function mergeStudent(existing, incoming) {
   if (!existing) return { ...incoming, gpa: { ...incoming.gpa } };
   return {
     ...existing,
+    ...incoming,
     keyHashes: [...new Set([...(existing.keyHashes ?? []), ...(incoming.keyHashes ?? [])])].sort(),
-    gpa: { ...incoming.gpa, ...existing.gpa }
+    gpa: 새값우선(existing.gpa, incoming.gpa)
   };
 }
 
@@ -144,6 +161,25 @@ export async function saveDataset(db, dataset) {
   const suneung = transaction.objectStore(STORE.suneung);
   const files = transaction.objectStore(STORE.files);
 
+  /*
+   * **따로 있던 두 ID가 한 학생으로 이어졌으면, 옛 ID로 쌓아 둔 기록을 먼저 옮긴다.**
+   *
+   * 옮기지 않으면 지원 이력이 두 ID로 나뉜 채 남아 학생 수가 한 명 더 세어지고,
+   * 그 뒤 업로드가 두 ID에 번갈아 붙어 스스로 낫지 않는다.
+   */
+  for (const { from, into } of dataset.merges ?? []) {
+    if (!from || !into || from === into) continue;
+    for (const row of await promisify(applications.index('sid').getAll(from))) {
+      applications.put({ ...row, sid: into });
+    }
+    for (const row of await promisify(suneung.index('sid').getAll(from))) {
+      const target = await promisify(suneung.get([into, row.area]));
+      suneung.put({ ...새값우선(row, target ?? {}), sid: into, area: row.area });
+      suneung.delete([from, row.area]);
+    }
+    students.delete(from);
+  }
+
   for (const student of dataset.students ?? []) {
     const existing = await promisify(students.get(student.sid));
     students.put(mergeStudent(existing, student));
@@ -162,13 +198,28 @@ export async function saveDataset(db, dataset) {
     applications.add(application);
   }
   for (const row of dataset.suneung ?? []) {
-    // 덮지 않고 합친다. 양식마다 담는 항목이 달라 — 어떤 것은 등급만, 어떤 것은 표점·백분위까지 —
-    // 덮어쓰면 먼저 넣은 파일의 자세한 값이 사라진다
+    // 빠진 항목은 먼저 넣은 값을 지키고, 둘 다 있는 항목은 방금 올린 값이 이긴다
     const existing = await promisify(suneung.get([row.sid, row.area]));
-    suneung.put(existing ? { ...row, ...existing } : row);
+    suneung.put(existing ? 새값우선(existing, row) : row);
   }
   for (const file of dataset.files ?? []) {
     files.put(file);
+  }
+
+  /*
+   * **지원 기록이 하나도 남지 않은 학생은 지운다.**
+   *
+   * 같은 파일을 고쳐(학생 한 명을 빼고) 다시 올리면 그 사람의 지원 건은 걷히는데
+   * 학생·수능 레코드는 남아, 아무 기록도 없는 익명 ID가 학생 수와 수능 집계에만
+   * 계속 들어갔다. 파일 하나를 통째로 뺄 때(removeFile)와 같은 정리를 여기서도 한다.
+   */
+  const 살아있는 = new Set((await promisify(applications.getAll())).map((row) => row.sid));
+  for (const sid of await promisify(students.getAllKeys())) {
+    if (살아있는.has(sid)) continue;
+    students.delete(sid);
+    for (const row of await promisify(suneung.index('sid').getAll(sid))) {
+      suneung.delete([row.sid, row.area]);
+    }
   }
 
   await done(transaction);

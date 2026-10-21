@@ -203,7 +203,7 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
     });
   }
 
-  const { sids, students: identified, warnings: idWarnings } = await assignStudentIds(
+  const { sids, students: identified, merges, warnings: idWarnings } = await assignStudentIds(
     rows.map((row) => ({ cohortYear: row.cohortYear, identity: row.parsed.identity })),
     { existing }
   );
@@ -265,6 +265,8 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
     students: [...studentBySid.values()].sort((left, right) => left.sid.localeCompare(right.sid)),
     applications,
     suneung,
+    // 보관소가 옛 ID로 쌓아 둔 기록을 옮기도록 함께 넘긴다
+    merges,
     warnings
   };
 }

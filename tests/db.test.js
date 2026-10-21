@@ -86,15 +86,19 @@ describe('이어서 올리기', () => {
     expect(merged.keyHashes.sort()).toEqual(['h1', 'h3']);
   });
 
-  it('나중 파일의 내신을 더하되 이미 있는 값을 덮지 않는다', async () => {
+  /*
+   * 빠진 항목은 먼저 넣은 값을 지키고, 둘 다 있는 항목은 **방금 올린 값이 이긴다.**
+   * 거꾸로 두었더니 등급을 바로잡아 같은 파일을 다시 올려도 옛 값이 화면에 남았다.
+   */
+  it('나중 파일의 내신을 더하고, 같은 항목은 새 값으로 바꾼다', async () => {
     await saveDataset(db, dataset());
     await saveDataset(db, {
-      students: [{ sid: '2025-AAAA-1111', cohortYear: 2025, keyHashes: [], gpa: { 전교과: 9.99, 국영수: 1.9 } }],
+      students: [{ sid: '2025-AAAA-1111', cohortYear: 2025, keyHashes: [], gpa: { 전교과: 3.3, 국영수: 1.9 } }],
       applications: [], suneung: [], files: []
     });
     const merged = (await loadDataset(db)).students
       .find((student) => student.sid === '2025-AAAA-1111');
-    expect(merged.gpa.전교과).toBe(1.82);
+    expect(merged.gpa.전교과).toBe(3.3);
     expect(merged.gpa.국영수).toBe(1.9);
   });
 

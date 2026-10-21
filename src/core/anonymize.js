@@ -242,16 +242,22 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
   clusters.forEach((cluster, index) => {
     if (!cluster) return;
     const root = sets.find(index);
-    if (!roots.has(root)) roots.set(root, { cohortYear: null, hashes: new Set(), best: null, sid: null });
+    if (!roots.has(root)) roots.set(root, { cohortYear: null, hashes: new Set(), best: null, sids: new Set() });
     const merged = roots.get(root);
     for (const hash of cluster.hashes) merged.hashes.add(hash);
     if (merged.cohortYear === null) merged.cohortYear = cluster.cohortYear;
     if (cluster.best && (!merged.best || cluster.best.strength > merged.best.strength)) merged.best = cluster.best;
-    if (cluster.sid && !merged.sid) merged.sid = cluster.sid;
+    // 보관돼 있던 ID를 **모두** 모은다. 둘 이상이면 한 학생이 두 ID로 나뉘어 있던 것이다
+    if (cluster.sid) merged.sids.add(cluster.sid);
   });
 
   const sidByRoot = new Map();
   const students = [];
+  /**
+   * 한 학생이 두 ID로 나뉘어 보관돼 있다가 이번에 이어진 자리.
+   * @type {{from: string, into: string}[]}
+   */
+  const merges = [];
   for (const [root, merged] of roots.entries()) {
     if (merged.hashes.size === 0) continue;
     // 이미 있던 학생은 원래 ID를 지킨다. 담임이 본 ID가 바뀌면 안 된다
@@ -259,9 +265,26 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     const bytes = Uint8Array.from(
       strongest.slice(0, 16).match(/.{2}/g).map((pair) => Number.parseInt(pair, 16))
     );
-    const sid = merged.sid ?? `${merged.cohortYear}-${group(encodeBase32(bytes, ANON_ID_CHARS), 4)}`;
+    /*
+     * 보관된 ID가 둘 이상이면 **하나만 남는다.** 둘 다 지킬 수는 없다 — 한 사람이니까.
+     *
+     * 남길 것을 사전순으로 정한다. 먼저 만난 쪽을 선택하면 파일을 올린 차례에 따라
+     * 살아남는 ID가 달라져, 같은 자료를 다시 넣은 사람과 다른 ID를 보게 된다.
+     * 사라지는 ID는 `merges`로 알려, 보관소가 그 ID로 쌓아 둔 기록을 옮기게 한다.
+     */
+    const stored = [...merged.sids].sort();
+    const sid = stored[0] ?? `${merged.cohortYear}-${group(encodeBase32(bytes, ANON_ID_CHARS), 4)}`;
+    for (const other of stored.slice(1)) merges.push({ from: other, into: sid });
     sidByRoot.set(root, sid);
     students.push({ sid, cohortYear: merged.cohortYear, keyHashes: [...merged.hashes].sort() });
+  }
+
+  if (merges.length > 0) {
+    warnings.push({
+      type: 'students-merged',
+      count: merges.length,
+      message: `따로 있던 익명 ID ${merges.length}개가 같은 학생으로 이어졌습니다. 지난 기록도 함께 옮겼습니다.`
+    });
   }
 
   if (unverifiedNameLinks > 0) {
@@ -284,6 +307,7 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
   return {
     sids: clusterOfEntry.map((root) => (root === null ? null : sidByRoot.get(sets.find(root)) ?? null)),
     students: students.sort((left, right) => left.sid.localeCompare(right.sid)),
+    merges,
     warnings
   };
 }

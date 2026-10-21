@@ -315,7 +315,7 @@ describe('식별할 수 없는 행', () => {
 
   it('빈 입력을 견딘다', async () => {
     const result = await assignStudentIds([]);
-    expect(result).toEqual({ sids: [], students: [], warnings: [] });
+    expect(result).toEqual({ sids: [], students: [], merges: [], warnings: [] });
   });
 });
 
