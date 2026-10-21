@@ -138,8 +138,16 @@ export function prefilledYear(sheet) {
    * 보관된다** — 그러고도 겉보기에는 멀쩡하다 (§2·§5). 모르면 비워 두고 묻는다.
    */
   const years = sheet?.duplicate?.cohortYears ?? [];
-  const 시트수 = (sheet?.duplicate?.sheets ?? []).length;
-  return 시트수 <= 1 && years.length === 1 ? years[0] : null;
+  const sheets = sheet?.duplicate?.sheets ?? [];
+  /*
+   * 폴백은 **시트별 기록이 없던 한 장짜리 옛 레코드**를 위한 것이다. 그 레코드가
+   * 담고 있지 않은 시트에까지 답하면, 지난번에 아무것도 정한 적 없는 시트에
+   * 「지난번에 정한 값입니다」가 붙는다 — 시트 둘인 파일을 제외하고 한 장만 다시
+   * 올린 뒤에 실제로 그렇게 된다.
+   */
+  return sheets.length <= 1 && sheets.includes(sheet.sheetName) && years.length === 1
+    ? years[0]
+    : null;
 }
 
 /**

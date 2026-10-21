@@ -284,7 +284,8 @@ export async function saveDataset(db, dataset) {
      * 있는데 갈아 치우면, 시트별 기록이 없던 옛 레코드에서 다른 시트의 해가 사라져
      * 패널이 보관된 자료를 숨긴다.
      */
-    const 모두적혀있다 = sheets.every((name) => yearBySheet[name] !== undefined);
+    // 시트 이름이 `constructor`면 상속된 속성이 잡혀 참이 된다
+    const 모두적혀있다 = sheets.every((name) => Object.prototype.hasOwnProperty.call(yearBySheet, name));
     files.put({
       ...옛기록,
       ...file,
