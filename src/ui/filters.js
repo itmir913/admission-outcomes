@@ -282,8 +282,12 @@ export function createFilters({ mount, read, onChange, onClose }) {
     // 팝오버에는 제목줄이 따로 있다. 여기서 또 그리면 같은 제목이 두 번 나온다
     if (!withHead) return el('div', {}, [body]);
 
+    /*
+     * 위 여백만 좁다. 머리줄 높이는 단추(36px)가 정하는데 제목 글자는 그 안에서
+     * 가운데 서므로, 좌우와 같은 여백을 주면 제목 위만 8px 더 벌어져 보인다.
+     */
     return el('section', {
-      class: `card px-3 py-3 ${active ? 'border-brand/40 ring-1 ring-brand/20' : ''}`
+      class: `card px-3 pb-3 pt-1 ${active ? 'border-brand/40 ring-1 ring-brand/20' : ''}`
     }, [head, body]);
   }
 
