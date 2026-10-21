@@ -146,7 +146,14 @@ function readExtra(row, columns, labels) {
      * **앞자리 0은 숫자로 보지 않는다.** `007` 같은 칸은 코드지 수가 아니고,
      * 숫자로 바꾸면 0이 지워져 다른 값이 된다.
      */
-    extra[label] = NUMERIC_TEXT.test(text) ? Number(text) : text;
+    /*
+     * **같은 이름의 열이 둘이면 번호를 덧붙인다.**
+     *
+     * 이름을 그대로 키로 쓰면 뒤 열이 앞 열을 덮어, 「비고」가 둘인 양식에서 앞쪽
+     * 값이 사라진다. 화면은 그래도 「2개를 원본 이름 그대로 둡니다」라고 적었다 (§5).
+     */
+    const key = Object.prototype.hasOwnProperty.call(extra, label) ? `${label}(${index + 1})` : label;
+    extra[key] = NUMERIC_TEXT.test(text) ? Number(text) : text;
   }
   return { extra, dropped };
 }
@@ -253,9 +260,11 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
   /** @type {Map<string, Map<string, object>>} */
   const suneungBySid = new Map();
 
+  /** 학생을 알아내지 못해 **저장하지 못한** 행 수. 조용히 사라지면 안 된다 (§5) */
+  let 저장못한행 = 0;
   rows.forEach((row, index) => {
     const sid = sids[index];
-    if (sid === null) return;
+    if (sid === null) { 저장못한행 += 1; return; }
     const student = studentBySid.get(sid);
 
     /*
@@ -296,6 +305,23 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
 
   const suneung = [];
   for (const areas of suneungBySid.values()) suneung.push(...areas.values());
+
+  /*
+   * **읽고도 저장하지 못한 행을 알린다.**
+   *
+   * 식별 열이 하나도 없는 시트는 모든 행이 학생에 묶이지 못해 **한 건도 저장되지
+   * 않는다.** 그런데 확인 화면은 「2행」을 읽었다고 적고, 경고는 「학생에 묶이지
+   * 않습니다」라고만 해서, 아무것도 들어오지 않았다는 사실이 어디에도 없었다.
+   */
+  if (저장못한행 > 0) {
+    warnings.push({
+      type: 'rows-not-saved',
+      count: 저장못한행,
+      message: 저장못한행 === rows.length
+        ? `학생을 알아낼 열(학번, 또는 반과 번호)이 없어 ${저장못한행}행을 한 건도 저장하지 않았습니다. 학번이나 반·번호가 있는 파일로 다시 올려 주세요.`
+        : `학생을 알아내지 못한 ${저장못한행}행은 저장하지 않았습니다.`
+    });
+  }
 
   return {
     students: [...studentBySid.values()].sort((left, right) => left.sid.localeCompare(right.sid)),

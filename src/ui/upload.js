@@ -68,6 +68,11 @@ export function uploadBlockers(sheets, decisions) {
       problems.push(`${sheet.fileName}: 대학명 열을 찾지 못했습니다`);
       continue;
     }
+    // 학생을 알아낼 열이 없으면 읽은 행이 한 건도 저장되지 않는다 (§3)
+    if (sheet.reading.identifiable === false) {
+      problems.push(`${sheet.fileName}: 학번이나 반·번호 열이 없어 저장할 수 없습니다`);
+      continue;
+    }
     if (decision.cohortYear === null && needsFileYear(sheet)) {
       problems.push(`${sheet.fileName}: 고3 년도를 넣어 주세요`);
     }

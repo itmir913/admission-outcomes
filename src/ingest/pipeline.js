@@ -18,6 +18,17 @@ import { inferCohortYear } from './year.js';
 import { buildDataset, isIdentityLabel } from './buildRecords.js';
 
 /**
+ * 학생을 알아낼 열이 있는지 (§3의 주키 재료).
+ *
+ * 없으면 모든 행이 학생에 묶이지 못해 **한 건도 저장되지 않는다.** 불러오기 전에
+ * 알려야 한다 — 읽은 행 수만 보고 들어온 줄 알면 빈 보관소를 보고도 모른다 (§5).
+ */
+function hasIdentity(columns = {}) {
+  if (columns['identity.hakbun'] !== undefined) return true;
+  return columns['identity.class'] !== undefined && columns['identity.number'] !== undefined;
+}
+
+/**
  * @typedef {object} PreparedSheet
  * @property {string} id 화면에서 이 시트를 가리킬 이름
  * @property {string} fileName
@@ -46,6 +57,7 @@ import { buildDataset, isIdentityLabel } from './buildRecords.js';
  * @property {string|null} profileId
  * @property {string|null} label 화면에 보일 양식 이름
  * @property {boolean} readable 분석할 수 있는 상태인지 (대학명 열이 있어야 한다)
+ * @property {boolean} identifiable 학생을 알아낼 열이 있는지 (없으면 한 건도 저장되지 않는다)
  * @property {number} columnCount 전체 열 수
 
 /**
@@ -73,6 +85,7 @@ export function readSheetColumns(grid, match) {
       profileId: match.profile.id,
       label: match.profile.programLabel ?? match.profile.id,
       readable: columns.univ !== undefined,
+      identifiable: hasIdentity(columns),
       columnCount: Object.keys(columns).length
     };
   }
@@ -95,6 +108,7 @@ export function readSheetColumns(grid, match) {
     profileId: null,
     label: '이름으로 알아냄',
     readable: resolved.columns.univ !== undefined,
+    identifiable: hasIdentity(resolved.columns),
     columnCount: resolved.labels.length
   };
 }
@@ -241,6 +255,7 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
       columns: reading.columns,
       yearBasis: basis,
       cohortYear,
+      sheetId: sheet.id,
       source: {
         fileHash: sheet.fileHash,
         sourceFile: sheet.fileName,
@@ -296,6 +311,33 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
   }
 
   const dataset = await buildDataset(inputs, { existing: existingStudents });
+
+  /*
+   * **한 건도 만들지 못한 시트를 알린다.**
+   *
+   * 보관소는 다시 넣는 시트의 옛 기록을 걷어내므로, 0건이 된 시트는 예전에 쌓아
+   * 둔 기록을 **지우기만 한다.** 비워 바로잡으려는 사람에게는 그게 맞지만, 머리글
+   * 행 수가 한 줄 밀리거나 프로파일이 빈 열을 가리켜 0건이 되는 길도 같은 문이다.
+   * 어느 쪽인지는 사람만 알 수 있으니 숫자를 보여 준다 (§5).
+   */
+  const 시트별건수 = new Map();
+  for (const row of dataset.applications ?? []) {
+    const key = `${row.fileHash}#${row.sourceSheet}`;
+    시트별건수.set(key, (시트별건수.get(key) ?? 0) + 1);
+  }
+  for (const input of inputs) {
+    const key = `${input.source?.fileHash}#${input.source?.sourceSheet}`;
+    if (시트별건수.get(key)) continue;
+    const sheet = prepared.find((item) => item.id === input.sheetId) ?? {
+      fileName: input.source?.sourceFile ?? '파일', sheetName: input.source?.sourceSheet, id: null
+    };
+    warnings.push({
+      type: 'sheet-empty',
+      sheet: sheet.id,
+      message: `${sheet.fileName}의 ${sheet.sheetName} 시트에서 지원 기록을 한 건도 만들지 못했습니다. 이 시트가 예전에 넣어 둔 기록은 지워집니다.`
+    });
+  }
+
   return {
     ...dataset,
     files: [...files.values()],
