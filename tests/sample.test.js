@@ -31,7 +31,7 @@ describe('예시 양식', () => {
     expect(sampleWorkbook({ students: 3 })).toEqual(sampleWorkbook({ students: 3 }));
   });
 
-  it('지어낸 자료임이 파일 이름에 드러난다', () => {
+  it('가상 데이터임이 파일 이름에 드러난다', () => {
     expect(SAMPLE_FILE_NAME).toContain('예시');
     expect(SAMPLE_FILE_NAME).toContain('가상');
   });
