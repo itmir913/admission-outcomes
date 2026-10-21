@@ -74,6 +74,23 @@ describe('긴 값이 상자를 뚫지 않는다', () => {
   });
 
   /*
+   * 확인 상자는 **파일 이름과 사람이 적은 글귀를 한 줄에 세운다.** 둘 다 길이를
+   * 우리가 정하지 않으므로, 줄어들 수 있게(min-w-0) 또는 줄을 바꿀 수 있게(flex-wrap)
+   * 열어 두지 않으면 상자를 넘는다. 실제로 좁은 화면에서 파일 이름이 밖으로 나가고
+   * 「불러오기」가 한 줄에 한 자씩 세로로 눌렸다.
+   */
+  it('확인 상자의 한 줄짜리 자리가 줄어들거나 줄을 바꾼다', () => {
+    const upload = readFileSync(join(ROOT, 'src/ui/upload.js'), 'utf8');
+    const 시트이름줄 = /el\('label', \{ class: '([^']*)'[^]*?sheet\.fileName/.exec(upload);
+    expect(시트이름줄, '시트 이름 줄을 찾지 못했다').not.toBeNull();
+    expect(시트이름줄[1]).toMatch(/(^| )min-w-0( |$)/);
+
+    const 단추줄 = /footer: el\('div', \{ class: '([^']*)'/.exec(upload);
+    expect(단추줄, '아래 단추줄을 찾지 못했다').not.toBeNull();
+    expect(단추줄[1]).toMatch(/(^| )flex-wrap( |$)/);
+  });
+
+  /*
    * 엑셀 값을 그대로 넣는 자리는 **말줄임(truncate)이나 줄바꿈(break-words) 중
    * 하나**를 달고 있어야 한다. 둘 다 없으면 긴 값이 상자를 밀어낸다.
    *
