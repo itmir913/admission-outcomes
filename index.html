@@ -15,7 +15,7 @@
   <link rel="icon" href="https://luminousky.com/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="https://luminousky.com/apple-touch-icon.png" />
   <!--
-    브라우저 안에서만 도는 도구다. 자료가 바깥으로 나가는 길을 만들지 않는다.
+    브라우저에서만 작동하는 도구다. 자료가 바깥으로 나가는 길을 만들지 않는다.
     이 정책이 그 약속을 브라우저가 대신 지키게 한다 (CLAUDE.md §1).
     바깥을 향한 구멍은 위의 아이콘 한 장뿐이고, 그것도 받아 오기만 한다.
   -->
@@ -75,14 +75,18 @@
 
   <!-- 자료가 없을 때: 불러오기 화면 -->
   <section id="시작화면" class="hidden min-h-0 flex-1 overflow-y-auto scroll-stable">
-    <div class="mx-auto max-w-3xl px-6 py-14">
+    <!--
+      조각 사이 간격을 **한 군데서** 준다. 제목·안내·투하 영역·예시 카드·개인정보·푸터가
+      같은 눈금(gutter)으로 떨어져야, 하나를 고칠 때 다른 것과 어긋나지 않는다.
+    -->
+    <div class="mx-auto flex max-w-3xl flex-col gap-gutter px-6 py-12">
       <h2 class="text-3xl font-bold tracking-tight">과년도 진학결과를 불러옵니다</h2>
-      <p class="mt-3 text-lg text-ink-soft">
+      <p class="text-lg text-ink-soft">
         엑셀 파일을 한꺼번에 여러 개 올려도 되고, 그것들을 담은 zip 하나를 올려도 됩니다.
       </p>
 
       <div id="투하영역"
-           class="card mt-8 flex flex-col items-center gap-4 border-2 border-dashed px-6 py-14 text-center transition-colors">
+           class="card flex flex-col items-center gap-4 border-2 border-dashed px-6 py-12 text-center transition-colors">
         <p class="text-lg font-medium">여기로 파일을 끌어다 놓으세요</p>
         <p class="text-ink-soft">.xlsx · .xls · .zip</p>
         <button type="button" id="파일선택" class="btn btn-primary">파일 선택</button>
@@ -91,18 +95,22 @@
       </div>
 
       <!--
-        예시 양식은 **투하 영역 밖에 둔다.** 그 상자는 「내 파일을 넣는 곳」이고
-        이것은 반대 방향이라, 안에 두면 「파일 선택」과 헷갈린다.
+        예시 양식은 **투하 영역 밖에, 제 카드로 둔다.** 그 상자는 「내 파일을 넣는 곳」이고
+        이것은 반대 방향이라, 안에 두면 「파일 선택」과 헷갈린다. 글줄로만 두었더니
+        이번에는 투하 영역에 딸린 각주처럼 보여, 나란히 선 카드로 세운다.
+
+        카드 사이 간격은 **하나로 묶는다**(gutter). 조각마다 mt 를 달면 하나를 고칠 때마다
+        다른 조각과 어긋난다.
       -->
-      <p class="mt-4 text-center text-base text-ink-soft">
-        아직 양식이 없으신가요?
-        <button type="button" id="예시받기"
-                class="font-semibold text-brand underline underline-offset-2 hover:text-brand/80">예시 양식 내려받기</button>
-        <span class="block">자료는 전부 지어낸 것입니다.</span>
-      </p>
+      <div class="card flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-5">
+        <div class="min-w-0 flex-1">
+          <p class="text-lg font-medium">아직 양식이 없으신가요?</p>
+          <p class="mt-1 text-base text-ink-soft">예시 양식의 데이터는 모두 가상 데이터입니다. 먼저 둘러보실 수 있습니다.</p>
+        </div>
+        <button type="button" id="예시받기" class="btn btn-brand shrink-0">예시 양식 내려받기</button>
+      </div>
 
-
-      <div class="card mt-6 px-6 py-5 text-base leading-relaxed text-ink-soft">
+      <div class="card px-6 py-5 text-base leading-relaxed text-ink-soft">
         <p class="font-semibold text-ink">개인정보</p>
         <ul class="mt-2 list-disc space-y-1 pl-5">
           <li><strong class="text-ink">이름과 학번은 보관하지 않습니다.</strong> 익명 ID를 만들 때만 쓰고 바로 버립니다.</li>
@@ -120,15 +128,15 @@
         **고정하지 않는다.** 아래에 붙여 두면 짧은 화면에서 안내 글을 덮는다.
         읽을 것 끝에 자연스럽게 따라오게 한다.
       -->
-      <footer class="no-print mt-10 border-t border-line pt-5 text-center text-base text-ink-soft">
+      <footer class="no-print border-t border-line pt-5 text-center text-base text-ink-soft">
         <p>
           <a class="font-medium text-brand underline underline-offset-2 hover:text-brand/80"
              href="https://github.com/itmir913/admission-outcomes" target="_blank" rel="noopener noreferrer">GitHub 저장소</a>
           <span class="px-2 text-line" aria-hidden="true">·</span>
           <a class="font-medium text-brand underline underline-offset-2 hover:text-brand/80"
-             href="mailto:itmir913@gmail.com">itmir913@gmail.com</a>
+             href="mailto:hello@luminousky.com">hello@luminousky.com</a>
         </p>
-        <p class="mt-1">&copy; luminousky · 브라우저 안에서만 도는 도구입니다.</p>
+        <p class="mt-1">&copy; luminousky · 브라우저에서만 작동하는 도구입니다.</p>
       </footer>
     </div>
   </section>
