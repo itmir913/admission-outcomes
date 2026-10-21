@@ -15,7 +15,14 @@ import { el, clear, formatNumber, debounce } from './dom.js';
 import { valueLabel, isBlank } from '../analysis/registry.js';
 import { toggleSort } from '../analysis/query.js';
 
-/** 행 높이. CSS의 `--spacing-row`와 같아야 창 밖 행 수 계산이 맞는다. */
+/**
+ * 행 높이의 **출발값**. CSS의 `--spacing-row`에서 왔다.
+ *
+ * 실제로 그려진 행은 이보다 높다 — 칸선 몫에 글자 배율까지 붙어 46~47px이 된다.
+ * 그 차이만큼 자리 계산이 밀리면 오버스캔이 먹히다가 어느 순간 **아래쪽이 빈다.**
+ * 그래서 그린 뒤에 한 번 재어 그 값을 쓴다(`measuredRowHeight`). 이 상수는 아직
+ * 아무것도 그리지 못한 첫 순간에만 쓰인다.
+ */
 const ROW_HEIGHT = 44;
 /** 창 위아래로 더 그려 두는 행. 스크롤할 때 빈칸이 스쳐 지나가지 않게 한다. */
 const OVERSCAN = 8;
@@ -48,12 +55,13 @@ export function suggestWidth(field) {
  * @param {number} rowCount
  * @returns {{start: number, end: number}}
  */
-export function visibleWindow(scrollTop, viewportHeight, rowCount) {
+export function visibleWindow(scrollTop, viewportHeight, rowCount, rowHeight = ROW_HEIGHT) {
   // 아직 자리를 잡지 못한 순간(높이 0)에도 한 화면은 그려 둔다.
   // 안 그리면 스크롤할 것이 없어 스크롤 이벤트도 영영 오지 않는다
   const viewport = viewportHeight > 0 ? viewportHeight : 600;
-  const first = Math.max(0, Math.floor(Math.max(0, scrollTop) / ROW_HEIGHT));
-  const count = Math.ceil(viewport / ROW_HEIGHT);
+  const step = rowHeight > 0 ? rowHeight : ROW_HEIGHT;
+  const first = Math.max(0, Math.floor(Math.max(0, scrollTop) / step));
+  const count = Math.ceil(viewport / step);
   return {
     start: Math.max(0, first - OVERSCAN),
     end: Math.min(rowCount, first + count + OVERSCAN)
@@ -146,6 +154,20 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
 
   function renderHead() {
     const offsets = pinOffsets();
+    /*
+     * **치던 자리를 기억했다 돌려준다.**
+     *
+     * 머리줄 검색은 220ms 뒤에 표를 다시 그리는데, 그때 이 줄을 통째로 새로 만든다.
+     * 글자는 새 칸에 그대로 남지만 커서가 사라져서, 잠깐 멈췄다 이어 치면 그 뒤
+     * 글자가 어디에도 들어가지 않는다 — 사람은 다 쳤다고 믿고 덜 걸러진 표를 본다.
+     */
+    const 치던칸 = document.activeElement;
+    const 치던열 = 치던칸?.closest?.('th')
+      && searchRow?.contains(치던칸)
+      ? [...(searchRow?.children ?? [])].indexOf(치던칸.closest('th'))
+      : -1;
+    const 커서 = 치던열 === -1 ? null : { start: 치던칸.selectionStart, end: 치던칸.selectionEnd };
+
     clear(headRow);
     if (searchRow) clear(searchRow);
 
@@ -255,6 +277,16 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
       }, [el('span', { class: 'flex h-full items-center gap-1 pr-2' }, [button]), handle]));
     });
 
+    if (치던열 !== -1) {
+      const 새칸 = searchRow?.children[치던열]?.querySelector('input');
+      if (새칸) {
+        새칸.focus({ preventScroll: true });
+        if (커서?.start !== null && 커서?.start !== undefined) {
+          새칸.setSelectionRange(커서.start, 커서.end ?? 커서.start);
+        }
+      }
+    }
+
     measureHead();
   }
 
@@ -348,8 +380,11 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
   const rowsTop = () =>
     body.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
 
+  /** 그려 본 행에서 잰 실제 높이. 재기 전에는 CSS 눈금을 쓴다 */
+  let measuredRowHeight = ROW_HEIGHT;
+
   const windowRange = () =>
-    visibleWindow(scroller.scrollTop - rowsTop(), scroller.clientHeight, rows.length);
+    visibleWindow(scroller.scrollTop - rowsTop(), scroller.clientHeight, rows.length, measuredRowHeight);
 
   function renderBody(force = false) {
     const { start, end } = windowRange();
@@ -361,7 +396,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
 
     // 창 위아래의 빈자리를 높이만 가진 행으로 채운다. 스크롤 막대가 실제 행 수를 나타내야 한다
     if (start > 0) {
-      parts.push(el('tr', { attrs: { 'aria-hidden': 'true' }, style: { height: `${start * ROW_HEIGHT}px` } }));
+      parts.push(el('tr', { attrs: { 'aria-hidden': 'true' }, style: { height: `${start * measuredRowHeight}px` } }));
     }
 
     for (let index = start; index < end; index += 1) {
@@ -404,10 +439,24 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     }
 
     if (end < rows.length) {
-      parts.push(el('tr', { attrs: { 'aria-hidden': 'true' }, style: { height: `${(rows.length - end) * ROW_HEIGHT}px` } }));
+      parts.push(el('tr', { attrs: { 'aria-hidden': 'true' }, style: { height: `${(rows.length - end) * measuredRowHeight}px` } }));
     }
 
     clear(body).append(...parts);
+
+    /*
+     * **그린 뒤에 한 번 잰다.** 칸선과 글자 배율 때문에 실제 행은 CSS 눈금보다 높다.
+     * 그 차이를 모르면 위 빈자리가 실제보다 짧게 잡혀, 스크롤을 내릴수록 창과 그린
+     * 구간이 어긋나다 아래쪽이 빈다.
+     */
+    const 실제행 = [...body.children].find((node) => node.getAttribute('aria-hidden') !== 'true');
+    const 높이 = 실제행?.getBoundingClientRect().height ?? 0;
+    if (높이 > 0 && Math.abs(높이 - measuredRowHeight) > 0.5) {
+      measuredRowHeight = 높이;
+      // 자를 바꿨으니 빈자리도 다시 잰 값으로 그린다
+      drawn = { start: -1, end: -1 };
+      renderBody(true);
+    }
   }
 
   const repaintBody = () => renderBody(true);

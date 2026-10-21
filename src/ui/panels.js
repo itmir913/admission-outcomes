@@ -186,8 +186,16 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
     }
   }
 
+  const pinInput = el('input', {
+    class: 'field mt-1 w-24 text-center figure',
+    attrs: { type: 'number', min: 0, max: 6, step: 1, value: pinCount, 'aria-label': '고정할 열 수' },
+    on: { change: (event) => { pinCount = Math.max(0, Math.min(6, Number(event.target.value) || 0)); paint(); } }
+  });
+
   function paint() {
     pinCount = Math.min(pinCount, chosen.length);
+    // 열을 지워 고정 수가 깎이면 칸의 숫자도 따라가야 한다. 아래 글귀와 어긋나 보였다
+    pinInput.value = String(pinCount);
     paintShown();
     paintPicker();
     pinNote.textContent = pinCount === 0
@@ -204,11 +212,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
       shownList,
       el('div', { class: 'mt-4' }, [
         el('label', { class: 'text-base font-semibold', text: '왼쪽에 고정할 열 수' }),
-        el('input', {
-          class: 'field mt-1 w-24 text-center figure',
-          attrs: { type: 'number', min: 0, max: 6, step: 1, value: pinCount, 'aria-label': '고정할 열 수' },
-          on: { change: (event) => { pinCount = Math.max(0, Math.min(6, Number(event.target.value) || 0)); paint(); } }
-        }),
+        pinInput,
         pinNote
       ])
     ]),
