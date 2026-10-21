@@ -18,7 +18,7 @@ import { tallyOutcomes, passRate, rateNote } from '../src/ui/outcome.js';
 import { sortRows, searchHaystack } from '../src/analysis/query.js';
 import { visibleWindow } from '../src/ui/table.js';
 import { facetCounts, applyQuery } from '../src/analysis/query.js';
-import { uploadBlockers } from '../src/ui/upload.js';
+import { uploadBlockers, prefilledYear } from '../src/ui/upload.js';
 
 let counter = 0;
 const freshDatabase = () => openDatabase(`audit-${(counter += 1)}-${Date.now()}`);
@@ -421,5 +421,59 @@ describe('4차 감사 — 고치면서 들여온 자리들', () => {
     }
     const { files } = await loadDataset(db);
     expect(files[0].cohortYears).toEqual([2025]);
+  });
+});
+
+describe('5차 감사 — 미리 채운 연도가 거짓말하던 자리', () => {
+  it('식별 열이 빈칸 표시뿐이면 여러 학생을 한 사람으로 묶지 않는다', async () => {
+    const sheet = {
+      grid: [
+        ['학번', '이름', '대학명', '최종'],
+        ['-', '-', '가온대학교', '합격'],
+        ['-', '-', '한결대학교', '불합격'],
+        ['-', '-', '서림대학교', '합격']
+      ],
+      headerRows: 1,
+      columns: { 'identity.hakbun': 0, 'identity.name': 1, univ: 2, final: 3 },
+      cohortYear: 2025
+    };
+    const { students, applications, warnings } = await buildDataset([sheet]);
+    // `-`를 키 재료로 쓰면 세 행이 한 익명 ID로 합쳐지고, 화면에는 아무 표시도 없었다
+    expect(students).toHaveLength(0);
+    expect(applications).toHaveLength(0);
+    expect(warnings.some((warning) => warning.type === 'rows-not-saved')).toBe(true);
+  });
+
+  it('시트가 여럿인 파일에서는 파일 연도로 시트를 채우지 않는다', () => {
+    // 「2025학년」 시트는 2025로 확정했고 「누적」 시트는 행마다 연도다
+    const duplicate = {
+      sheets: ['2025학년', '누적'],
+      cohortYears: [2025],
+      yearBySheet: { '2025학년': 2025, '누적': null }
+    };
+    const 카드 = (sheetName) => ({
+      id: sheetName, fileName: '누적.xlsx', sheetName, duplicate,
+      reading: { readable: true, identifiable: true }
+    });
+    // 누적 시트에 2025가 채워지면 2023년 지원 건이 2025년으로 보관된다
+    expect(prefilledYear(카드('누적'))).toBeNull();
+    expect(prefilledYear(카드('2025학년'))).toBe(2025);
+  });
+
+  it('시트별 기록이 없는 옛 레코드의 해를 버리지 않는다', async () => {
+    const db = await freshDatabase();
+    // yearBySheet가 들어오기 전 판으로 보관한 레코드
+    await saveDataset(db, {
+      students: [], applications: [], suneung: [],
+      files: [{ hash: 'F', name: '누적.xlsx', sheets: ['가', '나'], cohortYears: [2024, 2025] }],
+      readSheets: [{ fileHash: 'F', sheetName: '가' }, { fileHash: 'F', sheetName: '나' }]
+    });
+    await saveDataset(db, {
+      students: [], applications: [], suneung: [],
+      files: [{ hash: 'F', name: '누적.xlsx', sheets: ['가'], cohortYears: [2024], yearBySheet: { '가': 2024 } }],
+      readSheets: [{ fileHash: 'F', sheetName: '가' }]
+    });
+    const { files } = await loadDataset(db);
+    expect(files[0].cohortYears).toEqual(expect.arrayContaining([2024, 2025]));
   });
 });
