@@ -44,14 +44,19 @@ function summaryCard(tally) {
   ]);
 
   return el('div', { class: 'card overflow-hidden' }, [
+    /*
+     * **0인 칸도 지우지 않는다.** 전체 화면에서는 판정 미상이 없으면 칸을 뺐는데,
+     * 한 학생을 볼 때는 그 빈자리가 "세어 보지 않았다"는 뜻으로 보인다. 0이라고 적어
+     * 두어야 읽은 결과임이 드러난다 (§5).
+     */
     el('div', { class: 'stat-grid' }, [
       cell('지원', tally.지원),
+      cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`),
       cell('합격', tally.합격, 'text-pass'),
       cell('충원합격', tally.충원합격, 'text-wait'),
       cell('불합격', tally.불합격, 'text-fail'),
-      tally.미상 > 0 ? cell('판정 미상', tally.미상, 'text-ink-soft') : null,
-      cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`)
-    ].filter(Boolean)),
+      cell('정보 없음', tally.미상, 'text-ink-soft')
+    ]),
     el('div', { class: 'border-t border-line-soft px-4 py-3' }, [outcomeBar(tally)])
   ]);
 }
