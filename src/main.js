@@ -43,6 +43,7 @@ const dom = {
   검색: /** @type {HTMLInputElement} */ (pick('#검색')),
   칩줄: pick('#칩줄'),
   고정수: pick('#고정수'),
+  고정메모: pick('#고정메모'),
   열팝오버: pick('#열팝오버'),
   알림줄: pick('#알림줄'),
   표: pick('#표'),
@@ -79,6 +80,8 @@ const table = createTable({
   searchRow: pick('#검색행'),
   body: pick('#본문행'),
   empty: dom.표없음,
+  // 화면이 좁아져 실제 고정 수가 달라지면 도구줄의 메모도 따라가야 한다
+  onPinnedChange: () => paintToolbar(),
   /** 머리줄 검색칸에 지금 무엇이 적혀 있는지. 다시 그려도 글자가 남아야 한다 */
   columnSearch: (key) => {
     const found = state.view.filters.find((filter) => filter.key === key && filter.op === 'contains');
@@ -340,7 +343,17 @@ const MAX_PINNED = 6;
  */
 function paintToolbar() {
   const pinned = Math.min(state.view.pinned, state.view.columns.length, MAX_PINNED);
+  /*
+   * **실제로 몇 개가 고정돼 있는지 적는다.**
+   *
+   * 좁은 화면에서는 고정 열 너비 합이 화면을 넘어 뒤쪽이 고정되지 않는다. 사람이
+   * 정한 수만 적으면 「+」를 눌러도 화면이 그대로여서 고장 났다고 읽거나, 더 나쁘게는
+   * 3개가 고정돼 있다고 믿는다 (§5).
+   */
+  const 실제고정 = table?.effectivePinned?.() ?? pinned;
   dom.고정수.textContent = String(pinned);
+  dom.고정메모.textContent = 실제고정 < pinned ? `지금 ${실제고정}개만` : '';
+  dom.고정메모.classList.toggle('hidden', 실제고정 >= pinned);
 
   const disable = (selector, off) => {
     const node = pick(selector);

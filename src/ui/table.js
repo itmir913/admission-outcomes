@@ -90,7 +90,7 @@ export function cellText(key, value) {
  * @param {(row: object) => void} [options.onRowOpen]
  * @param {(state: object) => void} [options.onStateChange] 정렬·너비가 바뀔 때
  */
-export function createTable({ scroller, colgroup, headRow, searchRow, body, empty, onRowOpen, onStateChange, onColumnSearch, columnSearch = () => '', columnFiltered = () => false, onColumnFilter }) {
+export function createTable({ scroller, colgroup, headRow, searchRow, body, empty, onRowOpen, onStateChange, onColumnSearch, columnSearch = () => '', columnFiltered = () => false, onColumnFilter, onPinnedChange }) {
   /** @type {object[]} */
   let rows = [];
   /** @type {Map<string, object>} */
@@ -117,12 +117,19 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
    * 자리만 화면에 맞춰 줄인다.
    */
   function 유효고정() {
-    const 한도 = (scroller.clientWidth || 0) * 0.6;
+    const 쓸수있는폭 = scroller.clientWidth || 0;
+    /*
+     * **폭을 못 재면 하나만 고정한다.** 상한을 끄면 시작 화면이 떠 있어 표가 아직
+     * 자리를 못 받은 순간(폭 0)에 사람이 정한 수가 그대로 그려지고, 그 머리줄이
+     * 겹친 채 남는다 — 실제로 375px에서 재현됐다 (§5).
+     */
+    if (쓸수있는폭 === 0) return Math.min(1, state.pinned, state.columns.length);
+    const 한도 = 쓸수있는폭 * 0.6;
     let sum = 0;
     let count = 0;
     for (let index = 0; index < state.pinned && index < state.columns.length; index += 1) {
       const width = state.widths[state.columns[index]] ?? DEFAULT_WIDTH;
-      if (count > 0 && 한도 > 0 && sum + width > 한도) break;
+      if (count > 0 && sum + width > 한도) break;
       sum += width;
       count += 1;
     }
@@ -152,7 +159,25 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     const offsets = pinOffsets();
     const 고정수 = 유효고정();
     const rows = [headRow, searchRow, ...body.children].filter(Boolean);
+    /*
+     * **고정에서 빠진 칸은 그 자리에서 떼 준다.**
+     *
+     * 너비를 끌어 한도를 넘기는 동안에는 머리줄을 다시 그릴 수 없다 — 손잡이 노드에
+     * 포인터를 붙들어 두었으므로 노드가 바뀌면 끌기가 끊긴다. 앞쪽 자리만 고쳐 쓰면
+     * 빠져야 할 뒤쪽 칸이 옛 자리를 달고 남아 고정 열끼리 포개진다. 끄는 그 순간이
+     * 바로 사람이 그 자리를 보고 있는 때다.
+     */
     for (const row of rows) {
+      for (let index = 고정수; index < row.children.length; index += 1) {
+        const cell = /** @type {HTMLElement} */ (row.children[index]);
+        if (!cell.classList.contains('pinned')) continue;
+        cell.classList.remove('pinned', 'pin-edge');
+        cell.style.left = '';
+      }
+      if (고정수 > 0) {
+        const edge = /** @type {HTMLElement} */ (row.children[고정수 - 1]);
+        if (edge?.classList.contains('pinned')) edge.classList.add('pin-edge');
+      }
       for (let index = 0; index < 고정수 && index < row.children.length; index += 1) {
         const cell = /** @type {HTMLElement} */ (row.children[index]);
         if (cell.classList.contains('pinned')) cell.style.left = `${offsets[index]}px`;
@@ -206,6 +231,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     if (searchRow) clear(searchRow);
 
     const 고정수 = 유효고정();
+    그린고정수 = 고정수;
     state.columns.forEach((key, index) => {
       const field = fields.get(key);
       const rank = state.sorts.findIndex((sort) => sort.key === key);
@@ -422,6 +448,8 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
   let measuredRowHeight = ROW_HEIGHT;
   /** 다시 재다가 또 다시 재는 일을 막는다 */
   let 재측정중 = false;
+  /** 머리줄을 마지막으로 그릴 때 쓴 고정 열 수. 바뀌면 다시 그려야 한다 */
+  let 그린고정수 = -1;
 
   const windowRange = () =>
     visibleWindow(scroller.scrollTop - rowsTop(), scroller.clientHeight, rows.length, measuredRowHeight);
@@ -531,18 +559,20 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
      * 화면 폭이 바뀌면 **실제로 고정할 열 수**가 달라진다. 머리줄을 그대로 두면
      * 자리 값만 바뀌어 고정 표시와 실제 고정이 어긋나므로, 바뀐 때만 다시 그린다.
      */
-    let 그린고정수 = 유효고정();
     new globalThis.ResizeObserver(() => {
-      const 지금 = 유효고정();
-      if (지금 !== 그린고정수) {
-        그린고정수 = 지금;
+      if (유효고정() !== 그린고정수) {
         renderHead();
+        // 도구줄이 적는 「지금 n개만」도 따라가야 한다
+        onPinnedChange?.(유효고정());
       }
       renderBody(true);
     }).observe(scroller);
   }
 
   return {
+    /** 화면에 **실제로** 고정된 열 수. 좁은 화면에서는 사람이 정한 수보다 적다 */
+    effectivePinned: () => 유효고정(),
+
     /**
      * @param {{rows: object[], registry: object[], state: object}} next
      */
