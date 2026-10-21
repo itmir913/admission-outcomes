@@ -195,25 +195,31 @@ export function openStudent(dialog, { sid, rows }) {
     areaRows.some(([, parts]) => !isBlank(parts[part])));
 
   const 칸 = (value, extra = '') => el('td', {
-    class: `border-t border-line px-3 py-2 text-center text-base tabular-nums ${extra}`,
+    class: `whitespace-nowrap border-t border-line px-3 py-2 text-center text-base tabular-nums ${extra}`,
     text: isBlank(value) ? '-' : formatNumber(value)
   });
 
   function suneungTable() {
-    return el('div', { class: 'card mt-3 overflow-x-auto scroll-stable' }, [
-      el('table', { class: 'w-full border-collapse' }, [
+    // 세로로는 미끄러지지 않는 상자다. 막대 자리를 비워 두면 오른쪽에 빈 띠만 남는다
+    return el('div', { class: 'card mt-3 overflow-x-auto' }, [
+      /*
+       * 표가 **상자 너비를 다 쓴다.** 칸을 글자에 맞춰 줄이면 오른쪽에 빈 띠가
+       * 남아, 성적표가 아니라 떠 있는 쪽지처럼 보인다. 글자는 줄바꿈하지 않고,
+       * 좁아서 다 못 담으면 상자가 가로로 미끄러진다.
+       */
+      el('table', { class: 'w-full min-w-max border-collapse' }, [
         el('thead', {}, [
           el('tr', { class: 'bg-canvas' }, [
-            el('th', { class: 'px-3 py-2 text-center text-base font-semibold', text: '영역' }),
+            el('th', { class: 'whitespace-nowrap px-3 py-2 text-center text-base font-semibold', text: '영역' }),
             ...usedColumns.map(([part, label]) => el('th', {
-              class: `px-3 py-2 text-center text-base font-semibold ${part === 'grade' ? 'text-brand' : ''}`,
+              class: `whitespace-nowrap px-3 py-2 text-center text-base font-semibold ${part === 'grade' ? 'text-brand' : ''}`,
               text: label
             }))
           ])
         ]),
         el('tbody', {}, areaRows.map(([area, parts]) => el('tr', {}, [
           el('th', {
-            class: 'border-t border-line px-3 py-2 text-center text-base font-semibold',
+            class: 'whitespace-nowrap border-t border-line px-3 py-2 text-center text-base font-semibold',
             attrs: { scope: 'row' },
             text: area
           }),
