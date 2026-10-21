@@ -142,6 +142,9 @@ function mergeStudent(existing, incoming) {
     ...existing,
     ...incoming,
     keyHashes: [...new Set([...(existing.keyHashes ?? []), ...(incoming.keyHashes ?? [])])].sort(),
+    // 키 종류도 **합친다.** 들어온 쪽으로 덮으면, 파일마다 다른 식별 열을 쓰는 학생의
+    // 종류 기록이 업로드마다 지워져 모순을 알아보는 장치가 조용히 꺼진다
+    keyKinds: { ...(existing.keyKinds ?? {}), ...(incoming.keyKinds ?? {}) },
     gpa: 새값우선(existing.gpa, incoming.gpa)
   };
 }

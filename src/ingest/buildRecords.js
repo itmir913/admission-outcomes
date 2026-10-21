@@ -292,6 +292,8 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
       sid: student.sid,
       cohortYear: student.cohortYear,
       keyHashes: student.keyHashes,
+      // 키 종류도 함께 넘긴다. 보관되지 않으면 다음 업로드가 모순을 알아보지 못한다
+      keyKinds: student.keyKinds ?? {},
       gpa: {}
     });
   }

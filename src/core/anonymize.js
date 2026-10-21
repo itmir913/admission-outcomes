@@ -263,19 +263,48 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
    * 보관하지도 않는다. 다만 **익명 ID를 뽑는 재료로는 그대로 쓴다** — 빼면 그 키밖에
    * 없는 행이 묶음을 못 만들어 통째로 저장되지 않는다 (§5의 데이터 누락).
    */
+  /** @type {Map<string, string>} 해시 → 키 종류. 보관할 때 함께 적는다 */
+  const kindByHash = new Map();
+  for (const keys of allowedByEntry) {
+    for (const key of keys) kindByHash.set(hashByText.get(key.text), key.kind);
+  }
+
   /** @type {Map<string, Map<string, Set<string>>>} 해시 → (더 강한 종류 → 그 행들이 가진 해시들) */
   const 더강한것 = new Map();
-  for (const keys of allowedByEntry) {
-    for (const key of keys) {
-      const hash = hashByText.get(key.text);
-      if (!더강한것.has(hash)) 더강한것.set(hash, new Map());
-      const 쌓인것 = 더강한것.get(hash);
-      for (const other of keys) {
+  /**
+   * 한 사람의 것으로 선언된 키 묶음을 쌓는다. 행 하나든, 보관된 학생 하나든 같다.
+   * @param {{hash: string, kind: string, strength: number}[]} 한묶음
+   */
+  const 쌓기 = (한묶음) => {
+    for (const key of 한묶음) {
+      if (!더강한것.has(key.hash)) 더강한것.set(key.hash, new Map());
+      const 쌓인것 = 더강한것.get(key.hash);
+      for (const other of 한묶음) {
         if (other.strength <= key.strength) continue;
         if (!쌓인것.has(other.kind)) 쌓인것.set(other.kind, new Set());
-        쌓인것.get(other.kind).add(hashByText.get(other.text));
+        쌓인것.get(other.kind).add(other.hash);
       }
     }
+  };
+  for (const keys of allowedByEntry) {
+    쌓기(keys.map((key) => ({ hash: hashByText.get(key.text), kind: key.kind, strength: key.strength })));
+  }
+  /*
+   * **보관된 학생도 한 묶음처럼 쌓는다.**
+   *
+   * 모순이 한 파일 안에 있으면 위에서 드러나지만, 두 파일에 나뉘어 오면 첫 파일의
+   * 약한 키는 깨끗한 채로 보관되고 다음 파일의 짝이 거기에 그대로 붙는다 —
+   * 「1학기 명단」과 「2학기 추가 명단」처럼 흔한 길이다. 보관된 학생의 키 종류를
+   * 함께 적어 두었다면 그 모순도 여기서 드러난다.
+   */
+  for (const student of existing) {
+    const kinds = student.keyKinds ?? {};
+    const 묶음 = (student.keyHashes ?? [])
+      .map((hash) => ({ hash, kind: kinds[hash], strength: KEY_KIND[kinds[hash]]?.strength }))
+      // 종류를 적어 두지 않은 옛 레코드는 모르는 것으로 둔다. 다시 불러오면 채워진다 (§5)
+      .filter((key) => key.kind && key.strength);
+    if (묶음.length > 1) 쌓기(묶음);
+    for (const key of 묶음) if (!kindByHash.has(key.hash)) kindByHash.set(key.hash, key.kind);
   }
   /** @type {Set<string>} 서로 다른 학생을 가리키는 것이 드러난 해시 */
   const 오염된해시 = new Set();
@@ -398,14 +427,36 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
      * 학생이 다시 이어진다 — 보관된 학생은 종류를 알 수 없어 검토를 못 하기 때문이다.
      */
     const 보관할것 = [...merged.hashes].filter((hash) => !오염된해시.has(hash)).sort();
-    students.push({ sid, cohortYear: merged.cohortYear, keyHashes: 보관할것 });
+    // 종류를 함께 적어 둔다. 다음 업로드에서 모순을 알아보려면 해시만으로는 모자란다
+    const keyKinds = {};
+    for (const hash of 보관할것) if (kindByHash.has(hash)) keyKinds[hash] = kindByHash.get(hash);
+    students.push({ sid, cohortYear: merged.cohortYear, keyHashes: 보관할것, keyKinds });
   }
+
+  /*
+   * **같은 sid를 두 번 내보내지 않는다.**
+   *
+   * 오염된 키밖에 없는 행들은 서로 잇지 못해 묶음을 따로 만들지만, 익명 ID는 같은
+   * 해시에서 뽑으므로 sid가 같다. 그대로 내보내면 이 목록을 세는 코드가 학생을
+   * 하나 더 센다 — 지금은 보관소가 sid로 받아 걸러 주지만, 계약이 깨진 값이다.
+   */
+  const 한번씩 = new Map();
+  for (const student of students) {
+    const 있던것 = 한번씩.get(student.sid);
+    한번씩.set(student.sid, 있던것 ? {
+      ...있던것,
+      keyHashes: [...new Set([...있던것.keyHashes, ...student.keyHashes])].sort(),
+      keyKinds: { ...있던것.keyKinds, ...student.keyKinds }
+    } : student);
+  }
+  students.length = 0;
+  students.push(...한번씩.values());
 
   if (잇지않은행 > 0) {
     warnings.push({
       type: 'identity-conflict',
       count: 잇지않은행,
-      message: `식별자가 서로 어긋나 잇지 않은 행이 ${잇지않은행}건 있습니다. 학번이 다른데 반·번호가 겹치거나, 이름이 같은데 번호가 다른 경우입니다 — 다른 학생으로 두었고, 그 이름이나 반·번호로는 더 잇지 않습니다.`
+      message: `서로 어긋나는 식별자가 있어, 그 이름이나 반·번호로는 잇지 않은 행이 ${잇지않은행}건 있습니다. 학번이 다른데 반·번호가 겹치거나, 이름이 같은데 번호가 다른 경우입니다 — 다른 학생으로 두었습니다.`
     });
   }
 
