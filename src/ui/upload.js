@@ -125,12 +125,21 @@ function 미해결안내(unresolved) {
   ].filter(Boolean);
 }
 
-function 지난연도(sheet) {
+export function prefilledYear(sheet) {
   // 시트마다 적어 둔 값이 있으면 그것이 가장 정확하다
   const perSheet = sheet?.duplicate?.yearBySheet?.[sheet.sheetName];
   if (typeof perSheet === 'number') return perSheet;
+  /*
+   * **파일 단위 목록으로 시트의 연도를 말하지 않는다.**
+   *
+   * 그 목록은 파일 전체가 쓴 해들이다. 시트가 여럿인 파일에서 어느 시트가 어느
+   * 해였는지는 시트별 기록만 안다. 목록에 해가 하나뿐이라고 그걸 집어 채우면,
+   * 행마다 연도가 실린 누적 시트에 고정 연도가 들어앉아 **여러 해가 한 해로
+   * 보관된다** — 그러고도 겉보기에는 멀쩡하다 (§2·§5). 모르면 비워 두고 묻는다.
+   */
   const years = sheet?.duplicate?.cohortYears ?? [];
-  return years.length === 1 ? years[0] : null;
+  const 시트수 = (sheet?.duplicate?.sheets ?? []).length;
+  return 시트수 <= 1 && years.length === 1 ? years[0] : null;
 }
 
 /**
@@ -153,7 +162,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
      */
     const decisions = new Map(prepared.sheets.map((sheet) => [
       sheet.id,
-      { cohortYear: 지난연도(sheet) ?? sheet.yearGuess.cohortYear, include: Boolean(sheet.reading?.readable) }
+      { cohortYear: prefilledYear(sheet) ?? sheet.yearGuess.cohortYear, include: Boolean(sheet.reading?.readable) }
     ]));
 
     /*
@@ -313,7 +322,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         sheet.duplicate
           ? el('p', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-2 text-base text-wait' }, [
               `같은 내용을 이미 불러왔습니다. 다시 넣으면 그 파일이 넣었던 기록을 갈아 끼웁니다 — 건수가 두 배로 늘지는 않습니다.${
-                지난연도(sheet) === null ? '' : ` 고3 년도는 지난번에 정한 ${지난연도(sheet)}년으로 채워 두었습니다.`}`
+                prefilledYear(sheet) === null ? '' : ` 고3 년도는 지난번에 정한 ${prefilledYear(sheet)}년으로 채워 두었습니다.`}`
             ])
           : null,
 
@@ -352,7 +361,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
                * 미리 채운 칸에 「찾지 못했습니다」를 함께 적지 않는다. 채워 놓고 못
                * 찾았다고 말하면 사람은 「그럼 이 숫자는 뭔가」부터 의심한다 (§2).
                */
-              지난연도(sheet) !== null
+              prefilledYear(sheet) !== null
                 ? el('p', { class: 'mt-1 text-base text-ink-soft', text: '지난번에 정한 값입니다. 맞는지 확인해 주세요.' })
                 : guess.explanation
                   ? el('p', { class: 'mt-1 text-base text-ink-soft', text: guess.explanation })

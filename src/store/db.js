@@ -278,14 +278,20 @@ export async function saveDataset(db, dataset) {
      * 「현재 엑셀 파일」 패널이 있지도 않은 해를 말한다 (§2·§5).
      */
     const 적어둔연도 = [...new Set(Object.values(yearBySheet).filter((year) => year !== null && year !== undefined))];
+    const sheets = [...new Set([...(옛기록.sheets ?? []), ...(file.sheets ?? [])])];
+    /*
+     * 시트별 기록이 **모든 시트를 덮을 때만** 그것으로 갈아 치운다. 한 시트만 적혀
+     * 있는데 갈아 치우면, 시트별 기록이 없던 옛 레코드에서 다른 시트의 해가 사라져
+     * 패널이 보관된 자료를 숨긴다.
+     */
+    const 모두적혀있다 = sheets.every((name) => yearBySheet[name] !== undefined);
     files.put({
       ...옛기록,
       ...file,
-      sheets: [...new Set([...(옛기록.sheets ?? []), ...(file.sheets ?? [])])],
-      // 시트별 기록이 없는 옛 레코드만 합집합으로 물러난다
-      cohortYears: 적어둔연도.length > 0
+      sheets,
+      cohortYears: 모두적혀있다 && 적어둔연도.length > 0
         ? 적어둔연도
-        : [...new Set([...(옛기록.cohortYears ?? []), ...(file.cohortYears ?? [])])],
+        : [...new Set([...(옛기록.cohortYears ?? []), ...적어둔연도])],
       yearBySheet
     });
   }
