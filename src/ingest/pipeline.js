@@ -15,7 +15,7 @@ import { loadUploads } from './files.js';
 import { matchProfile } from './profile.js';
 import { resolveSheet } from './resolveColumns.js';
 import { inferCohortYear } from './year.js';
-import { buildDataset } from './buildRecords.js';
+import { buildDataset, isIdentityLabel } from './buildRecords.js';
 
 /**
  * @typedef {object} PreparedSheet
@@ -260,10 +260,22 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
       loadedAt: new Date().toISOString()
     };
     if (reading.source === 'names' && reading.unresolved.length > 0) {
+      /*
+       * 해석하지 못한 열이라고 다 보존하는 것은 아니다. 식별 열로 보이는 이름은
+       * 보관소에 넣지 않으므로(§1), 한 숫자로 묶어 「보존했다」고 알리면 사실과 다르다.
+       */
+      const 보존 = reading.unresolved.filter((item) => !isIdentityLabel(item.label));
+      const 제외 = reading.unresolved.filter((item) => isIdentityLabel(item.label));
+      const 목록 = (items) => `${items.slice(0, 5).map((item) => item.label).join(', ')}${items.length > 5 ? ' …' : ''}`;
       warnings.push({
         type: 'columns-unresolved',
         sheet: sheet.id,
-        message: `${sheet.fileName}에서 열 ${reading.unresolved.length}개를 해석하지 못해 원본 이름 그대로 보존했습니다: ${reading.unresolved.slice(0, 5).map((item) => item.label).join(', ')}${reading.unresolved.length > 5 ? ' …' : ''}`
+        message: [
+          보존.length > 0
+            ? `${sheet.fileName}에서 열 ${보존.length}개를 해석하지 못해 원본 이름 그대로 보존했습니다: ${목록(보존)}`
+            : `${sheet.fileName}에서 해석하지 못한 열이 있습니다.`,
+          제외.length > 0 ? `개인정보로 보이는 열 ${제외.length}개(${목록(제외)})는 보관하지 않았습니다.` : null
+        ].filter(Boolean).join(' ')
       });
     }
     for (const note of reading.notes) {

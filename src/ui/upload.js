@@ -9,6 +9,7 @@
  */
 
 import { el, clear, openDialog, dialogFrame } from './dom.js';
+import { isIdentityLabel } from '../ingest/buildRecords.js';
 
 /** 고3 년도를 학년도로. 화면에서 둘을 늘 나란히 보여 준다. */
 export const toSchoolYear = (cohortYear) => cohortYear + 1;
@@ -98,6 +99,27 @@ export function chosenCount(sheets, decisions) {
  * @param {object} sheet
  * @returns {number|null}
  */
+/**
+ * 해석하지 못한 열을 어떻게 다뤘는지 알린다.
+ *
+ * 식별 열로 보이는 이름은 보관소에 넣지 않는다(§1). 한 숫자로 묶어 「원본 이름
+ * 그대로 둔다」고 적으면, 나중에 그 열을 찾는 사람이 사라진 까닭을 알 수 없다.
+ */
+function 미해결안내(unresolved) {
+  if (!unresolved || unresolved.length === 0) return [];
+  const 보존 = unresolved.filter((item) => !isIdentityLabel(item.label));
+  const 제외 = unresolved.filter((item) => isIdentityLabel(item.label));
+  const 목록 = (items) => `${items.slice(0, 6).map((item) => item.label).join(', ')}${items.length > 6 ? ' …' : ''}`;
+  return [
+    보존.length > 0
+      ? el('p', { class: 'mt-1 text-base', text: `해석하지 못한 ${보존.length}개는 원본 이름 그대로 둡니다 — ${목록(보존)}` })
+      : null,
+    제외.length > 0
+      ? el('p', { class: 'mt-1 text-base', text: `개인정보로 보이는 ${제외.length}개(${목록(제외)})는 보관하지 않습니다.` })
+      : null
+  ].filter(Boolean);
+}
+
 function 지난연도(sheet) {
   // 시트마다 적어 둔 값이 있으면 그것이 가장 정확하다
   const perSheet = sheet?.duplicate?.yearBySheet?.[sheet.sheetName];
@@ -297,12 +319,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
           ? el('div', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-3 text-base text-wait' }, [
               el('p', { class: 'font-semibold', text: '등록된 양식과 달라 열 이름으로 해석했습니다. 한 번 확인해 주세요.' }),
               el('p', { class: 'mt-1 text-base' , text: `열 ${reading.columnCount}개 중 ${Object.keys(reading.columns).length}개를 해석했습니다.` }),
-              reading.unresolved.length > 0
-                ? el('p', {
-                    class: 'mt-1 text-base',
-                    text: `해석하지 못한 ${reading.unresolved.length}개는 원본 이름 그대로 둡니다 — ${reading.unresolved.slice(0, 6).map((item) => item.label).join(', ')}${reading.unresolved.length > 6 ? ' …' : ''}`
-                  })
-                : null,
+              ...미해결안내(reading.unresolved),
               ...reading.notes.map((note) => el('p', { class: 'mt-1 text-base', text: note }))
             ])
           : null,
