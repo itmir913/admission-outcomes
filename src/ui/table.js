@@ -473,8 +473,30 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
   /** 머리줄을 마지막으로 그릴 때 쓴 고정 열 수. 바뀌면 다시 그려야 한다 */
   let 그린고정수 = -1;
 
+  /**
+   * 인쇄하는 동안에는 **가상 스크롤을 끈다.**
+   *
+   * 화면에서는 보이는 구간만 그리고 위아래 나머지는 높이만 가진 빈 행으로 메운다.
+   * 종이에는 그 빈 행이 그대로 빈 자리로 찍혀, A4 50쪽을 넘기면서 정작 자료는
+   * 한 화면 분량밖에 들어 있지 않았다. 종이에는 모든 행이 나와야 한다.
+   */
+  let 인쇄중 = false;
+
   const windowRange = () =>
-    visibleWindow(scroller.scrollTop - rowsTop(), scroller.clientHeight, rows.length, measuredRowHeight);
+    인쇄중
+      ? { start: 0, end: rows.length }
+      : visibleWindow(scroller.scrollTop - rowsTop(), scroller.clientHeight, rows.length, measuredRowHeight);
+
+  /** 인쇄 전후로 그리는 범위를 바꾼다. 돌아올 때 다시 그려야 스크롤이 제자리를 찾는다 */
+  const 인쇄모드 = (켬) => {
+    인쇄중 = 켬;
+    drawn = { start: -1, end: -1 };
+    renderBody(true);
+  };
+
+  // 단추로 눌렀을 때도, Ctrl+P로 눌렀을 때도 같은 자리에서 받는다
+  globalThis.addEventListener?.('beforeprint', () => 인쇄모드(true));
+  globalThis.addEventListener?.('afterprint', () => 인쇄모드(false));
 
   function renderBody(force = false) {
     const { start, end } = windowRange();
