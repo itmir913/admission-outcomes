@@ -179,8 +179,25 @@ export async function saveDataset(db, dataset) {
     }
     for (const row of await promisify(suneung.index('sid').getAll(from))) {
       const target = await promisify(suneung.get([into, row.area]));
+      /*
+       * 두 쪽 다 예전에 보관된 값이라 **어느 쪽이 새것인지 알 수 없다.** 그래서
+       * 보관소의 다른 자리(「방금 올린 값이 이긴다」)와 달리 먼저 있던 값을 지킨다.
+       */
       suneung.put({ ...새값우선(row, target ?? {}), sid: into, area: row.area });
       suneung.delete([from, row.area]);
+    }
+    /*
+     * **내신을 함께 옮긴다.**
+     *
+     * 내신은 학생 레코드의 `gpa`에만 산다. 이번 업로드의 학생 목록에는 이어 주는
+     * 파일에서 읽은 값만 들어 있으므로, 사라지는 ID에 쌓여 있던 내신은 여기서
+     * 옮기지 않으면 어디로도 가지 않는다 — 화면은 그 학생의 내신을 빈칸으로
+     * 보여 주고, 경고는 「지난 기록도 함께 옮겼습니다」라고 적는다 (§5).
+     */
+    const 사라질학생 = await promisify(students.get(from));
+    if (사라질학생) {
+      const 남을학생 = await promisify(students.get(into));
+      students.put(mergeStudent(사라질학생, 남을학생 ?? { sid: into }));
     }
     students.delete(from);
   }
@@ -240,7 +257,22 @@ export async function saveDataset(db, dataset) {
     suneung.put(existing ? 새값우선(existing, row) : row);
   }
   for (const file of dataset.files ?? []) {
-    files.put(file);
+    /*
+     * **파일 기록은 합친다.**
+     *
+     * 지원 기록은 시트 단위로 남는데 파일 기록은 이번에 넣은 시트만으로 만들어진다.
+     * 통째로 덮으면 고르지 않은 시트의 이름과 확정해 둔 연도가 사라져, 다음에 그
+     * 파일을 올릴 때 연도 칸이 다시 빈칸이 되고(§2) 「현재 엑셀 파일」 목록은
+     * 보관된 다른 시트를 숨긴다.
+     */
+    const 옛기록 = await promisify(files.get(file.hash));
+    files.put(옛기록 ? {
+      ...옛기록,
+      ...file,
+      sheets: [...new Set([...(옛기록.sheets ?? []), ...(file.sheets ?? [])])],
+      cohortYears: [...new Set([...(옛기록.cohortYears ?? []), ...(file.cohortYears ?? [])])],
+      yearBySheet: { ...(옛기록.yearBySheet ?? {}), ...(file.yearBySheet ?? {}) }
+    } : file);
   }
 
   /*
