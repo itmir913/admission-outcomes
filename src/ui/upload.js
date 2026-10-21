@@ -225,7 +225,12 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
             ])
           ]),
 
-          el('div', { class: 'ml-auto flex items-center gap-2' }, [
+          /*
+           * 좁은 화면에서는 **표식이 제 줄로 내려간다.** 파일 이름과 한 줄에 서면
+           * 이름 쪽이 먼저 줄어들어 「예시…」 네 글자만 남는다 — 어느 파일인지
+           * 알아볼 수 없게 되는 쪽이 표식이 한 줄 내려가는 것보다 나쁘다.
+           */
+          el('div', { class: 'ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto' }, [
             // 상태가 셋이다. 어떻게 읽어 냈는지에 따라 사람이 할 일이 다르다
             !reading?.readable
               ? el('span', { class: 'tag tag-fail', text: '대학명 열을 찾지 못함' })
@@ -329,7 +334,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
 
     openDialog(dialog, dialogFrame({
       title: '불러올 엑셀 파일을 확인해 주세요',
-      note: '아래 고3 년도는 엑셀 파일에서 불러온 값입니다. 고3 실제 연도인지 학년도인지 확인해 주세요.',
+      note: '아래 고3 년도는 엑셀에서 읽은 값입니다. 실제 연도인지 학년도인지 확인해 주세요.',
       body,
       onClose: () => finish(false),
       /*

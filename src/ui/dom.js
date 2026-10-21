@@ -74,17 +74,25 @@ export function openDialog(dialog, content) {
  */
 export function dialogFrame({ title, note, body, footer, onClose }) {
   return el('div', { class: 'flex max-h-[86vh] flex-col' }, [
-    el('div', { class: 'flex items-start gap-4 border-b border-line px-6 py-4' }, [
-      el('div', { class: 'min-w-0 flex-1' }, [
-        el('h2', { class: 'text-xl font-bold tracking-tight', text: title }),
-        note ? el('p', { class: 'mt-1 text-base text-ink-soft', text: note }) : null
+    /*
+     * **안내 글은 상자 너비를 다 쓴다.**
+     *
+     * 제목과 안내를 한 덩어리로 묶고 그 옆에 「닫기」를 세웠더니, 단추가 차지한
+     * 너비만큼 안내까지 좁아져 좁은 화면에서 네댓 줄로 늘어졌다. 단추는 제목
+     * 줄에만 서고, 안내는 그 아래 한 줄로 내려와 전부를 쓴다.
+     */
+    el('div', { class: 'border-b border-line px-6 py-4' }, [
+      el('div', { class: 'flex items-start gap-4' }, [
+        // 제목은 줄을 고르게 나눈다. 어절 단위로 끊는 글이라 줄 끝이 들쭉날쭉해진다
+        el('h2', { class: 'min-w-0 flex-1 text-balance text-xl font-bold tracking-tight', text: title }),
+        el('button', {
+          class: 'btn btn-sm shrink-0',
+          text: '닫기',
+          attrs: { type: 'button' },
+          on: { click: () => onClose?.() }
+        })
       ]),
-      el('button', {
-        class: 'btn btn-sm',
-        text: '닫기',
-        attrs: { type: 'button' },
-        on: { click: () => onClose?.() }
-      })
+      note ? el('p', { class: 'mt-1 text-pretty text-base text-ink-soft', text: note }) : null
     ]),
     el('div', { class: 'min-h-0 flex-1 scroll-stable overflow-y-auto px-6 py-5' }, [body]),
     footer ? el('div', { class: 'flex flex-wrap items-center justify-end gap-3 border-t border-line px-6 py-4' }, [footer]) : null
