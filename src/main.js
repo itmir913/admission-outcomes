@@ -134,7 +134,7 @@ const filters = createFilters({
  * 요약 띠 (§7 · plan.md §6).
  *
  * **측정값의 정의를 늘 문장으로 함께 둔다.** 상담 중에 숫자의 근거를 설명하지
- * 못하면 그 숫자는 쓸 수 없다. "합격 12"가 건수인지 사람 수인지는 보는 사람마다 다르게 읽는다.
+ * 못하면 그 숫자는 쓸 수 없다. "합격 12"가 건수인지 학생 수인지는 보는 사람마다 다르게 읽는다.
  */
 function paintSummary(visible, total) {
   const tally = tallyOutcomes(visible);
@@ -170,7 +170,7 @@ function paintSummary(visible, total) {
       class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-base text-ink-soft',
       text: tally.미상 > 0
         ? '합격률 = (합격 + 충원합격) ÷ 판정을 읽어 낸 지원 건수. 판정 미상 건은 분모에서 빠집니다.'
-        : '합격률 = (합격 + 충원합격) ÷ 지원 건수. 사람 수가 아니라 지원 건수 기준입니다.'
+        : '합격률 = (합격 + 충원합격) ÷ 지원 건수. 학생 수가 아니라 지원 건수 기준입니다.'
     })
   ]));
 }
