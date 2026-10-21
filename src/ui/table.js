@@ -189,7 +189,12 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
        * 문제였다. 평소에는 회색 띠로 서 있고, 잡을 수 있게 되면 파래진다.
        */
       const handle = el('span', {
-        class: 'absolute right-0 top-0 h-full w-2 cursor-col-resize bg-line transition-colors hover:bg-brand active:bg-brand',
+        /*
+         * **잡는 자리는 넓게, 보이는 선은 가늘게.** 띠를 통째로 칠했더니 8px짜리
+         * 회색 기둥이 열마다 서서 자료보다 눈에 먼저 들어왔다. 선은 2px만 그리고,
+         * 손이 닿는 자리는 그대로 8px다.
+         */
+        class: 'absolute right-0 top-0 h-full w-2 cursor-col-resize before:absolute before:inset-y-0 before:right-0 before:w-0.5 before:bg-line before:transition-colors hover:before:bg-brand',
         attrs: { role: 'separator', 'aria-label': `${field?.label ?? key} 열 너비 조정` },
         on: { pointerdown: (event) => startResize(event, key) }
       });
