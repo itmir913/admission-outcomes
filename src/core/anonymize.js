@@ -88,8 +88,14 @@ export function isBlankMark(normalized, { zeroIsBlank = true, nameField = false 
    * 적으면 `Na`다. 넓은 목록을 이름에 그대로 들이대면 그 학생의 행이 키를 얻지
    * 못해 한 건도 저장되지 않고, 경고는 몇 행인지만 말한다 (§5의 데이터 누락).
    */
-  if (nameField) return ['없음', '해당없음', '미해당', '.'].includes(normalized);
-  if (BLANK_MARKS.has(normalized) || BLANK_MARKS.has(normalized.toUpperCase())) return true;
+  if (['없음', '해당없음', '미해당', '.'].includes(normalized)) return true;
+  // 빗금이 들어 이름일 수 없다. 전각 `Ｎ／Ａ`는 정규화가 여기로 데려온다
+  if (normalized.toUpperCase() === 'N/A') return true;
+  /*
+   * 맨글자 `NA`는 **이름과 자료 칸에서는 값이다** — 「나」씨의 로마자 표기이고,
+   * 지역 코드로도 쓰인다. 학번·반·번호 칸에서만 「없음」으로 본다.
+   */
+  if (!nameField && (BLANK_MARKS.has(normalized) || BLANK_MARKS.has(normalized.toUpperCase()))) return true;
   /*
    * **학번·반·번호에 0은 있을 수 없다.** 빈 숫자 칸을 0으로 내보내는 양식이 있고,
    * 그 0이 가장 강한 주키로 받아들여지면 그 해의 그 행들이 전부 한 학생이 된다.

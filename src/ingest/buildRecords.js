@@ -174,10 +174,11 @@ function readExtra(row, columns, labels) {
     /*
      * 빈칸 표시는 빈칸으로 둔다. `-`를 글자로 담아 두면 그 열은 영영 숫자 열이 못 된다.
      *
-     * 식별 열과 **같은 판정**을 쓰되 0만 뺀다 — 전각 `－`나 `Ｎ／Ａ`를 글자로 담으면
-     * 값이 든 것처럼 보이고 필터 목록에 한 줄로 서는데, 0은 여기서 멀쩡한 값이다.
+     * 식별 열과 **같은 판정**을 쓰되 좁은 잣대다 — 전각 `－`나 `Ｎ／Ａ`를 글자로 담으면
+     * 값이 든 것처럼 보이고 필터 목록에 한 줄로 서지만, `0`과 맨글자 `NA`는 여기서
+     * 멀쩡한 값이다(충원 0명, 지역 코드 NA).
      */
-    if (isBlankMark(normalizeIdentityText(text), { zeroIsBlank: false })) continue;
+    if (isBlankMark(normalizeIdentityText(text), { zeroIsBlank: false, nameField: true })) continue;
     /*
      * 숫자로만 적힌 칸은 숫자로 담는다. 글자로 담아 두면 해석하지 못한 등급 열에
      * 범위 필터도 정렬도 걸리지 않는다 — 화면에는 숫자가 보이는데 숫자로 다룰 수가 없다.
