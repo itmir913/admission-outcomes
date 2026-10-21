@@ -55,8 +55,15 @@ const UNIT = '';
  * 이름의 사이 공백까지 없애는 이유: `홍 길동`과 `홍길동`은 같은 사람인데
  * 파일마다 다르게 적혀 있으면 둘로 나뉜다.
  */
+/**
+ * 자리를 채우려고 넣는 표기. 식별 값으로 쓰면 서로 다른 학생이 한 사람이 된다.
+ * 읽는 쪽에서도 걸러내지만(`buildRecords`의 `coerce`) 여기서 한 번 더 막는다.
+ */
+const BLANK_MARKS = new Set(['-', '--', '.', '없음', '해당없음', '미해당', 'N/A', 'n/a']);
+
 function normalizePart(value) {
   if (value === null || value === undefined) return '';
+  if (BLANK_MARKS.has(String(value).trim())) return '';
   // NFKC로 전각 숫자(３０１０１)와 반각을 같게 만든다
   const text = String(value).normalize('NFKC').replace(/\s+/g, '').trim();
   // 엑셀은 같은 반·번호·학번을 파일마다 문자열('01')로도 숫자(1)로도 담는다.

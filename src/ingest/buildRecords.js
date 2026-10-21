@@ -39,6 +39,7 @@ function typeOf(key) {
 export function coerce(key, raw) {
   if (raw === null || raw === undefined) return null;
   const type = typeOf(key);
+  const parts = key.split('.');
   const text = String(raw).trim();
   if (text === '') return null;
 
@@ -47,7 +48,15 @@ export function coerce(key, raw) {
     const value = Number(text.replace(/,/g, ''));
     return Number.isFinite(value) ? value : null;
   }
-  // 글자 필드에서는 `-`를 지우지 않는다. 불합격사유 같은 곳에 뜻이 있을 수 있다
+  /*
+   * **식별 열의 빈칸 표시는 빈칸으로 본다.**
+   *
+   * 학번 칸에 `-`를 적어 자리를 채운 양식이 있다. 글자로 그대로 담으면 그 `-`가
+   * 키 재료가 되어, 재수생·전입처럼 학번이 없는 행들이 **한 학생으로 묶인다.**
+   * 행 수는 맞으므로 화면에는 아무 표시도 나지 않는다 (§3·§5).
+   */
+  if (parts[0] === 'identity' && BLANK_MARKS.has(text)) return null;
+  // 그 밖의 글자 필드에서는 `-`를 지우지 않는다. 불합격사유 같은 곳에 뜻이 있을 수 있다
   return text;
 }
 
