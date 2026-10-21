@@ -414,7 +414,16 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
 
   function paint() {
     const hasRows = rows.length > 0;
-    scroller.classList.toggle('hidden', !hasRows);
+    /*
+     * 결과가 없어도 **아무것도 감추지 않는다.**
+     *
+     * 스크롤 상자를 통째로 감췄더니 그 안에 든 요약 띠·검색칸·단추줄·칩이 함께
+     * 사라졌다. 검색어를 잘못 쳐서 0건이 된 사람은 고쳐 칠 칸마저 잃고, 화면에는
+     * "없습니다" 한 줄만 남는다. 빠져나올 길을 지우면 안 된다.
+     *
+     * 표도 머리줄까지는 남긴다. 머리줄의 열별 검색칸이 0건을 만든 장본인일 때가
+     * 많아서, 그 칸이 보여야 무엇을 지울지 알 수 있다. 비는 것은 몸통뿐이다.
+     */
     empty.classList.toggle('hidden', hasRows);
     renderColgroup();
     renderHead();

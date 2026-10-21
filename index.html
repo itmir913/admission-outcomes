@@ -184,8 +184,14 @@
               </thead>
               <tbody id="본문행"></tbody>
         </table>
+
+        <!--
+          **스크롤 상자 안에, 표 바로 아래 둔다.** 밖에 두고 표와 번갈아 보이게 했더니
+          0건이 되는 순간 요약 띠·검색칸·단추줄이 표와 함께 사라졌다. 여기 두면
+          머리줄과 검색칸은 그대로 서 있고 몸통 자리에만 안내가 뜬다.
+        -->
+        <p id="표없음" class="sticky left-0 hidden w-full px-6 py-10 text-center text-lg text-ink-soft"></p>
       </div>
-      <p id="표없음" class="hidden px-6 py-10 text-center text-lg text-ink-soft"></p>
     </div>
   </main>
 
