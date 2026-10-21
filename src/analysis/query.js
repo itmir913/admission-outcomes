@@ -42,6 +42,9 @@ function 화면글자(row, key, value) {
  * @param {object} row
  * @param {Filter} filter
  */
+/** 필터 하나가 선택한 값들의 라벨. 같은 필터 객체로 수천 행을 거르므로 한 번만 만든다 */
+const 라벨집합 = new WeakMap();
+
 export function matchesFilter(row, filter) {
   const value = row[filter.key];
 
@@ -83,8 +86,14 @@ export function matchesFilter(row, filter) {
    * 같은 2.35로 적히지만 원값은 다르다. 세는 기준과 거르는 기준은 하나여야 한다.
    */
   const label = valueLabel(filter.key, value);
-  return chosen.some((candidate) => candidate === value
-    || (!isBlank(candidate) && valueLabel(filter.key, candidate) === label));
+  // 선택값마다 라벨을 다시 만들면 셈이 행 × 선택 수가 된다. 한 번 만들어 둔다
+  let labels = 라벨집합.get(filter);
+  if (!labels) {
+    labels = new Set(chosen.filter((candidate) => !isBlank(candidate))
+      .map((candidate) => valueLabel(filter.key, candidate)));
+    라벨집합.set(filter, labels);
+  }
+  return labels.has(label);
 }
 
 /**
@@ -129,6 +138,12 @@ export function searchHaystack(row, keys) {
  * 포기가 맨 위에 등록이 맨 아래에 선다(`declined` < `none` < `registered`).
  * 어느 쪽도 사람이 기대하는 차례가 아니고, 틀려도 틀린 티가 나지 않는다 (§5).
  */
+/*
+ * 이 목록은 세 가지를 한꺼번에 뜻한다. 열을 더할 때 셋을 다 생각해야 한다.
+ *   1. 정렬 차례가 글자순이 아니라 여기 적힌 차례다
+ *   2. 빈칸에도 화면에 적히는 글자가 있다 (검색이 그 글자를 훑는다)
+ *   3. 저장 코드(`pass`·`none`)는 검색에서 훑지 않는다
+ */
 const 뜻순서 = {
   outcome: ['pass', 'waitPass', 'fail', 'unknown', 'none'],
   registered: ['registered', 'declined', 'unknown', 'none'],
@@ -143,12 +158,15 @@ const 뜻차례 = (key, value) => {
 /**
  * 값이 있는 것끼리 견준다. 빈칸 처리는 방향을 뒤집기 전에 따로 한다.
  */
+/** 비교마다 새로 만들면 1만 행 정렬이 0.5초를 넘는다. 한 번 만들어 쓴다 */
+const 한글순서 = new Intl.Collator('ko', { numeric: true });
+
 function compareValues(left, right) {
   if (typeof left === 'number' && typeof right === 'number') return left - right;
   if (typeof left === 'boolean' || typeof right === 'boolean') {
     return Number(right === true) - Number(left === true);
   }
-  return String(left).localeCompare(String(right), 'ko', { numeric: true });
+  return 한글순서.compare(String(left), String(right));
 }
 
 /**
