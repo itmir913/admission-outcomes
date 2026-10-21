@@ -118,6 +118,17 @@
     }
   }
 
+  /*
+   * 윤곽선만 색을 입은 단추. 머리줄에서 성격이 다른 하나를 가려 보이게 할 때 쓴다 —
+   * 채워 칠한 btn-primary 는 그 줄의 주인이 되어, 자료를 다루는 단추들을 눌러 내린다.
+   */
+  .btn-brand {
+    @apply border-brand/30 text-brand;
+    @media (hover: hover) {
+      &:hover { @apply border-brand/50 bg-brand-soft; }
+    }
+  }
+
   .btn-danger {
     @apply border-fail/30 text-fail;
     @media (hover: hover) {
