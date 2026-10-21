@@ -244,7 +244,8 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
           el('div', { class: 'ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto' }, [
             // 상태가 셋이다. 어떻게 읽어 냈는지에 따라 사람이 할 일이 다르다
             !reading?.readable
-              ? el('span', { class: 'tag tag-fail', text: '대학명 열을 찾지 못함' })
+              // 표식은 **사람이 겪은 일**을 적는다. 「대학명 열」은 우리 사정이지 그 사람의 사정이 아니다
+              ? el('span', { class: 'tag tag-fail', text: '읽지 못하는 양식' })
               : reading.source === 'profile'
                 ? el('span', { class: 'tag tag-pass', text: `${reading.label} 양식` })
                 : el('span', { class: 'tag tag-wait', text: '이름으로 알아냄' }),
