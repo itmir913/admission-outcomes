@@ -183,13 +183,15 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
         }
       }, [label, badge, marks]);
 
+      /*
+       * 손잡이는 **눈에 보여야 한다.** 투명하게 두고 글귀로 "드래그하세요"라고
+       * 적어 두었더니, 글귀는 마우스를 올려야 뜨는데 올릴 자리를 모르는 것이
+       * 문제였다. 평소에는 회색 띠로 서 있고, 잡을 수 있게 되면 파래진다.
+       */
       const handle = el('span', {
-        class: 'absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-ink/10',
-        attrs: { role: 'separator', 'aria-label': `${field?.label ?? key} 열 너비 조정`, title: '드래그로 너비 조정 · 더블클릭하면 내용에 맞춤' },
-        on: {
-          pointerdown: (event) => startResize(event, key),
-          dblclick: () => fitColumn(key)
-        }
+        class: 'absolute right-0 top-0 h-full w-2 cursor-col-resize bg-line transition-colors hover:bg-brand active:bg-brand',
+        attrs: { role: 'separator', 'aria-label': `${field?.label ?? key} 열 너비 조정` },
+        on: { pointerdown: (event) => startResize(event, key) }
       });
 
       searchRow?.append(el('th', {
@@ -322,33 +324,6 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     handle.addEventListener('pointerup', up);
   }
 
-  /**
-   * 내용에 맞춰 너비를 잡는다.
-   *
-   * 지금 화면에 그려진 칸만 재는 것이 아니라 **모든 행의 값**을 잰다.
-   * 창 밖 행이 더 길면 맞춤이 무의미해진다.
-   */
-  function fitColumn(key) {
-    const field = fields.get(key);
-    const canvas = fitColumn.canvas ?? (fitColumn.canvas = document.createElement('canvas'));
-    const context = canvas.getContext('2d');
-    const style = getComputedStyle(document.body);
-    context.font = `${style.fontSize} ${style.fontFamily}`;
-
-    let widest = context.measureText(field?.label ?? key).width;
-    for (const row of rows) {
-      const text = cellText(key, row[key]);
-      if (!text) continue;
-      const width = context.measureText(text).width;
-      if (width > widest) widest = width;
-    }
-    // 좌우 여백 + 정렬 표시 자리
-    state.widths[key] = Math.max(MIN_WIDTH, Math.min(520, Math.ceil(widest) + 44));
-    renderColgroup();
-    renderHead();
-    repaintBody();
-    announce();
-  }
 
   /**
    * 행이 시작하는 자리. 스크롤 상자 안에서 표 위에 놓인 것들의 높이다.
