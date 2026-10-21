@@ -134,6 +134,18 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     })));
   }
 
+  /**
+   * 검색 칸이 앉을 자리 — 첫 줄의 **실제** 높이를 재어 CSS 에 넘긴다.
+   *
+   * 손으로 적어 둔 값과 어긋나면 두 줄 사이가 벌어지고, 그 틈으로 지나가는
+   * 자료가 비친다. 글자 크기 하나만 바뀌어도 어긋나므로 매번 다시 잰다.
+   */
+  function measureHead() {
+    const table = headRow.closest('table');
+    if (!table) return;
+    table.style.setProperty('--head-row1', `${headRow.getBoundingClientRect().height}px`);
+  }
+
   function renderHead() {
     const offsets = pinOffsets();
     clear(headRow);
@@ -226,6 +238,8 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
         on: { pointerdown: (event) => startReorder(event, index) }
       }, [el('span', { class: 'flex h-full items-center gap-1 pr-2' }, [button]), handle]));
     });
+
+    measureHead();
   }
 
   /**

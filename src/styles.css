@@ -183,8 +183,20 @@
    * 유틸리티 클래스로 표현할 수 없는 유일한 값이다.
    * 고정 열의 left도 앞선 열들의 실제 너비 합이라 같은 이유로 인라인이다.
    */
+  /*
+   * **칸선을 합치지 않는다**(`separate`).
+   *
+   * `collapse` 에서는 테두리가 칸이 아니라 표의 것이 된다. 그래서 머리줄을 붙여
+   * 두어도 테두리만 제자리에 남고 칸은 따라 올라가, 붙은 머리와 지나가는 자료
+   * 사이로 뒤가 비친다. 칸이 제 테두리를 들고 있어야 함께 움직인다.
+   *
+   * `border-spacing: 0` 이라 칸은 여전히 맞닿고, 테두리는 아래쪽 하나뿐이라
+   * 합치지 않아도 겹쳐 두꺼워지지 않는다.
+   */
   .grid-table {
-    @apply w-full border-collapse text-base;
+    @apply w-full text-base;
+    border-collapse: separate;
+    border-spacing: 0;
     table-layout: fixed;
   }
 
@@ -222,20 +234,31 @@
    * 손으로 맞춰야 하는데, 글자 크기가 바뀌면 그 값이 어긋나 둘 사이가 벌어진다.
    * 그 틈으로 지나가던 자료 행이 비쳐 보였다. thead 하나만 붙이면 틈이 생길 자리가 없다.
    */
+  /*
+   * 머리에도 바탕을 깐다. 칸들이 맞닿는 1px 자리가 소수점 때문에 어긋나도,
+   * 그 틈으로 보이는 것이 지나가는 자료가 아니라 머리의 바탕이 되게 한다.
+   *
+   * **붙이는 일은 칸이 한다.** `thead` 에 `sticky` 를 주는 쪽이 간단하지만
+   * 브라우저가 받아 주지 않는 자리가 있었다 — 재어 보니 머리가 그대로 흘러갔다.
+   */
   .grid-table thead {
-    @apply sticky top-0 z-20;
+    @apply bg-canvas;
   }
   .grid-table thead th {
-    @apply select-none bg-canvas text-base font-semibold tracking-tight text-ink;
+    @apply sticky top-0 z-20 select-none bg-canvas text-base font-semibold tracking-tight text-ink;
     box-shadow: inset -1px -1px 0 var(--color-line);
   }
 
   /*
    * 머리줄 둘째 칸 — 열별 검색 (참고 UI).
    *
-   * 첫 칸 바로 아래에 온다. 붙이는 일은 thead 가 맡으므로 여기서는 자리를 적지 않는다.
+   * 첫 칸 **바로 아래**에 붙는다. 그 자리는 첫 줄의 실제 높이라, 표를 그린
+   * 뒤에 재어 `--head-row1` 로 넣어 준다 — 글자 크기나 여백이 바뀌면 함께 바뀌는
+   * 값이라 클래스로는 적을 수 없다 (§9의 예외). 손으로 적어 둔 44px 과 실제
+   * 47px 이 어긋나, 그 3px 틈으로 지나가던 자료가 비친 적이 있다.
    */
   .grid-table thead tr + tr th {
+    top: var(--head-row1, var(--spacing-row));
     @apply bg-surface px-1 py-1;
     box-shadow: inset -1px -1px 0 var(--color-line);
   }
