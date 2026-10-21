@@ -42,7 +42,13 @@ function 화면글자(row, key, value) {
  * @param {object} row
  * @param {Filter} filter
  */
-/** 필터 하나가 선택한 값들의 라벨. 같은 필터 객체로 수천 행을 거르므로 한 번만 만든다 */
+/**
+ * 선택한 값들의 라벨. 같은 목록으로 수천 행을 거르므로 한 번만 만든다.
+ *
+ * **키는 `values` 배열이다.** 필터 객체를 키로 두면 「필터를 제자리에서 고치지
+ * 않는다」가 적히지 않은 불변식이 되고, 어기는 날 예외도 테스트 실패도 없이
+ * 거르는 결과만 틀린다. 배열을 키로 두면 `filter.values = […]`가 캐시 미스가 된다.
+ */
 const 라벨집합 = new WeakMap();
 
 export function matchesFilter(row, filter) {
@@ -87,11 +93,11 @@ export function matchesFilter(row, filter) {
    */
   const label = valueLabel(filter.key, value);
   // 선택값마다 라벨을 다시 만들면 셈이 행 × 선택 수가 된다. 한 번 만들어 둔다
-  let labels = 라벨집합.get(filter);
+  let labels = 라벨집합.get(chosen);
   if (!labels) {
     labels = new Set(chosen.filter((candidate) => !isBlank(candidate))
       .map((candidate) => valueLabel(filter.key, candidate)));
-    라벨집합.set(filter, labels);
+    라벨집합.set(chosen, labels);
   }
   return labels.has(label);
 }
