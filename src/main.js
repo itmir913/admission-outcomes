@@ -145,7 +145,8 @@ function paintSummary(visible, total) {
 
   clear(dom.요약띠).append(el('div', { class: 'card overflow-hidden' }, [
     el('div', { class: 'stat-grid' }, [
-      cell(걸러짐 ? `지원 (전체 ${total})` : '지원', tally.지원),
+      // 거른 상태에서는 「전체」가 아니다. 그때는 분모를 괄호로 밝힌다
+      cell(걸러짐 ? `지원 (전체 ${total}건 중)` : '전체 지원', tally.지원),
       cell('학생', tally.학생),
       cell('합격', tally.합격, 'text-pass'),
       cell('충원합격', tally.충원합격, 'text-wait'),
@@ -385,7 +386,7 @@ function refresh({ keepScroll = false } = {}) {
 
   const students = new Set(state.dataset.students?.map((student) => student.sid)).size;
   dom.요약.textContent = hasData
-    ? `파일 ${state.dataset.files?.length ?? 0}개 · 학생 ${students}명 · 지원 ${state.rows.length}건`
+    ? `파일 ${state.dataset.files?.length ?? 0}개 · 학생 ${students}명 · 전체 지원 ${state.rows.length}건`
     : '';
 
   if (!hasData) { clear(dom.칩줄); clear(dom.알림줄); clear(dom.요약띠); return; }
