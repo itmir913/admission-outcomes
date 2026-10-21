@@ -329,7 +329,17 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
       .filter((key) => key.kind && key.strength);
     if (묶음.length > 1) 쌓기(묶음);
     for (const key of 묶음) if (!kindByHash.has(key.hash)) kindByHash.set(key.hash, key.kind);
-    if (합쳐진레코드인가(묶음)) 합쳐진레코드 += 1;
+    /*
+     * **종류를 하나라도 모르면 판정하지 않는다** (§5).
+     *
+     * `묶음`은 종류를 아는 해시만 남긴 목록이다. 묶어 주던 학번의 종류가 아직
+     * 안 적혀 있으면 그 학번이 보이지 않아, 반·번호 둘만 보고 「합쳐졌다」고
+     * 말하게 된다 — 멀쩡한 보관소를 지우라고 말하는 셈이다. 늦게 알리는 쪽이
+     * 틀리게 알리는 쪽보다 낫다.
+     */
+    const 종류를다안다 = (student.keyHashes ?? []).length > 0
+      && 묶음.length === (student.keyHashes ?? []).length;
+    if (종류를다안다 && 합쳐진레코드인가(묶음)) 합쳐진레코드 += 1;
   }
   /** @type {Set<string>} 서로 다른 학생을 가리키는 것이 드러난 해시 */
   const 오염된해시 = new Set();
@@ -433,6 +443,10 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     if (merged.hashes.size === 0) continue;
     // 이미 있던 학생은 원래 ID를 지킨다. 담임이 본 ID가 바뀌면 안 된다
     const strongest = merged.best?.hash ?? [...merged.hashes].sort()[0];
+    // 손상된 보관소를 만나면 사람이 읽을 문장으로 멈춘다. 그러지 않으면 화면에 TypeError가 뜬다
+    if (!/^[0-9a-f]{32,}$/.test(strongest)) {
+      throw new Error('보관소의 키 기록이 손상됐습니다. 「데이터 초기화」 후 다시 불러와 주세요.');
+    }
     const bytes = Uint8Array.from(
       strongest.slice(0, 16).match(/.{2}/g).map((pair) => Number.parseInt(pair, 16))
     );
