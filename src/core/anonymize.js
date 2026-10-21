@@ -56,16 +56,45 @@ const UNIT = '';
  * 파일마다 다르게 적혀 있으면 둘로 나뉜다.
  */
 /**
- * 자리를 채우려고 넣는 표기. 식별 값으로 쓰면 서로 다른 학생이 한 사람이 된다.
- * 읽는 쪽에서도 걸러내지만(`buildRecords`의 `coerce`) 여기서 한 번 더 막는다.
+ * 자리를 채우려고 넣는 표기. 식별 값으로 쓰면 **서로 다른 학생이 한 사람이 된다.**
+ *
+ * 읽는 쪽(`buildRecords`의 `coerce`)과 여기가 같은 목록을 봐야 한다. 베껴 두면
+ * 한쪽만 늘어나는 날 다시 어긋나므로, 목록도 판정도 이 파일에서만 정한다.
  */
-const BLANK_MARKS = new Set(['-', '--', '.', '없음', '해당없음', '미해당', 'N/A', 'n/a']);
+const BLANK_MARKS = new Set(['-', '--', '.', '없음', '해당없음', '미해당', 'N/A', 'NA']);
+
+/** 대시류. 엑셀에는 전각 하이픈(－)과 줄표(—)가 섞여 들어온다 */
+const DASHES = /^[-‐‑‒–—―ー－]+$/;
+
+/**
+ * 식별 값으로 쓸 수 없는 빈칸 표기인지.
+ *
+ * **정규화한 뒤에 본다.** 날글자로 맞춰 보면 전각 `Ｎ／Ａ`도, 사이가 벌어진 `없 음`도
+ * 그대로 통과해 키 재료가 된다 — 그러면 학번 칸이 그 표기인 학생들이 한 익명 ID로
+ * 묶이고, 행 수는 맞으므로 화면에는 아무 표시도 나지 않는다 (§3·§5).
+ *
+ * @param {string} normalized NFKC로 고르고 공백을 없앤 글자
+ */
+export function isBlankMark(normalized) {
+  if (normalized === '') return true;
+  if (BLANK_MARKS.has(normalized) || BLANK_MARKS.has(normalized.toUpperCase())) return true;
+  if (DASHES.test(normalized)) return true;
+  /*
+   * **학번·반·번호에 0은 있을 수 없다.** 빈 숫자 칸을 0으로 내보내는 양식이 있고,
+   * 그 0이 가장 강한 주키로 받아들여지면 그 해의 그 행들이 전부 한 학생이 된다.
+   */
+  return /^0+$/.test(normalized);
+}
+
+/** 식별 값의 표기 차이를 없앤다. NFKC로 전각 숫자(３０１０１)와 반각을 같게 만든다 */
+export function normalizeIdentityText(value) {
+  if (value === null || value === undefined) return '';
+  return String(value).normalize('NFKC').replace(/\s+/g, '').trim();
+}
 
 function normalizePart(value) {
-  if (value === null || value === undefined) return '';
-  if (BLANK_MARKS.has(String(value).trim())) return '';
-  // NFKC로 전각 숫자(３０１０１)와 반각을 같게 만든다
-  const text = String(value).normalize('NFKC').replace(/\s+/g, '').trim();
+  const text = normalizeIdentityText(value);
+  if (isBlankMark(text)) return '';
   // 엑셀은 같은 반·번호·학번을 파일마다 문자열('01')로도 숫자(1)로도 담는다.
   // 앞의 0을 떼어 표기 차이를 흡수하지 않으면 한 학생이 둘로 나뉜다
   return /^\d+$/.test(text) ? String(Number(text)) : text;

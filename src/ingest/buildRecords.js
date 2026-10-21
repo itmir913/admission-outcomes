@@ -10,13 +10,19 @@
 
 import fields from '../dict/fields.json' with { type: 'json' };
 import { buildHeaderLabels, bodyRows } from './headerBlock.js';
-import { assignStudentIds } from '../core/anonymize.js';
+import { assignStudentIds, isBlankMark, normalizeIdentityText } from '../core/anonymize.js';
 import { toCohortYear } from './year.js';
 
 const SCALAR_TYPE = new Map(fields.scalars.map((field) => [field.key, field.type]));
 const PART_TYPE = fields.partTypes;
 
-/** 값이 비었다는 뜻으로 쓰이는 표기들. 엑셀에서 자리를 채우려고 넣는다. */
+/*
+ * 값이 비었다는 뜻으로 쓰이는 표기들. 엑셀에서 자리를 채우려고 넣는다.
+ *
+ * **식별 열의 판정과는 다른 목록이다.** 여기는 숫자·글자 칸을 보는 자리라 `0`이
+ * 멀쩡한 값이지만(충원 0명), 학번·반·번호에서 `0`은 있을 수 없다. 식별 열은
+ * `anonymize.js`의 `isBlankMark`가 본다.
+ */
 const BLANK_MARKS = new Set(['-', '--', '.', '없음', '해당없음', '미해당', 'N/A', 'n/a']);
 
 /** 숫자로만 적힌 칸. 앞자리 0이 붙은 것은 코드로 보고 제외한다 */
@@ -51,11 +57,14 @@ export function coerce(key, raw) {
   /*
    * **식별 열의 빈칸 표시는 빈칸으로 본다.**
    *
-   * 학번 칸에 `-`를 적어 자리를 채운 양식이 있다. 글자로 그대로 담으면 그 `-`가
+   * 학번 칸에 `-`나 `0`을 적어 자리를 채운 양식이 있다. 글자로 그대로 담으면 그것이
    * 키 재료가 되어, 재수생·전입처럼 학번이 없는 행들이 **한 학생으로 묶인다.**
    * 행 수는 맞으므로 화면에는 아무 표시도 나지 않는다 (§3·§5).
+   *
+   * 판정은 키를 만드는 쪽과 **같은 함수**로 한다. 두 곳에 목록을 베껴 두면
+   * 한쪽만 늘어나는 날 그 틈으로 같은 결함이 돌아온다.
    */
-  if (parts[0] === 'identity' && BLANK_MARKS.has(text)) return null;
+  if (parts[0] === 'identity' && isBlankMark(normalizeIdentityText(text))) return null;
   // 그 밖의 글자 필드에서는 `-`를 지우지 않는다. 불합격사유 같은 곳에 뜻이 있을 수 있다
   return text;
 }
