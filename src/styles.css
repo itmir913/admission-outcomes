@@ -170,9 +170,15 @@
    * 선 색으로 칠해지기** 때문이다. 다섯 칸을 두 줄로 놓으면 여섯째 자리가 회색으로
    * 남아 빈 칸처럼 보였다. 둘레선은 칸이 있는 곳에만 생긴다.
    */
+  /*
+   * 칸 수는 **2·3·6 셋뿐이다.**
+   *
+   * 자리에 맞춰 알아서 접게 두었더니 너비에 따라 4+2처럼 어중간하게 나뉘어,
+   * 줄마다 칸 수가 달라지고 어느 칸이 어느 칸과 짝인지 알 수 없었다.
+   * 여섯을 나누어떨어지게 하는 수만 쓴다.
+   */
   .stat-grid {
-    @apply grid gap-px bg-surface;
-    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+    @apply grid grid-cols-2 gap-px bg-surface sm:grid-cols-3 lg:grid-cols-6;
   }
   .stat {
     @apply flex min-w-0 flex-col justify-center gap-0.5 bg-surface px-4 py-3;
