@@ -85,6 +85,19 @@ function applicationCard(row) {
     el('dd', { class: 'text-base font-medium', text: valueLabel('', value) })
   ]));
 
+  /*
+   * 지나온 자취는 **표식으로 적는다.** 1단계·예비순위·등록은 있을 때만 뜻이 있는 값이라,
+   * 이름과 값을 나란히 적는 자리에 두면 비어 있는 칸이 늘 네댓 개씩 생긴다.
+   */
+  const 표식 = (text, tone) => el('span', { class: `tag tag-${tone}`, text });
+
+  const marks = [
+    isBlank(row.stage1) ? null : 표식(`1단계 ${valueLabel('', row.stage1)}`, 'none'),
+    isBlank(row.waitRank) ? null : 표식(`예비 ${valueLabel('', row.waitRank)}`, 'wait'),
+    row.registered && row.registered !== 'none'
+      ? 표식(valueLabel('registered', row.registered), 'pass') : null
+  ].filter(Boolean);
+
   return el('article', { class: 'card flex overflow-hidden' }, [
     el('div', { class: `w-1.5 shrink-0 ${stripe}`, attrs: { 'aria-hidden': 'true' } }),
     el('div', { class: 'min-w-0 flex-1 px-4 py-3' }, [
@@ -96,19 +109,28 @@ function applicationCard(row) {
           el('span', { text: outcome.label })
         ])
       ]),
-      el('dl', { class: 'mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4' }, [
-        line('모집단위', row.dept),
+
+      // 대학 다음에 오는 것은 언제나 모집단위다. 이름표를 달지 않아도 무엇인지 안다
+      isBlank(row.dept) ? null : el('p', {
+        class: 'mt-1 truncate text-lg font-medium',
+        text: String(row.dept),
+        attrs: { title: String(row.dept) }
+      }),
+
+      el('dl', { class: 'mt-2 grid grid-cols-2 gap-x-4 gap-y-2' }, [
         line('전형유형', row.admType),
         line('전형명', row.admName),
         line('계열', row.track),
-        line('모집시기', row.period),
-        line('1단계', row.stage1),
-        line('불합격 사유', row.failReason),
-        line('예비순위', row.waitRank),
-        row.registered && row.registered !== 'none'
-          ? line('등록', valueLabel('registered', row.registered)) : null
-      ].filter(Boolean))
-    ])
+        line('모집시기', row.period)
+      ].filter(Boolean)),
+
+      marks.length > 0 ? el('div', { class: 'mt-2 flex flex-wrap gap-2' }, marks) : null,
+
+      isBlank(row.failReason) ? null : el('p', {
+        class: 'mt-2 rounded-lg bg-fail-soft px-3 py-1.5 text-base text-fail',
+        text: `불합격 사유 ${valueLabel('', row.failReason)}`
+      })
+    ].filter(Boolean))
   ]);
 }
 
@@ -124,7 +146,8 @@ function applicationCard(row) {
 export function openStudent(dialog, { sid, rows }) {
   let order = '기본';
 
-  const cards = el('div', { class: 'mt-3 space-y-3' });
+  // 넓은 화면에서는 두 줄로 세운다. 지원이 열 건을 넘는 학생이 흔해서, 한 줄이면 내려 보기만 길어진다
+  const cards = el('div', { class: 'mt-3 grid gap-3 xl:grid-cols-2' });
   function paintCards() {
     const sorted = [...rows].sort(CARD_ORDERS[order].compare);
     clear(cards).append(...sorted.map(applicationCard));
@@ -263,10 +286,11 @@ export function openStudent(dialog, { sid, rows }) {
     el('section', {}, [
       el('div', { class: 'flex flex-wrap items-center gap-3' }, [
         el('h3', { class: 'text-lg font-bold tracking-tight', text: `지원 이력 ${rows.length}건` }),
-        el('label', { class: 'ml-auto flex items-center gap-2 text-base text-ink-soft' }, [
+        // 좁은 화면에서 고르는 칸이 줄지 않으면 상자 밖으로 밀고 나간다
+        el('label', { class: 'ml-auto flex min-w-0 items-center gap-2 text-base text-ink-soft' }, [
           '차례',
           el('select', {
-            class: 'field min-h-9 w-auto text-base',
+            class: 'field min-h-9 w-auto min-w-0 max-w-full text-base',
             attrs: { 'aria-label': '지원 카드 차례' },
             on: { change: (event) => { order = event.target.value; paintCards(); } }
           }, Object.entries(CARD_ORDERS).map(([key, value]) => el('option', {
