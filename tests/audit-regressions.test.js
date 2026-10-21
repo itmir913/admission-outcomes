@@ -661,6 +661,31 @@ describe('10차 감사 — 다른 학생으로 둔 둘이 같은 키를 들고 �
     expect(new Set(모양).size).toBe(1);
   });
 
+  it('모순이 두 파일에 나뉘어 와도 다른 학생으로 둔다', async () => {
+    const 시트 = (번호, 이름, 대학) => ({
+      grid: [['번호', '이름', '대학명', '최종'], [번호, 이름, 대학, '합격']],
+      headerRows: 1,
+      columns: { 'identity.number': 0, 'identity.name': 1, univ: 2, final: 3 },
+      cohortYear: 2025,
+      source: { fileHash: `F${번호}`, sourceFile: `${번호}.xlsx`, sourceSheet: 'S' }
+    });
+    for (const 이름 of ['가', '김가온', '홍길동', '윤서아']) {
+      const db = await freshDatabase();
+      for (const [번호, 대학] of [['7', '가온대학교'], ['8', '한결대학교']]) {
+        const dataset = await buildDataset([시트(번호, 이름, 대학)], {
+          existing: (await loadDataset(db)).students
+        });
+        await saveDataset(db, {
+          ...dataset, files: [], readSheets: [{ fileHash: `F${번호}`, sheetName: 'S' }]
+        });
+      }
+      // 한 파일에 담으면 둘로 나뉘는데 나눠 올리면 하나가 되던 자리다
+      const { students, applications } = await loadDataset(db);
+      expect(students.length, 이름).toBe(2);
+      expect(applications.length, 이름).toBe(2);
+    }
+  });
+
   it('같은 파일을 네 번 올려도 학생 수가 늘지도 줄지도 않는다', async () => {
     for (const 이름 of ['가', '김가온', '최여울', '홍길동', '강민재', '윤서아']) {
       const db = await freshDatabase();
