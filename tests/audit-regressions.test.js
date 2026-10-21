@@ -285,3 +285,91 @@ describe('2차 감사 — 조용히 틀리던 자리들', () => {
     expect(두배.end).toBeLessThan(기본.end);
   });
 });
+
+describe('3차 감사 — 자료가 사라지던 자리들', () => {
+  it('이름이 같은 미해결 열을 서로 덮지 않는다', async () => {
+    const sheet = {
+      grid: [
+        ['학번', '대학명', '최종', '비고', '비고'],
+        ['20250012345', '가온대학교', '합격', '장학금', '기숙사']
+      ],
+      headerRows: 1,
+      columns: { 'identity.hakbun': 0, univ: 1, final: 2 },
+      cohortYear: 2025
+    };
+    const { applications } = await buildDataset([sheet]);
+    expect(Object.values(applications[0].extra)).toEqual(expect.arrayContaining(['장학금', '기숙사']));
+  });
+
+  it('학생을 알아낼 열이 없으면 저장하지 않았다고 알린다', async () => {
+    const sheet = {
+      grid: [['대학명', '모집단위', '최종'], ['가온대학교', '컴퓨터공학부', '합격']],
+      headerRows: 1,
+      columns: { univ: 0, dept: 1, final: 2 },
+      cohortYear: 2025
+    };
+    const { applications, warnings } = await buildDataset([sheet]);
+    expect(applications).toHaveLength(0);
+    // 읽은 행 수만 보고 들어온 줄 알면, 빈 보관소를 보고도 모른다
+    expect(warnings.some((warning) => warning.type === 'rows-not-saved')).toBe(true);
+  });
+
+  it('합칠 때 사라지는 ID의 내신을 함께 옮긴다', async () => {
+    const db = await freshDatabase();
+    await saveDataset(db, {
+      students: [{ sid: 'B', cohortYear: 2025, keyHashes: ['h'], gpa: { total: 1.62 } }],
+      applications: [{ sid: 'B', cohortYear: 2025, univ: '가온대학교', fileHash: 'F', sourceSheet: 'S' }],
+      suneung: [], files: [], readSheets: [{ fileHash: 'F', sheetName: 'S' }]
+    });
+    await saveDataset(db, {
+      students: [{ sid: 'A', cohortYear: 2025, keyHashes: ['cn', 'h'], gpa: {} }],
+      applications: [{ sid: 'A', cohortYear: 2025, univ: '한결대학교', fileHash: 'G', sourceSheet: 'S' }],
+      suneung: [], files: [],
+      merges: [{ from: 'B', into: 'A' }],
+      readSheets: [{ fileHash: 'G', sheetName: 'S' }]
+    });
+    const loaded = await loadDataset(db);
+    const 남은 = loaded.students.find((student) => student.sid === 'A');
+    expect(남은.gpa.total).toBe(1.62);
+    expect(loaded.students).toHaveLength(1);
+  });
+
+  it('시트 하나만 다시 올려도 다른 시트의 연도 기록이 남는다', async () => {
+    const db = await freshDatabase();
+    const 기록 = (sheets, yearBySheet) => ({
+      hash: 'F', name: '누적.xlsx', sheets, cohortYears: Object.values(yearBySheet), yearBySheet
+    });
+    await saveDataset(db, {
+      students: [], applications: [], suneung: [],
+      files: [기록(['A반', 'B반'], { 'A반': 2024, 'B반': 2025 })],
+      readSheets: [{ fileHash: 'F', sheetName: 'A반' }, { fileHash: 'F', sheetName: 'B반' }]
+    });
+    await saveDataset(db, {
+      students: [], applications: [], suneung: [],
+      files: [기록(['A반'], { 'A반': 2024 })],
+      readSheets: [{ fileHash: 'F', sheetName: 'A반' }]
+    });
+    const { files } = await loadDataset(db);
+    expect(files[0].yearBySheet).toEqual({ 'A반': 2024, 'B반': 2025 });
+    expect(files[0].sheets).toEqual(expect.arrayContaining(['A반', 'B반']));
+  });
+
+  it('용량을 넘은 압축은 통째로 거절한다', () => {
+    const big = makeWorkbook({ result: senjinhakGrid(2025) });
+    const zip = makeZip({ 'a.xlsx': big, 'b.xlsx': big, 'c.xlsx': big });
+    const result = expandUploads([{ name: 'bundle.zip', bytes: zip }], { limits: { maxEntries: 50, maxTotalBytes: 1 } });
+    expect(result.files).toHaveLength(0);
+    expect(result.skipped[0].name).toBe('bundle.zip');
+  });
+
+  it('압축 안의 macOS 부산물은 항목 수에 세지 않는다', () => {
+    const book = makeWorkbook({ result: senjinhakGrid(2025) });
+    const entries = {};
+    for (let index = 0; index < 3; index += 1) {
+      entries[`${index}.xlsx`] = book;
+      entries[`__MACOSX/._${index}.xlsx`] = new Uint8Array([1, 2, 3]);
+    }
+    const result = expandUploads([{ name: 'mac.zip', bytes: makeZip(entries) }], { limits: { maxEntries: 4, maxTotalBytes: 512 * 1024 * 1024 } });
+    expect(result.files).toHaveLength(3);
+  });
+});
