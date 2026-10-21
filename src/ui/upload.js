@@ -337,9 +337,15 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
             ])
           : el('div', { class: 'mt-4' }, [
               el('label', { class: 'text-base font-semibold', text: '고3 년도' }),
-              guess.explanation
-                ? el('p', { class: 'mt-1 text-base text-ink-soft', text: guess.explanation })
-                : el('p', { class: 'mt-1 text-base text-ink-soft', text: '파일에서 연도를 찾지 못했습니다. 직접 넣어 주세요.' }),
+              /*
+               * 미리 채운 칸에 「찾지 못했습니다」를 함께 적지 않는다. 채워 놓고 못
+               * 찾았다고 말하면 사람은 「그럼 이 숫자는 뭔가」부터 의심한다 (§2).
+               */
+              지난연도(sheet) !== null
+                ? el('p', { class: 'mt-1 text-base text-ink-soft', text: '지난번에 정한 값입니다. 맞는지 확인해 주세요.' })
+                : guess.explanation
+                  ? el('p', { class: 'mt-1 text-base text-ink-soft', text: guess.explanation })
+                  : el('p', { class: 'mt-1 text-base text-ink-soft', text: '파일에서 연도를 찾지 못했습니다. 직접 넣어 주세요.' }),
               yearInput, yearEcho
             ])
       ]);

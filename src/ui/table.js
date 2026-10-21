@@ -107,11 +107,34 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
 
   const announce = () => onStateChange?.(state);
 
+  /**
+   * **실제로 고정할 열 수.** 사람이 정한 수보다 적을 수 있다.
+   *
+   * 좁은 화면에서는 고정 열 너비의 합이 화면보다 넓어질 수 있다. 그러면 뒤쪽
+   * 고정 열이 앞쪽 고정 열 위에 그대로 깔려 그 열이 통째로 가려지고, 고정되지
+   * 않은 자료 열은 음수 자리로 밀려 **닿을 길이 없어진다.** 375px에서 기본값
+   * 셋이 바로 그렇게 된다. 사람이 정한 수는 그대로 두고(화면이 넓어지면 돌아온다)
+   * 자리만 화면에 맞춰 줄인다.
+   */
+  function 유효고정() {
+    const 한도 = (scroller.clientWidth || 0) * 0.6;
+    let sum = 0;
+    let count = 0;
+    for (let index = 0; index < state.pinned && index < state.columns.length; index += 1) {
+      const width = state.widths[state.columns[index]] ?? DEFAULT_WIDTH;
+      if (count > 0 && 한도 > 0 && sum + width > 한도) break;
+      sum += width;
+      count += 1;
+    }
+    return count;
+  }
+
   /** 고정 열이 앉을 왼쪽 자리. 앞선 열들의 실제 너비 합이다. */
   function pinOffsets() {
     const offsets = [];
     let sum = 0;
-    for (let index = 0; index < state.pinned && index < state.columns.length; index += 1) {
+    const 고정수 = 유효고정();
+    for (let index = 0; index < 고정수 && index < state.columns.length; index += 1) {
       offsets.push(sum);
       sum += state.widths[state.columns[index]] ?? DEFAULT_WIDTH;
     }
@@ -127,9 +150,10 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
    */
   function movePinned() {
     const offsets = pinOffsets();
+    const 고정수 = 유효고정();
     const rows = [headRow, searchRow, ...body.children].filter(Boolean);
     for (const row of rows) {
-      for (let index = 0; index < state.pinned && index < row.children.length; index += 1) {
+      for (let index = 0; index < 고정수 && index < row.children.length; index += 1) {
         const cell = /** @type {HTMLElement} */ (row.children[index]);
         if (cell.classList.contains('pinned')) cell.style.left = `${offsets[index]}px`;
       }
@@ -164,22 +188,29 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
      * 글자가 어디에도 들어가지 않는다 — 사람은 다 쳤다고 믿고 덜 걸러진 표를 본다.
      */
     const 치던칸 = document.activeElement;
-    // 같은 칸에 있는 「≡」 단추까지 검색칸으로 치면, 값 목록을 연 사람의 포커스가 뒤로 끌려간다
-    const 치던열 = 치던칸?.tagName === 'INPUT'
-      && 치던칸?.closest?.('th')
-      && searchRow?.contains(치던칸)
-      ? [...(searchRow?.children ?? [])].indexOf(치던칸.closest('th'))
+    /*
+     * 검색칸과 「≡」 단추를 **따로 기억한다.**
+     *
+     * 둘을 한 가지로 치면 값 목록을 연 사람의 포커스가 검색칸으로 끌려가고,
+     * 검색칸만 되돌리면 단추를 누른 사람은 포커스를 잃는다 — 그러면 Tab이 문서
+     * 맨 앞으로 돌아가, 방금 연 목록까지 표 전체를 지나야 닿는다.
+     */
+    const 치던자리 = 치던칸?.closest?.('th');
+    const 치던열 = 치던자리 && searchRow?.contains(치던칸)
+      ? [...(searchRow?.children ?? [])].indexOf(치던자리)
       : -1;
+    const 치던것 = 치던칸?.tagName === 'INPUT' ? 'search' : 'filter';
     const 커서 = 치던열 === -1 ? null : { start: 치던칸.selectionStart, end: 치던칸.selectionEnd };
 
     clear(headRow);
     if (searchRow) clear(searchRow);
 
+    const 고정수 = 유효고정();
     state.columns.forEach((key, index) => {
       const field = fields.get(key);
       const rank = state.sorts.findIndex((sort) => sort.key === key);
       const sort = rank === -1 ? null : state.sorts[rank];
-      const pinned = index < state.pinned;
+      const pinned = index < 고정수;
 
       const label = el('span', { class: 'truncate', text: field?.label ?? key });
       /*
@@ -227,7 +258,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
       });
 
       searchRow?.append(el('th', {
-        class: `${pinned ? 'pinned' : ''} ${pinned && index === state.pinned - 1 ? 'pin-edge' : ''}`,
+        class: `${pinned ? 'pinned' : ''} ${pinned && index === 고정수 - 1 ? 'pin-edge' : ''}`,
         style: pinned ? { left: `${offsets[index]}px` } : {}
       }, [
         el('div', { class: 'col-search' }, [
@@ -270,7 +301,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
       ]));
 
       headRow.append(el('th', {
-        class: `relative ${sort ? 'sorted' : ''} ${pinned ? 'pinned' : ''} ${pinned && index === state.pinned - 1 ? 'pin-edge' : ''}`,
+        class: `relative ${sort ? 'sorted' : ''} ${pinned ? 'pinned' : ''} ${pinned && index === 고정수 - 1 ? 'pin-edge' : ''}`,
         attrs: {
           scope: 'col',
           'data-key': key,
@@ -282,10 +313,13 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     });
 
     if (치던열 !== -1) {
-      const 새칸 = searchRow?.children[치던열]?.querySelector('input');
+      const 새자리 = searchRow?.children[치던열];
+      const 새칸 = 치던것 === 'search'
+        ? 새자리?.querySelector('input')
+        : 새자리?.querySelector('button');
       if (새칸) {
         새칸.focus({ preventScroll: true });
-        if (커서?.start !== null && 커서?.start !== undefined) {
+        if (치던것 === 'search' && 커서?.start !== null && 커서?.start !== undefined) {
           새칸.setSelectionRange(커서.start, 커서.end ?? 커서.start);
         }
       }
@@ -398,6 +432,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     drawn = { start, end };
 
     const offsets = pinOffsets();
+    const 고정수 = 유효고정();
     const parts = [];
 
     // 창 위아래의 빈자리를 높이만 가진 행으로 채운다. 스크롤 막대가 실제 행 수를 나타내야 한다
@@ -421,7 +456,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
 
       state.columns.forEach((key, columnIndex) => {
         const field = fields.get(key);
-        const pinned = columnIndex < state.pinned;
+        const pinned = columnIndex < 고정수;
         const text = cellText(key, row[key]);
 
         // 결과 열만 색과 모양을 함께 붙인다. 색만으로 구분하지 않는다 (§7)
@@ -434,7 +469,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
 
         tr.append(el('td', {
           // `figure`는 자릿수만 맞춘다. 정렬은 스타일시트 한 자리에서만 정한다
-          class: `${field?.numeric ? 'figure' : ''} ${pinned ? 'pinned' : ''} ${pinned && columnIndex === state.pinned - 1 ? 'pin-edge' : ''}`,
+          class: `${field?.numeric ? 'figure' : ''} ${pinned ? 'pinned' : ''} ${pinned && columnIndex === 고정수 - 1 ? 'pin-edge' : ''}`,
           // 잘린 값을 마우스로 확인할 수 있게 한다
           attrs: text ? { title: text } : {},
           style: pinned ? { left: `${offsets[columnIndex]}px` } : {}
@@ -492,7 +527,19 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
 
   // 창 크기가 바뀌면 보이는 행 수도 바뀐다. 다시 그리지 않으면 아래쪽이 빈 채로 남는다
   if (globalThis.ResizeObserver) {
-    new globalThis.ResizeObserver(() => renderBody(true)).observe(scroller);
+    /*
+     * 화면 폭이 바뀌면 **실제로 고정할 열 수**가 달라진다. 머리줄을 그대로 두면
+     * 자리 값만 바뀌어 고정 표시와 실제 고정이 어긋나므로, 바뀐 때만 다시 그린다.
+     */
+    let 그린고정수 = 유효고정();
+    new globalThis.ResizeObserver(() => {
+      const 지금 = 유효고정();
+      if (지금 !== 그린고정수) {
+        그린고정수 = 지금;
+        renderHead();
+      }
+      renderBody(true);
+    }).observe(scroller);
   }
 
   return {
