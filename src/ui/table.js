@@ -174,6 +174,14 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
         cell.classList.remove('pinned', 'pin-edge');
         cell.style.left = '';
       }
+      /*
+       * **다시 들어갈 자리가 생기면 되돌려 붙인다.** 빼기만 하면, 끌어 넓혔다가
+       * 같은 끌기 안에서 도로 줄여도 고정이 돌아오지 않는다 — 사람은 아까 너비로
+       * 되맞췄는데 왜 그대로인지 알 수 없다.
+       */
+      for (let index = 0; index < 고정수 && index < row.children.length; index += 1) {
+        /** @type {HTMLElement} */ (row.children[index]).classList.add('pinned');
+      }
       if (고정수 > 0) {
         const edge = /** @type {HTMLElement} */ (row.children[고정수 - 1]);
         if (edge?.classList.contains('pinned')) edge.classList.add('pin-edge');
@@ -182,6 +190,11 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
         const cell = /** @type {HTMLElement} */ (row.children[index]);
         if (cell.classList.contains('pinned')) cell.style.left = `${offsets[index]}px`;
       }
+    }
+    // 끌기 경로도 도구줄에 알린다. 알리지 않으면 고정이 셋에서 하나로 줄어도 숫자는 셋이다
+    if (고정수 !== 그린고정수) {
+      그린고정수 = 고정수;
+      onPinnedChange?.(고정수);
     }
   }
 
@@ -231,6 +244,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     if (searchRow) clear(searchRow);
 
     const 고정수 = 유효고정();
+    const 바뀌었다 = 고정수 !== 그린고정수;
     그린고정수 = 고정수;
     state.columns.forEach((key, index) => {
       const field = fields.get(key);
@@ -352,6 +366,8 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     }
 
     measureHead();
+    // **그린 뒤에 알린다.** 그리기 전에 읽으면 도구줄이 한 걸음 뒤처진 수를 적는다
+    if (바뀌었다) onPinnedChange?.(고정수);
   }
 
   /**
@@ -549,6 +565,20 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     renderColgroup();
     renderHead();
     repaintBody();
+    /*
+     * **자리를 받은 뒤에 한 번 더 본다.**
+     *
+     * 처음 그릴 때 표가 아직 폭을 못 받았으면 고정 열 수를 하나로 잡아 둔다.
+     * 그 뒤 레이아웃이 끝나도 스크롤 상자의 크기가 바뀌지 않으면 관찰자는 깨어나지
+     * 않아서, 넓은 화면인데 한 열만 고정된 채로 남는다. 그릴 때마다 한 틱 뒤에
+     * 다시 재어 어긋나면 머리줄만 고쳐 그린다.
+     */
+    globalThis.requestAnimationFrame?.(() => {
+      if (유효고정() !== 그린고정수) {
+        renderHead();
+        renderBody(true);
+      }
+    });
   }
 
   scroller.addEventListener('scroll', () => renderBody(), { passive: true });
@@ -570,8 +600,14 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
   }
 
   return {
-    /** 화면에 **실제로** 고정된 열 수. 좁은 화면에서는 사람이 정한 수보다 적다 */
-    effectivePinned: () => 유효고정(),
+    /**
+     * 화면에 **실제로 그려진** 고정 열 수. 아직 한 번도 그리지 못했으면 `null`이다.
+     *
+     * 지금 계산한 값을 주면 안 된다 — 표가 아직 폭도 열도 못 받은 순간에 물으면
+     * 0이 나오고, 도구줄은 「지금 0개만」이라 적는다. 세 열이 멀쩡히 고정돼 있는데
+     * 하나도 고정 안 됐다고 적는 화면이다. 모르면 모른다고 답한다 (§5).
+     */
+    drawnPinned: () => (그린고정수 < 0 ? null : 그린고정수),
 
     /**
      * @param {{rows: object[], registry: object[], state: object}} next

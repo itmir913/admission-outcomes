@@ -350,10 +350,11 @@ function paintToolbar() {
    * 정한 수만 적으면 「+」를 눌러도 화면이 그대로여서 고장 났다고 읽거나, 더 나쁘게는
    * 3개가 고정돼 있다고 믿는다 (§5).
    */
-  const 실제고정 = table?.effectivePinned?.() ?? pinned;
+  const 실제고정 = table?.drawnPinned?.() ?? null;
+  const 메모 = 실제고정 !== null && 실제고정 < pinned;
   dom.고정수.textContent = String(pinned);
-  dom.고정메모.textContent = 실제고정 < pinned ? `지금 ${실제고정}개만` : '';
-  dom.고정메모.classList.toggle('hidden', 실제고정 >= pinned);
+  dom.고정메모.textContent = 메모 ? `지금 ${실제고정}개만` : '';
+  dom.고정메모.classList.toggle('hidden', !메모);
 
   const disable = (selector, off) => {
     const node = pick(selector);
