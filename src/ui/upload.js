@@ -93,10 +93,12 @@ export function chosenCount(sheets, decisions) {
  * @param {HTMLDialogElement} dialog
  * @param {{sheets: object[], skipped: object[]}} prepared
  * @param {number} currentYear
- * @returns {Promise<Record<string, {cohortYear: number|null, include: boolean}>|null>} 취소하면 null
+ * @param {(decisions: Record<string, {cohortYear: number|null, include: boolean}>) => Promise<void>} commit
+ *   사람이 「불러오기」를 누르면 이것이 끝날 때까지 상자가 서 있는다.
+ * @returns {Promise<boolean>} 불러왔으면 true, 취소하면 false
  */
-export function confirmUploads(dialog, prepared, currentYear) {
-  return new Promise((resolve) => {
+export function confirmUploads(dialog, prepared, currentYear, commit) {
+  return new Promise((resolve, reject) => {
     /**
      * @type {Map<string, {cohortYear: number|null, include: boolean}>}
      *
@@ -108,12 +110,33 @@ export function confirmUploads(dialog, prepared, currentYear) {
       { cohortYear: sheet.yearGuess.cohortYear, include: Boolean(sheet.reading?.readable) }
     ]));
 
-    const finish = (value) => { dialog.close(); resolve(value); };
+    /*
+     * 불러오는 동안은 상자를 닫지 못한다. 먼저 닫아 버리니 사람은 다 된 줄 알고
+     * 다음 일을 시작하는데, 뒤에서는 아직 쓰고 있었다 (§5).
+     */
+    let working = false;
+
+    const finish = (value) => {
+      if (working) return;
+      dialog.close();
+      resolve(value);
+    };
 
     let footerNote;
     let submitButton;
+    let cancelButton;
 
     function refreshFooter() {
+      if (working) {
+        submitButton.disabled = true;
+        submitButton.textContent = '불러오는 중…';
+        cancelButton.disabled = true;
+        footerNote.textContent = '불러오고 있습니다. 끝나면 이 창이 닫힙니다.';
+        footerNote.className = 'mr-auto text-base text-ink-soft';
+        return;
+      }
+      submitButton.textContent = '불러오기';
+      cancelButton.disabled = false;
       const problems = uploadBlockers(prepared.sheets, decisions);
       const chosen = chosenCount(prepared.sheets, decisions);
       submitButton.disabled = problems.length > 0 || chosen === 0;
@@ -266,12 +289,33 @@ export function confirmUploads(dialog, prepared, currentYear) {
     ]);
 
     footerNote = el('p', { class: 'mr-auto text-base text-ink-soft' });
+    cancelButton = el('button', {
+      class: 'btn', text: '취소', attrs: { type: 'button' },
+      on: { click: () => finish(false) }
+    });
     submitButton = el('button', {
       class: 'btn btn-primary', text: '불러오기', attrs: { type: 'button' },
       on: {
-        click: () => finish(Object.fromEntries(
-          [...decisions].map(([id, decision]) => [id, { ...decision }])
-        ))
+        click: async () => {
+          if (working) return;
+          working = true;
+          refreshFooter();
+          const chosen = Object.fromEntries(
+            [...decisions].map(([id, decision]) => [id, { ...decision }])
+          );
+          try {
+            await commit(chosen);
+          } catch (error) {
+            // 실패하면 상자를 그대로 둔다. 선택한 것이 남아 있어야 다시 눌러 볼 수 있다
+            working = false;
+            refreshFooter();
+            reject(error);
+            return;
+          }
+          working = false;
+          dialog.close();
+          resolve(true);
+        }
       }
     });
 
@@ -279,18 +323,24 @@ export function confirmUploads(dialog, prepared, currentYear) {
       title: '불러올 자료를 확인해 주세요',
       note: '고3 년도는 사람이 확정합니다. 아래 값은 파일에서 읽어 낸 제안일 뿐입니다.',
       body,
-      onClose: () => finish(null),
+      onClose: () => finish(false),
       footer: el('div', { class: 'flex w-full items-center gap-3' }, [
         footerNote,
-        el('button', {
-          class: 'btn', text: '취소', attrs: { type: 'button' },
-          on: { click: () => finish(null) }
-        }),
+        cancelButton,
         submitButton
       ])
     }));
 
-    dialog.addEventListener('close', () => resolve(null), { once: true });
+    // 바깥을 눌러 닫는 길도 불러오는 동안은 막는다
+    dialog.onclick = (event) => { if (event.target === dialog) finish(false); };
+    // Esc
+    const blockEsc = (event) => { if (working) event.preventDefault(); };
+    dialog.addEventListener('cancel', blockEsc);
+    dialog.addEventListener('close', () => {
+      // 상자는 다시 쓰인다. 들러붙은 청취자를 떼어 둔다
+      dialog.removeEventListener('cancel', blockEsc);
+      resolve(false);
+    }, { once: true });
     refreshFooter();
   });
 }

@@ -453,17 +453,21 @@ async function handleFiles(files) {
     });
 
     busy(false);
-    const decisions = await confirmUploads(dom.확인상자, prepared, CURRENT_YEAR);
-    if (!decisions) return;
-
-    busy(true);
-    const dataset = await commitSheets(prepared.sheets, {
-      decisions,
-      existingStudents: state.dataset.students ?? []
+    /*
+     * 불러오기는 확인 상자가 서 있는 동안 끝낸다. 상자가 먼저 닫히면
+     * 사람은 다 된 줄 알고 다음 일을 시작하는데 뒤에서는 아직 쓰고 있었다.
+     */
+    const loaded = await confirmUploads(dom.확인상자, prepared, CURRENT_YEAR, async (decisions) => {
+      const dataset = await commitSheets(prepared.sheets, {
+        decisions,
+        existingStudents: state.dataset.students ?? []
+      });
+      await saveDataset(state.db, dataset);
+      state.warnings = dataset.warnings ?? [];
+      await reload();
     });
-    await saveDataset(state.db, dataset);
-    state.warnings = dataset.warnings ?? [];
-    await reload();
+    if (!loaded) return;
+
     // 자료를 처음 넣었으면 브라우저에 함부로 비우지 말라고 청한다
     if ((state.dataset.files ?? []).length > 0) requestPersistence();
   } catch (error) {

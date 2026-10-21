@@ -4,12 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>진학결과 분석</title>
+
   <!--
-    브라우저 안에서만 도는 도구다. 바깥으로 나가는 요청 경로를 아예 만들지 않는다.
+    아이콘의 정본은 luminousky.com에 하나뿐이다. 저장소에 복사본을 두면
+    둘이 서로 달라지고, 어느 쪽이 맞는지 아무도 모르게 된다. 그래서 가리키기만 한다.
+
+    대신 **그림 한 장을 받는 길만** CSP에 연다 — 그만큼 아이콘을 받을 때
+    luminousky.com에 요청이 한 번 나간다. 자료가 나가는 길(`connect-src`)은 그대로 닫혀 있다.
+  -->
+  <link rel="icon" href="https://luminousky.com/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="https://luminousky.com/apple-touch-icon.png" />
+  <!--
+    브라우저 안에서만 도는 도구다. 자료가 바깥으로 나가는 길을 만들지 않는다.
     이 정책이 그 약속을 브라우저가 대신 지키게 한다 (CLAUDE.md §1).
+    바깥을 향한 구멍은 위의 아이콘 한 장뿐이고, 그것도 받아 오기만 한다.
   -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'" />
+        content="default-src 'self'; img-src 'self' data: blob: https://luminousky.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'" />
 
   <!--
     스타일은 **자바스크립트를 타지 않는다.**
