@@ -43,8 +43,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Pages가 꺼져 있으면 켠다. 저장소 설정을 사람이 미리 바꿔 두지 않아도 돌아간다
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Set up Node
         uses: actions/setup-node@v4
