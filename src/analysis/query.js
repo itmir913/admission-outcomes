@@ -284,7 +284,26 @@ export function applyQuery(rows, { filters = [], search = '', sorts = [], search
  * @param {{search?: string, searchKeys?: string[]}} [context]
  * @returns {Map<unknown, number>}
  */
-export function facetCounts(rows, filters, key, { search = '', searchKeys } = {}) {
+export function facetCounts(rows, filters, key, options = {}) {
+  return new Map([...facetBuckets(rows, filters, key, options)]
+    .map(([value, bucket]) => [value, bucket.count]));
+}
+
+/**
+ * 값마다 **건수와 그 줄이 품은 화면 글자**를 함께 센다.
+ *
+ * 값 목록은 한 줄에 화면 글자가 여럿 묶일 수 있어(`none`에 「기록 없음」과
+ * 「1단계 불합격」), 그 줄이 무엇을 품었는지를 이름에 적는다. 그 말을 건수와
+ * **다른 행 집합**에서 모으면, 필터를 거는 순간 「포함」이라는 단정이 틀린다 —
+ * 2건이 전부 1단계 탈락인데 「일부만 그렇다」고 적는 식이다 (§5).
+ *
+ * @param {object[]} rows
+ * @param {Filter[]} filters
+ * @param {string} key
+ * @param {{search?: string, searchKeys?: string[]}} [context]
+ * @returns {Map<unknown, {count: number, texts: string[]}>}
+ */
+export function facetBuckets(rows, filters, key, { search = '', searchKeys } = {}) {
   /*
    * 이 열의 **값 선택만** 뺀다. 같은 열의 머리줄 검색(`contains`)은 남겨 둬야
    * 옆에 적는 건수가 눌렀을 때 남는 행 수와 맞는다 — 「3건」이라 적힌 것을 눌렀더니
@@ -292,7 +311,7 @@ export function facetCounts(rows, filters, key, { search = '', searchKeys } = {}
    */
   const others = filters.filter((filter) => filter.key !== key || filter.op === 'contains');
   const tokens = searchTokens(search);
-  /** @type {Map<string, {value: unknown, count: number}>} */
+  /** @type {Map<string, {value: unknown, count: number, texts: string[]}>} */
   const counts = new Map();
 
   for (const row of rows) {
@@ -313,10 +332,12 @@ export function facetCounts(rows, filters, key, { search = '', searchKeys } = {}
     const value = isBlank(row[key]) ? null : row[key];
     const bucket = value === null ? '' : valueLabel(key, value);
     const seen = counts.get(bucket);
-    counts.set(bucket, { value: seen?.value ?? value, count: (seen?.count ?? 0) + 1 });
+    const texts = seen?.texts ?? [];
+    texts.push(화면글자(row, key, value));
+    counts.set(bucket, { value: seen?.value ?? value, count: (seen?.count ?? 0) + 1, texts });
   }
   // 바구니는 묶는 데만 쓴다. 바깥은 대표값으로 받는다
-  return new Map([...counts.values()].map((entry) => [entry.value, entry.count]));
+  return new Map([...counts.values()].map((entry) => [entry.value, { count: entry.count, texts: entry.texts }]));
 }
 
 /**

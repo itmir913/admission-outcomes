@@ -108,7 +108,8 @@ export function bucketLabel(key, value, 품은글자 = []) {
    * 전부가 그 표기인 줄(`unknown`)과 일부만 그런 줄(`none`)은 다르게 적는다.
    * 「기록 없음(1단계 불합격)」은 그 줄 전부가 1단계 탈락이라는 뜻이 되어 버린다.
    */
-  const 전부 = !품은글자.includes(바탕);
+  // 비어 있거나 알 수 없는 글자가 섞이면 「전부」라고 단정하지 않는다
+  const 전부 = 품은글자.length > 0 && 품은글자.every((text) => text && text !== 바탕);
   const 보일것 = 섞인것.slice(0, 2).join('·');
   const 나머지 = 섞인것.length > 2 ? ` 외 ${섞인것.length - 2}` : '';
   return {

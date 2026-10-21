@@ -10,7 +10,7 @@
 
 import { el, clear, formatNumber, debounce } from './dom.js';
 import { valueLabel, isBlank, GROUP_LABEL, GROUP_ORDER, primaryGpaField, bucketLabel } from '../analysis/registry.js';
-import { facetCounts } from '../analysis/query.js';
+import { facetCounts, facetBuckets } from '../analysis/query.js';
 
 /** 처음부터 열어 두는 필터. 상담에서 가장 먼저 거는 것들이다. */
 const OPENING = ['cohortYear', 'outcome', 'univ', 'track', 'admType', 'period', 'region'];
@@ -85,21 +85,20 @@ export function createFilters({ mount, read, onChange, onClose }) {
   }
 
   // ── 값 선택 (글자·enum 열) ─────────────────────────────────────────────
-  function valueBlock(field, filter, counts, redraw, rows) {
+  function valueBlock(field, filter, counts, redraw) {
     const chosen = new Set((filter?.values ?? []).map((value) => (isBlank(value) ? null : value)));
     const needle = (localSearch.get(field.key) ?? '').trim().toLowerCase();
 
     // 선택한 값이 다른 필터 때문에 한 건도 안 남으면 목록에서 사라져, 체크를 풀 자리가 없어진다
     const 건수 = new Map(counts);
-    for (const value of chosen) if (!건수.has(value)) 건수.set(value, 0);
-
-    // 결과 열은 한 줄에 화면 글자가 여럿 묶인다. 무엇이 묶였는지는 행이 안다
-    const 품은글자 = (value) => (field.key === 'outcome'
-      ? (rows ?? []).filter((row) => row['#outcome']?.code === value).map((row) => row['#outcome']?.label)
-      : []);
+    for (const value of chosen) if (!건수.has(value)) 건수.set(value, { count: 0, texts: [] });
 
     const entries = [...건수.entries()]
-      .map(([value, count]) => ({ value, count, ...bucketLabel(field.key, value, 품은글자(value)) }))
+      .map(([value, bucket]) => ({
+        value,
+        count: bucket.count,
+        ...bucketLabel(field.key, value, bucket.texts)
+      }))
       .filter((entry) => entry.count > 0 || chosen.has(entry.value))
       .filter((entry) => !needle || entry.terms.some((term) => term.toLowerCase().includes(needle)))
       .sort(entryOrder(field));
@@ -315,7 +314,8 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const body = field.numeric && field.cardinality > SEARCHABLE_AT
       // 같은 패널의 두 숫자가 다른 바탕 위에 서지 않도록, 빈칸 건수도 값 목록과 같은 셈을 쓴다
       ? rangeBlock(field, filter, facetCounts(rows, filters, field.key, { search }).get(null) ?? 0)
-      : valueBlock(field, filter, facetCounts(rows, filters, field.key, { search }), redraw, rows);
+      // 건수와 「무엇을 품었는지」를 같은 셈에서 받는다. 둘이 다른 바탕에 서면 이름이 거짓이 된다
+      : valueBlock(field, filter, facetBuckets(rows, filters, field.key, { search }), redraw);
 
     // 팝오버에는 제목줄이 따로 있다. 여기서 또 그리면 같은 제목이 두 번 나온다
     if (!withHead) return el('div', {}, [body]);
