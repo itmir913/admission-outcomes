@@ -27,6 +27,7 @@ import { createTable } from './ui/table.js';
 import { createFilters } from './ui/filters.js';
 import { readFiles, confirmUploads, bindDropzone } from './ui/upload.js';
 import { openStudent } from './ui/student.js';
+import { outcomeBar, passRate, tallyOutcomes } from './ui/outcome.js';
 import { openFiles, openColumns } from './ui/panels.js';
 import { loadView, saveView, forgetView, pruneView, emptyView } from './ui/prefs.js';
 
@@ -127,96 +128,11 @@ const filters = createFilters({
 // ── 다시 그리기 ───────────────────────────────────────────────────────────────
 
 /**
- * 지금 보이는 지원 건을 판정별로 센다.
- *
- * 읽지 못한 표기(`unknown`)와 기록이 없는 건(`none`)을 합격에도 불합격에도 넣지 않는다.
- * 어느 한쪽에 밀어 넣으면 합격률이 조용히 틀리고, 틀린 티가 나지 않는다(§5).
- *
- * @param {object[]} rows
- */
-export function tallyOutcomes(rows) {
-  const tally = { 지원: rows.length, 합격: 0, 충원합격: 0, 불합격: 0, 미상: 0, 학생: 0 };
-  const students = new Set();
-  for (const row of rows) {
-    if (row.sid) students.add(row.sid);
-    const code = row['#outcome']?.code;
-    if (code === 'pass') tally.합격 += 1;
-    else if (code === 'waitPass') tally.충원합격 += 1;
-    else if (code === 'fail') tally.불합격 += 1;
-    else tally.미상 += 1;
-  }
-  tally.학생 = students.size;
-  return tally;
-}
-
-/**
- * 합격률. 분모는 **판정을 읽어 낸 지원 건수**다.
- *
- * 전체 건수로 나누면 읽지 못한 표기가 많은 해일수록 합격률이 낮게 나오는데,
- * 그건 그 해 실적이 아니라 우리 사전의 구멍이다.
- *
- * @returns {number|null} 셀 수 있는 건이 하나도 없으면 null
- */
-export function passRate(tally) {
-  const judged = tally.합격 + tally.충원합격 + tally.불합격;
-  return judged === 0 ? null : (tally.합격 + tally.충원합격) / judged;
-}
-
-/**
  * 요약 띠 (§7 · plan.md §6).
  *
  * **측정값의 정의를 늘 문장으로 함께 둔다.** 상담 중에 숫자의 근거를 설명하지
  * 못하면 그 숫자는 쓸 수 없다. "합격 12"가 건수인지 사람 수인지는 보는 사람마다 다르게 읽는다.
  */
-/**
- * 판정 구성 막대.
- *
- * 숫자 일곱 개만으로는 서로의 비율이 눈에 들어오지 않는다. 띠 하나가 그걸 대신한다.
- *
- * **차트 라이브러리를 들이지 않는다.** 범주 넷짜리 띠 하나를 그리려고
- * 단일 HTML 배포에 수십 KB를 얹을 까닭이 없다 (§6). 분포를 칸마다 세어
- * 보여 줄 일이 생기면 그때 다시 판단한다.
- *
- * **색만으로 구분하지 않는다** (§9). 칸마다 모양을 함께 적고, 좁아서 글자가
- * 들어가지 않는 칸은 아래 범례가 받는다.
- */
-function outcomeBar(tally) {
-  if (tally.지원 === 0) return null;
-  const parts = [
-    { name: '합격', mark: '●', count: tally.합격, tone: 'bg-pass text-white' },
-    { name: '충원합격', mark: '△', count: tally.충원합격, tone: 'bg-wait text-white' },
-    { name: '불합격', mark: '✕', count: tally.불합격, tone: 'bg-fail text-white' },
-    { name: '판정 미상', mark: '·', count: tally.미상, tone: 'bg-line text-ink' }
-  ].filter((part) => part.count > 0);
-
-  const 몫 = (count) => (count / tally.지원) * 100;
-
-  /*
-   * 칸 안에는 **비율만** 적는다. 이름까지 넣었더니 폭이 좁은 화면에서 글자가 잘렸다 —
-   * 칸 너비는 비율이 정하는데 글자 길이는 이름이 정해서, 둘이 맞을 보장이 없다.
-   * 이름은 아래 범례가 맡는다. 범례는 색·모양과 이름을 잇는 열쇠이기도 하다.
-   */
-  const 적을만한가 = (part) => 몫(part.count) >= 8;
-
-  return el('div', { class: 'border-t border-line-soft px-4 py-3' }, [
-    el('div', {
-      class: 'flex h-6 w-full overflow-hidden rounded',
-      attrs: { role: 'img', 'aria-label': parts.map((part) => `${part.name} ${part.count}건`).join(', ') }
-    }, parts.map((part) => el('div', {
-      class: `${part.tone} flex items-center justify-center overflow-hidden whitespace-nowrap text-base font-semibold`,
-      // 칸 너비는 자료에서 나온다. 클래스로는 적을 수 없는 값이다 (§9의 예외)
-      style: { width: `${몫(part.count).toFixed(2)}%` },
-      attrs: { title: `${part.name} ${part.count}건 (${몫(part.count).toFixed(1)}%)` },
-      text: 적을만한가(part) ? `${part.mark} ${몫(part.count).toFixed(1)}%` : ''
-    }))),
-    el('ul', {
-      class: 'mt-2 flex flex-wrap gap-x-4 gap-y-1 text-base text-ink-soft'
-    }, parts.map((part) => el('li', {
-      text: `${part.mark} ${part.name} ${몫(part.count).toFixed(1)}%`
-    })))
-  ]);
-}
-
 function paintSummary(visible, total) {
   const tally = tallyOutcomes(visible);
   const rate = passRate(tally);
@@ -228,7 +144,7 @@ function paintSummary(visible, total) {
   ]);
 
   clear(dom.요약띠).append(el('div', { class: 'card overflow-hidden' }, [
-    el('div', { class: 'flex flex-wrap divide-x divide-line' }, [
+    el('div', { class: 'stat-grid' }, [
       cell(걸러짐 ? `지원 (전체 ${total})` : '지원', tally.지원),
       cell('학생', tally.학생),
       cell('합격', tally.합격, 'text-pass'),
@@ -237,7 +153,7 @@ function paintSummary(visible, total) {
       cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`),
       tally.미상 > 0 ? cell('판정 미상', tally.미상, 'text-ink-soft') : null
     ].filter(Boolean)),
-    outcomeBar(tally),
+    el('div', { class: 'border-t border-line-soft px-4 py-3' }, [outcomeBar(tally)]),
     el('p', {
       class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-base text-ink-soft',
       text: tally.미상 > 0

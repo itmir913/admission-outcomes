@@ -8,6 +8,7 @@
  */
 
 import { el, clear, openDialog, dialogFrame, formatNumber } from './dom.js';
+import { outcomeBar, passRate, tallyOutcomes } from './outcome.js';
 import { fieldLabel, valueLabel, isBlank } from '../analysis/registry.js';
 
 /** 지원 카드를 늘어놓는 차례. */
@@ -29,23 +30,29 @@ export const CARD_ORDERS = {
   }
 };
 
-/** 한 학생의 지원 건을 결과별로 센다. */
-export function summarize(rows) {
-  const tally = { 지원: rows.length, 합격: 0, 불합격: 0, 기타: 0 };
-  for (const row of rows) {
-    const outcome = row['#outcome'];
-    if (outcome?.passed) tally.합격 += 1;
-    else if (outcome?.code === 'fail') tally.불합격 += 1;
-    else tally.기타 += 1;
-  }
-  return tally;
-}
+/**
+  * 이 학생의 판정 요약.
+  *
+  * **전체 화면과 같은 모양이다** — 같은 함수로 세고 같은 띠로 그린다. 한 학생을
+  * 열었을 때 숫자의 뜻이 바뀌면, 두 화면을 견주던 사람이 그 자리에서 길을 잃는다.
+  */
+function summaryCard(tally) {
+  const rate = passRate(tally);
+  const cell = (name, value, tone = '') => el('div', { class: `stat ${tone}` }, [
+    el('p', { class: 'stat-name', text: name }),
+    el('p', { class: 'stat-value', text: value })
+  ]);
 
-/** 타일 하나. 이름과 값을 크게 붙여 놓는다. */
-function tile(label, value, tone = '') {
-  return el('div', { class: `card px-4 py-3 ${tone}` }, [
-    el('p', { class: 'text-base text-ink-soft', text: label }),
-    el('p', { class: 'mt-0.5 text-2xl font-bold tabular-nums', text: value })
+  return el('div', { class: 'card overflow-hidden' }, [
+    el('div', { class: 'stat-grid' }, [
+      cell('지원', tally.지원),
+      cell('합격', tally.합격, 'text-pass'),
+      cell('충원합격', tally.충원합격, 'text-wait'),
+      cell('불합격', tally.불합격, 'text-fail'),
+      tally.미상 > 0 ? cell('판정 미상', tally.미상, 'text-ink-soft') : null,
+      cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`)
+    ].filter(Boolean)),
+    el('div', { class: 'border-t border-line-soft px-4 py-3' }, [outcomeBar(tally)])
   ]);
 }
 
@@ -112,14 +119,14 @@ function applicationCard(row) {
 export function openStudent(dialog, { sid, rows }) {
   let order = '기본';
 
-  const cards = el('div', { class: 'mt-4 space-y-3' });
+  const cards = el('div', { class: 'mt-3 space-y-3' });
   function paintCards() {
     const sorted = [...rows].sort(CARD_ORDERS[order].compare);
     clear(cards).append(...sorted.map(applicationCard));
   }
   paintCards();
 
-  const tally = summarize(rows);
+  const tally = tallyOutcomes(rows);
   const sample = rows[0] ?? {};
   const gpa = collect(sample, 'gpa.');
   const suneung = collect(sample, 'suneung.');
@@ -135,18 +142,14 @@ export function openStudent(dialog, { sid, rows }) {
 
   const PART_LABEL = { subject: '과목', stdScore: '표점', percentile: '백분위', grade: '등급' };
 
-  const body = el('div', {}, [
-    el('div', { class: 'grid grid-cols-2 gap-3 sm:grid-cols-4' }, [
-      tile('지원', tally.지원),
-      tile('합격', tally.합격, 'border-pass/40 bg-pass-soft'),
-      tile('불합격', tally.불합격, 'border-fail/40 bg-fail-soft'),
-      tile('기타', tally.기타)
-    ]),
+  // 사이 간격을 **한 군데서** 준다. 조각마다 mt 를 달면 조각 하나가 빠질 때 간격이 어긋난다
+  const body = el('div', { class: 'space-y-6' }, [
+    summaryCard(tally),
 
     gpa.length > 0
-      ? el('section', { class: 'mt-6' }, [
+      ? el('section', {}, [
           el('h3', { class: 'text-lg font-bold tracking-tight', text: '내신' }),
-          el('div', { class: 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5' },
+          el('div', { class: 'mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5' },
             gpa.map((entry) => el('div', { class: 'card px-3 py-2' }, [
               el('p', { class: 'truncate text-base text-ink-soft', text: entry.label, attrs: { title: entry.label } }),
               el('p', { class: 'text-xl font-bold tabular-nums', text: formatNumber(entry.value) })
@@ -155,9 +158,9 @@ export function openStudent(dialog, { sid, rows }) {
       : null,
 
     byArea.size > 0
-      ? el('section', { class: 'mt-6' }, [
+      ? el('section', {}, [
           el('h3', { class: 'text-lg font-bold tracking-tight', text: '수능' }),
-          el('div', { class: 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5' },
+          el('div', { class: 'mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5' },
             [...byArea].map(([area, parts]) => el('div', { class: 'card px-3 py-2' }, [
               el('p', { class: 'text-base font-semibold', text: area }),
               ...Object.entries(parts).map(([part, value]) => el('p', {
@@ -168,7 +171,7 @@ export function openStudent(dialog, { sid, rows }) {
         ])
       : null,
 
-    el('section', { class: 'mt-6' }, [
+    el('section', {}, [
       el('div', { class: 'flex flex-wrap items-center gap-3' }, [
         el('h3', { class: 'text-lg font-bold tracking-tight', text: `지원 이력 ${rows.length}건` }),
         el('label', { class: 'ml-auto flex items-center gap-2 text-base text-ink-soft' }, [

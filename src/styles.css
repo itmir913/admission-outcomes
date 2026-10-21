@@ -45,8 +45,20 @@
   --color-fail: oklch(0.535 0.181 26);
   --color-fail-soft: oklch(0.957 0.028 26);
 
+  /*
+   * **카드를 둘러싼 여백은 전부 이 값 하나다.** 바깥 테두리와 카드 사이,
+   * 카드와 카드 사이가 서로 다르면 어느 쪽이 기준인지 눈이 매번 다시 재야 한다.
+   * 좁은 화면에서는 한 단계 줄여 자리를 내용에 돌려준다.
+   */
+  --spacing-gutter: 1rem;    /* 16px, 좁은 화면 */
+
   --spacing-row: 2.75rem; /* 44px */
   --spacing-bar: 3.5rem;  /* 머리줄 높이. 사이드바·표가 이 값을 빼서 자리를 잡는다 */
+}
+
+/* 넓은 화면에서만 한 단계 키운다. 눈금이 하나라 여기 한 줄로 끝난다 */
+@media (min-width: 64rem) {
+  :root { --spacing-gutter: 1.25rem; } /* 20px */
 }
 
 @layer base {
@@ -137,11 +149,23 @@
    * 이름은 한 번 익히면 다시 읽지 않는다.
    */
   /*
-   * 칸이 **너비를 나눠 가진다.** 왼쪽에 몰아 두었더니 오른쪽이 통째로 비어
-   * 카드만 길쭉했다. basis 로 최소 너비를 주어 좁은 화면에서는 줄을 바꾼다.
+   * 통계 칸은 **격자**로 눕는다.
+   *
+   * 가로로만 늘어놓고 사이에 세로선을 그었더니, 좁은 화면에서 줄이 바뀌면
+   * 가로선이 없어 칸들이 서로 붙어 보였다. 이제 칸마다 제 둘레에 선을 두르고
+   * 1px 씩 띄워 맞닿게 한다 — 가로든 세로든 맞닿는 곳마다 선이 생긴다.
+   *
+   * 선을 바탕색으로 깔지 않는 까닭은, 칸 수가 열의 배수가 아닐 때 **남는 자리까지
+   * 선 색으로 칠해지기** 때문이다. 다섯 칸을 두 줄로 놓으면 여섯째 자리가 회색으로
+   * 남아 빈 칸처럼 보였다. 둘레선은 칸이 있는 곳에만 생긴다.
    */
+  .stat-grid {
+    @apply grid gap-px bg-surface;
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  }
   .stat {
-    @apply flex min-w-0 flex-1 basis-28 flex-col justify-center gap-0.5 px-4 py-3;
+    @apply flex min-w-0 flex-col justify-center gap-0.5 bg-surface px-4 py-3;
+    outline: 1px solid var(--color-line);
   }
   .stat-name {
     @apply truncate text-base text-ink-soft;
@@ -355,8 +379,9 @@
    * 가로로는 따라다니지 않게 왼쪽에 고정한다 — 열이 80개 넘는 표를 옆으로 밀 때
    * 요약까지 함께 밀려 나가면 숫자를 다시 보려고 되돌아와야 한다.
    */
+  /* 여백은 바깥 더미가 준다. 여기서 또 주면 위아래가 두 겹이 된다 */
   .summary-rail {
-    @apply sticky left-0 z-10 w-full px-4 pb-3 pt-3 lg:px-5;
+    @apply w-full;
   }
 
   /*

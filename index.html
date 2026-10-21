@@ -100,21 +100,24 @@
 
       <div id="표" tabindex="-1" class="print-open min-h-0 min-w-0 flex-1 scroll-stable overflow-auto">
         <!--
-          요약 띠. **맨 위에 둔다** — 조건을 걸고 나서 가장 먼저 확인하는 것이
-          "그래서 몇 건이 남았나"이기 때문이다. 조작 수단은 그 아래에 둔다.
-          함께 스크롤된다. 분모가 무엇인지는 한 줄로 늘 밝힌다 (plan.md §6).
-        -->
-        <div id="요약띠" class="summary-rail" aria-live="polite"></div>
+          표 위에 얹히는 것들을 **한 더미로 묶는다.** 여백을 줄마다 따로 주면
+          줄 하나를 고칠 때마다 다른 줄과 어긋나고, 그 어긋남은 눈에 먼저 띈다.
+          바깥 여백도 줄 사이 간격도 `gutter` 눈금 하나에서 나온다.
 
-        <!--
-          조작 띠. **고정하지 않는다** — 내려 보는 동안 자리를 양보하고,
-          그 자리를 표가 쓴다. 상단에 남아야 하는 것은 표 머리줄 하나다.
-
-          가로로만 왼쪽에 고정한다. 열이 80개 넘는 표를 옆으로 밀 때 검색칸까지
-          따라 나가면 다시 쓰려고 되돌아와야 한다.
+          **고정하지 않는다** — 내려 보는 동안 자리를 양보하고, 그 자리를 표가 쓴다.
+          상단에 남아야 하는 것은 표 머리줄 하나다. 가로로만 왼쪽에 고정한다 —
+          열이 80개 넘는 표를 옆으로 밀 때 검색칸까지 따라 나가면 되돌아와야 한다.
         -->
-        <div class="no-print sticky left-0 w-full px-4 py-3 lg:px-5">
-          <div class="flex items-center gap-3">
+        <div class="sticky left-0 flex w-full flex-col gap-gutter p-gutter">
+          <!--
+            요약 띠가 **맨 위다** — 조건을 걸고 나서 가장 먼저 확인하는 것이
+            "그래서 몇 건이 남았나"이기 때문이다. 분모는 한 줄로 늘 밝힌다 (plan.md §6).
+          -->
+          <div id="요약띠" class="summary-rail" aria-live="polite"></div>
+
+          <div id="알림줄" class="space-y-2 empty:hidden"></div>
+
+          <div class="no-print flex items-center gap-3">
             <div class="relative min-w-0 flex-1">
               <input type="search" id="검색" class="field pl-10" placeholder="대학·학과·전형 검색"
                      aria-label="검색" />
@@ -127,7 +130,7 @@
             둘을 한 줄에 두면 칩이 늘어날 때마다 단추가 옆으로 밀리거나 줄이 접힌다.
             위아래로 나누면 단추는 제자리를 지키고, 칩은 아래로만 자란다.
           -->
-          <div class="flex flex-wrap items-center justify-end gap-1.5">
+          <div class="no-print flex flex-wrap items-center justify-end gap-1.5">
               <!--
                 열 고정 (#3). 대화상자 안에만 있어서 표를 볼 때는 조정할 길이 없었다.
                 0까지 내리면 고정이 해제된다.
@@ -152,10 +155,8 @@
             걸린 조건들. **비어 있으면 자리를 차지하지 않고**, 생기면 아래로 밀려
             표를 내린다. 줄바꿈을 허용해 칩이 많아도 전부 드러난다.
           -->
-          <div id="칩줄" class="mt-3 flex flex-wrap items-center gap-2 empty:mt-0"></div>
+          <div id="칩줄" class="no-print flex flex-wrap items-center gap-2 empty:hidden"></div>
         </div>
-
-        <div id="알림줄" class="sticky left-0 w-full space-y-2 px-4 pt-3 empty:pt-0 lg:px-5"></div>
 
         <table class="grid-table">
               <colgroup id="열너비"></colgroup>
