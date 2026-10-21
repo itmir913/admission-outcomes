@@ -13,6 +13,10 @@ import { inferCohortYear, BASIS } from '../src/ingest/year.js';
 import { openDatabase, saveDataset, loadDataset } from '../src/store/db.js';
 import { expandUploads } from '../src/ingest/files.js';
 import { makeWorkbook, makeZip, senjinhakGrid } from './helpers/workbook.js';
+import { classifyOutcome } from '../src/core/outcome.js';
+import { tallyOutcomes, passRate, rateNote } from '../src/ui/outcome.js';
+import { sortRows, searchHaystack } from '../src/analysis/query.js';
+import { visibleWindow } from '../src/ui/table.js';
 
 let counter = 0;
 const freshDatabase = () => openDatabase(`audit-${(counter += 1)}-${Date.now()}`);
@@ -237,5 +241,47 @@ describe('압축을 다 해제한 뒤에야 크기를 재던 문제', () => {
     const result = expandUploads([{ name: '정상.zip', bytes: archive }]);
     expect(result.files).toHaveLength(1);
     expect(result.skipped).toEqual([]);
+  });
+});
+
+describe('2차 감사 — 조용히 틀리던 자리들', () => {
+  it('통계 칸을 더하면 화면의 합격률이 그대로 나온다', () => {
+    const rows = [
+      { '#outcome': classifyOutcome({ final: '합격' }) },
+      { '#outcome': classifyOutcome({ final: '충원합격' }) },
+      { '#outcome': classifyOutcome({ final: '불합격' }) },
+      // 1단계에서만 탈락한 건. 분자도 분모도 아니다
+      { '#outcome': classifyOutcome({ final: null, stage1: '불합격' }) }
+    ];
+    const tally = tallyOutcomes(rows);
+    expect(tally.최종판정).toBe(tally.합격 + tally.충원합격 + tally.불합격);
+    expect(passRate(tally)).toBeCloseTo(2 / 3, 6);
+    // 분모가 몇 건인지와 무엇이 빠졌는지가 화면에 적혀야 한다
+    expect(rateNote(tally)).toContain('3건');
+    expect(rateNote(tally)).toContain('1건');
+  });
+
+  it('뜻이 있는 열은 저장값 글자순이 아니라 뜻 차례로 정렬한다', () => {
+    const rows = [
+      { outcome: 'fail', registered: 'none' },
+      { outcome: 'pass', registered: 'registered' },
+      { outcome: 'waitPass', registered: 'declined' }
+    ];
+    expect(sortRows(rows, [{ key: 'outcome', dir: 'asc' }]).map((row) => row.outcome))
+      .toEqual(['pass', 'waitPass', 'fail']);
+    expect(sortRows(rows, [{ key: 'registered', dir: 'asc' }]).map((row) => row.registered))
+      .toEqual(['registered', 'declined', 'none']);
+  });
+
+  it('전체 검색도 화면에 적힌 글자로 찾는다', () => {
+    // 「1단계 불합격」은 저장값에도 사전에도 없고 이름표에만 있다
+    const row = { outcome: 'none', '#outcome': classifyOutcome({ final: null, stage1: '불합격' }) };
+    expect(searchHaystack(row, ['outcome'])).toContain('1단계 불합격');
+  });
+
+  it('행 높이를 재서 넘겨 주면 그 높이로 창을 셈한다', () => {
+    const 기본 = visibleWindow(0, 440, 1000);
+    const 두배 = visibleWindow(0, 440, 1000, 72);
+    expect(두배.end).toBeLessThan(기본.end);
   });
 });

@@ -89,7 +89,11 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const chosen = new Set((filter?.values ?? []).map((value) => (isBlank(value) ? null : value)));
     const needle = (localSearch.get(field.key) ?? '').trim().toLowerCase();
 
-    const entries = [...counts.entries()]
+    // 선택한 값이 다른 필터 때문에 한 건도 안 남으면 목록에서 사라져, 체크를 풀 자리가 없어진다
+    const 건수 = new Map(counts);
+    for (const value of chosen) if (!건수.has(value)) 건수.set(value, 0);
+
+    const entries = [...건수.entries()]
       .map(([value, count]) => ({ value, count, label: valueLabel(field.key, value) }))
       .filter((entry) => entry.count > 0 || chosen.has(entry.value))
       .filter((entry) => !needle || entry.label.toLowerCase().includes(needle))

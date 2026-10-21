@@ -100,17 +100,29 @@ export function searchHaystack(row, keys) {
     const value = row[key];
     if (isBlank(value)) continue;
     parts.push(String(value).toLowerCase());
-    const label = valueLabel(key, value);
+    // 열별 검색칸과 같은 글자로 찾아야 한다 — 「1단계 불합격」은 이름표에만 있다
+    const label = 화면글자(row, key, value);
     if (label !== String(value)) parts.push(label.toLowerCase());
   }
   return parts.join(' ');
 }
 
-/** 판정이 화면에 늘어서는 차례. 합격 → 충원합격 → 불합격 → 읽지 못함 → 기록 없음 */
-const 판정순서 = ['pass', 'waitPass', 'fail', 'unknown', 'none'];
-const 판정차례 = (code) => {
-  const at = 판정순서.indexOf(String(code));
-  return at === -1 ? 판정순서.length : at;
+/*
+ * 뜻에 차례가 있는 열들.
+ *
+ * 저장값을 글자순으로 세우면 불합격이 합격 위에 오고(`fail` < `pass`), 등록 열은
+ * 포기가 맨 위에 등록이 맨 아래에 선다(`declined` < `none` < `registered`).
+ * 어느 쪽도 사람이 기대하는 차례가 아니고, 틀려도 틀린 티가 나지 않는다 (§5).
+ */
+const 뜻순서 = {
+  outcome: ['pass', 'waitPass', 'fail', 'unknown', 'none'],
+  registered: ['registered', 'declined', 'none'],
+  stage1Passed: [true, false, null]
+};
+const 뜻차례 = (key, value) => {
+  const order = 뜻순서[key];
+  const at = order.findIndex((item) => item === value || String(item) === String(value));
+  return at === -1 ? order.length : at;
 };
 
 /**
@@ -154,10 +166,8 @@ export function sortRows(rows, sorts = []) {
           return leftBlank ? 1 : -1;
         }
 
-        const order = sort.key === 'outcome'
-          // 판정은 뜻에 차례가 있다. 저장값(`fail`·`pass`…)을 글자순으로 세우면
-          // 불합격이 합격 위에 오고 미상이 그 사이에 낀다
-          ? 판정차례(leftValue) - 판정차례(rightValue)
+        const order = 뜻순서[sort.key]
+          ? 뜻차례(sort.key, leftValue) - 뜻차례(sort.key, rightValue)
           : compareValues(leftValue, rightValue);
         if (order !== 0) return sort.dir === 'desc' ? -order : order;
       }
