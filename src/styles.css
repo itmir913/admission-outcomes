@@ -312,6 +312,16 @@
   .grid-table .pin-edge {
     box-shadow: 8px 0 10px -8px oklch(0 0 0 / 0.35);
   }
+  /*
+   * **머리 칸의 칸선을 그림자와 함께 적는다.**
+   *
+   * `box-shadow` 는 쌓이지 않고 통째로 덮어쓴다. 여기서 그림자만 적었더니
+   * 머리줄의 `inset` 칸선이 지워져, 고정 열이 끝나는 자리에만 세로선이 없었다.
+   * 선은 거기가 가장 필요한 자리다.
+   */
+  .grid-table thead .pin-edge {
+    box-shadow: inset -1px -1px 0 var(--color-line), 8px 0 10px -8px oklch(0 0 0 / 0.35);
+  }
 
 
   @media (hover: hover) {

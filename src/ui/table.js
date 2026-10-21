@@ -110,6 +110,24 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     return offsets;
   }
 
+  /**
+   * 고정 열의 왼쪽 자리만 고쳐 쓴다. **머리를 다시 그리지 않는다.**
+   *
+   * 너비를 끄는 동안 머리를 다시 그렸더니, 손에 쥐고 있던 손잡이가 그 자리에서
+   * 떨어져 나가 포인터 붙듦(capture)과 이벤트가 함께 끊겼다 — 끌다 말고 놓인다.
+   * 자리 값만 바꾸면 쥔 것은 그대로다.
+   */
+  function movePinned() {
+    const offsets = pinOffsets();
+    const rows = [headRow, searchRow, ...body.children].filter(Boolean);
+    for (const row of rows) {
+      for (let index = 0; index < state.pinned && index < row.children.length; index += 1) {
+        const cell = /** @type {HTMLElement} */ (row.children[index]);
+        if (cell.classList.contains('pinned')) cell.style.left = `${offsets[index]}px`;
+      }
+    }
+  }
+
   function renderColgroup() {
     clear(colgroup).append(...state.columns.map((key) => el('col', {
       style: { width: `${state.widths[key] ?? DEFAULT_WIDTH}px` }
@@ -279,7 +297,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
       state.widths[key] = Math.max(MIN_WIDTH, Math.round(startWidth + moveEvent.clientX - startX));
       renderColgroup();
       // 고정 열의 너비가 바뀌면 뒤따르는 고정 열의 자리도 바뀐다
-      if (state.columns.indexOf(key) < state.pinned) { renderHead(); repaintBody(); }
+      if (state.columns.indexOf(key) < state.pinned) movePinned();
     };
     const up = () => {
       handle.removeEventListener('pointermove', move);
