@@ -222,13 +222,13 @@ describe('정렬', () => {
     expect(sorted.map((row) => row.n)).toEqual(['라', '가', '다', '나']);
   });
 
-  it('정렬 키가 같은 행끼리는 원래 차례를 지킨다', () => {
-    // 원본 차례가 곧 엑셀의 행 차례다. 흔들리면 사람이 표를 못 믿는다
+  it('정렬 키가 같은 행끼리는 원래 순서를 지킨다', () => {
+    // 원본 순서가 곧 엑셀의 행 순서다. 흔들리면 사람이 표를 못 믿는다
     const sorted = sortRows(sample, [{ key: 'v', dir: 'asc' }]);
     expect(sorted.slice(0, 2).map((row) => row.n)).toEqual(['가', '라']);
   });
 
-  it('한글을 사전 차례로 견준다', () => {
+  it('한글을 사전 순서로 견준다', () => {
     const sorted = sortRows([{ n: '하' }, { n: '가' }, { n: '나' }], [{ key: 'n', dir: 'asc' }]);
     expect(sorted.map((row) => row.n)).toEqual(['가', '나', '하']);
   });

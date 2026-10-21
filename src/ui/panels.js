@@ -84,14 +84,14 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
 }
 
 /**
- * 열 선택 — 표시/숨김 · 차례 바꾸기 · 좌측 고정.
+ * 열 선택 — 표시/숨김 · 순서 바꾸기 · 좌측 고정.
  *
  * 대교협은 81열이다. 전부 켜 놓고 시작할 수 없어서 선택하는 화면이 반드시 필요하다.
  *
  * @param {HTMLDialogElement} dialog
  * @param {object} options
  * @param {object[]} options.registry
- * @param {string[]} options.columns 지금 보이는 열 (차례대로)
+ * @param {string[]} options.columns 지금 보이는 열 (순서대로)
  * @param {number} options.pinned 좌측에 고정한 열 수
  * @param {(next: {columns: string[], pinned: number}) => void} options.onApply
  */
@@ -114,7 +114,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
     paint();
   }
 
-  /** 드래그로 차례 바꾸기. 버튼으로도 되게 두 길을 모두 연다. */
+  /** 드래그로 순서 바꾸기. 버튼으로도 되게 두 길을 모두 연다. */
   function dropOn(fromKey, toKey) {
     if (fromKey === toKey) return;
     const rest = chosen.filter((key) => key !== fromKey);
@@ -200,7 +200,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
   const body = el('div', { class: 'grid gap-5 md:grid-cols-2' }, [
     el('section', {}, [
       el('h3', { class: 'text-lg font-bold tracking-tight', text: '보이는 열' }),
-      el('p', { class: 'text-base text-ink-soft', text: '끌어다 놓거나 화살표로 차례를 바꿉니다. 표의 머리줄을 끌어도 됩니다.' }),
+      el('p', { class: 'text-base text-ink-soft', text: '끌어다 놓거나 화살표로 순서를 바꿉니다. 표의 머리줄을 끌어도 됩니다.' }),
       shownList,
       el('div', { class: 'mt-4' }, [
         el('label', { class: 'text-base font-semibold', text: '왼쪽에 고정할 열 수' }),

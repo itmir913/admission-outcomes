@@ -26,7 +26,7 @@ const DERIVED = {
   sourceFile: { label: '원본 파일', group: 'source', type: 'text' }
 };
 
-/** 열 묶음이 화면에 늘어서는 차례. */
+/** 열 묶음이 화면에 늘어서는 순서. */
 export const GROUP_ORDER = ['student', 'application', 'gpa', 'suneung', 'extra', 'source'];
 
 export const GROUP_LABEL = {

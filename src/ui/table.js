@@ -169,7 +169,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
         class: 'flex min-w-0 flex-1 items-center gap-1',
         attrs: {
           type: 'button',
-          title: `${field?.label ?? key} — 누르면 정렬 순위가 하나씩 쌓인다 (오름 → 내림 → 해제). Shift+누르면 이 열만으로 정렬. 끌면 열 차례가 바뀐다`,
+          title: `${field?.label ?? key} — 누르면 정렬 순위가 하나씩 쌓인다 (오름 → 내림 → 해제). Shift+누르면 이 열만으로 정렬. 끌면 열 순서가 바뀐다`,
           'aria-label': `${field?.label ?? key} 기준 정렬`
         },
         on: {
@@ -245,7 +245,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
   }
 
   /**
-   * 머리를 끌어 열 차례를 바꾼다.
+   * 머리를 끌어 열 순서를 바꾼다.
    *
    * 같은 손짓이 정렬도 하고 자리도 옮기므로, **얼마나 움직였는지로 둘을 구별한다.**
    * `DRAG_SLOP`을 넘기 전에는 아무 일도 일어나지 않고, 넘지 않은 채 손을 떼면 클릭이다.

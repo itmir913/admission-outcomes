@@ -11,7 +11,7 @@ import { el, clear, openDialog, dialogFrame, formatNumber } from './dom.js';
 import { outcomeBar, passRate, tallyOutcomes } from './outcome.js';
 import { fieldLabel, valueLabel, isBlank } from '../analysis/registry.js';
 
-/** 지원 카드를 늘어놓는 차례. */
+/** 지원 카드를 늘어놓는 순서. */
 export const CARD_ORDERS = {
   기본: {
     label: '연도 최신 → 합격 먼저 → 대학명',
@@ -182,7 +182,7 @@ export function openStudent(dialog, { sid, rows }) {
     ['percentile', '백분위'],
     ['grade', '등급']
   ];
-  // 성적표에 적히는 차례. 여기 없는 영역은 뒤에 붙인다
+  // 성적표에 적히는 순서. 여기 없는 영역은 뒤에 붙인다
   const AREA_ORDER = ['국어', '수학', '영어', '한국사', '탐구1', '탐구2', '제2외국어'];
 
   const areaRows = [...byArea].sort(([left], [right]) => {
@@ -267,7 +267,7 @@ export function openStudent(dialog, { sid, rows }) {
             ? el('details', { class: 'mt-3' }, [
                 el('summary', {
                   class: 'cursor-pointer list-none rounded-lg border border-line bg-surface px-4 py-2 text-base font-medium hover:bg-brand-soft',
-                  text: `반영비를 달리 센 ${접을내신.length}개 보기`
+                  text: `반영비를 다르게 계산한 ${접을내신.length}개 더보기`
                 }),
                 el('div', { class: 'mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5' },
                   접을내신.map((entry) => gpaCard(entry)))
@@ -288,10 +288,10 @@ export function openStudent(dialog, { sid, rows }) {
         el('h3', { class: 'text-lg font-bold tracking-tight', text: `지원 이력 ${rows.length}건` }),
         // 좁은 화면에서 고르는 칸이 줄지 않으면 상자 밖으로 밀고 나간다
         el('label', { class: 'ml-auto flex min-w-0 items-center gap-2 text-base text-ink-soft' }, [
-          '차례',
+          '정렬',
           el('select', {
             class: 'field min-h-9 w-auto min-w-0 max-w-full text-base',
-            attrs: { 'aria-label': '지원 카드 차례' },
+            attrs: { 'aria-label': '지원 카드 정렬' },
             on: { change: (event) => { order = event.target.value; paintCards(); } }
           }, Object.entries(CARD_ORDERS).map(([key, value]) => el('option', {
             text: value.label, attrs: { value: key, selected: key === order }

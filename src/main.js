@@ -167,7 +167,7 @@ function paintSummary(visible, total) {
 /**
  * 칩 줄 — 지금 걸려 있는 **정렬과 필터**를 한 줄에 늘어놓는다 (§7, 참고 UI).
  *
- * 정렬을 먼저 둔다. 표가 왜 이 차례로 보이는지를 먼저 파악해야 하고,
+ * 정렬을 먼저 둔다. 표가 왜 이 순서로 보이는지를 먼저 파악해야 하고,
  * 그다음이 무엇을 걸러 냈는지다. 둘 다 칩 하나씩 눌러 뗄 수 있다.
  */
 function paintChips() {
@@ -526,7 +526,7 @@ pick('#고정늘리기').addEventListener('click', () => 고정조정(1));
 pick('#정렬초기화').addEventListener('click', () => updateView({ sorts: [] }));
 pick('#필터초기화').addEventListener('click', () => updateView({ filters: [] }));
 
-// 열 구성·차례·너비를 한꺼번에 되돌린다. 하나씩 되돌리게 하면 아무도 안 쓴다
+// 열 구성·순서·너비를 한꺼번에 되돌린다. 하나씩 되돌리게 하면 아무도 안 쓴다
 pick('#열초기화').addEventListener('click', () => {
   const base = emptyView();
   updateView({ columns: defaultColumns(state.registry), widths: {}, pinned: base.pinned });

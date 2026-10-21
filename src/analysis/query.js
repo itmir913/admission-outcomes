@@ -116,8 +116,8 @@ function compareValues(left, right) {
  */
 export function sortRows(rows, sorts = []) {
   if (sorts.length === 0) return [...rows];
-  // 정렬 키가 전부 같은 행끼리는 원래 차례를 지킨다.
-  // 원본 차례가 곧 엑셀의 행 차례여서, 흔들리면 사람이 표를 못 믿는다
+  // 정렬 키가 전부 같은 행끼리는 원래 순서를 지킨다.
+  // 원본 순서가 곧 엑셀의 행 순서여서, 흔들리면 사람이 표를 못 믿는다
   return rows
     .map((row, index) => ({ row, index }))
     .sort((left, right) => {
