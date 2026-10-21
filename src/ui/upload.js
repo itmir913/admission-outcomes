@@ -55,6 +55,22 @@ export function needsFileYear(sheet) {
  * @param {Map<string, {cohortYear: number|null, include: boolean}>|Record<string, object>} decisions
  * @returns {string[]} 사람이 읽을 이유. 막을 것이 없으면 빈 배열
  */
+/**
+ * 무엇을 몇 개 불러오는지. **파일 수를 먼저 말한다** — 사람이 선택한 것은 파일이고
+ * 시트는 그 안에서 나온 것이다. 둘이 다를 때만 시트 수를 덧붙인다.
+ *
+ * @param {object[]} sheets
+ * @param {Map<string, object>|Record<string, object>} decisions
+ */
+export function 불러올것(sheets, decisions) {
+  const lookup = decisions instanceof Map ? (id) => decisions.get(id) : (id) => decisions[id];
+  const 선택한것 = (sheets ?? []).filter((sheet) => lookup(sheet.id)?.include);
+  const 파일수 = new Set(선택한것.map((sheet) => sheet.fileHash ?? sheet.fileName)).size;
+  return 선택한것.length > 파일수
+    ? `파일 ${파일수}개에서 시트 ${선택한것.length}장을 불러옵니다.`
+    : `파일 ${파일수}개를 불러옵니다.`;
+}
+
 export function uploadBlockers(sheets, decisions) {
   const lookup = decisions instanceof Map
     ? (id) => decisions.get(id)
@@ -207,7 +223,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         ? problems[0]
         : chosen === 0
           ? '불러올 시트를 하나 이상 선택해 주세요.'
-          : `${chosen}장을 불러옵니다.`;
+          : 불러올것(prepared.sheets, decisions);
       footerNote.className = problems.length > 0 || chosen === 0
         ? 'mr-auto text-base font-medium text-fail'
         : 'mr-auto text-base text-ink-soft';
