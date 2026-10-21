@@ -111,6 +111,21 @@ export function isIdentityLabel(label) {
  */
 function readExtra(row, columns, labels) {
   const used = new Set(Object.values(columns));
+  /*
+   * **중복 이름은 머리글을 보고 정한다.**
+   *
+   * 행마다 「이미 채웠는지」로 번호를 붙이면, 4열이 빈 행에서는 5열 값이 번호 없는
+   * 키에 들어앉는다. 그러면 `extra.비고` 한 열에 서로 다른 두 열의 값이 섞이고,
+   * 표도 필터도 그걸 한 열로 다룬다 — 조용히 틀린 값이다 (§5).
+   */
+  const 겹친이름 = new Set();
+  const 본이름 = new Set();
+  for (const item of labels ?? []) {
+    const label = item?.label ?? '';
+    if (label === '') continue;
+    if (본이름.has(label)) 겹친이름.add(label);
+    본이름.add(label);
+  }
   const extra = {};
   const dropped = [];
   /*
@@ -152,7 +167,7 @@ function readExtra(row, columns, labels) {
      * 이름을 그대로 키로 쓰면 뒤 열이 앞 열을 덮어, 「비고」가 둘인 양식에서 앞쪽
      * 값이 사라진다. 화면은 그래도 「2개를 원본 이름 그대로 둡니다」라고 적었다 (§5).
      */
-    const key = Object.prototype.hasOwnProperty.call(extra, label) ? `${label}(${index + 1})` : label;
+    const key = 겹친이름.has(label) ? `${label}(${index + 1})` : label;
     extra[key] = NUMERIC_TEXT.test(text) ? Number(text) : text;
   }
   return { extra, dropped };
@@ -318,7 +333,7 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
       type: 'rows-not-saved',
       count: 저장못한행,
       message: 저장못한행 === rows.length
-        ? `학생을 알아낼 열(학번, 또는 반과 번호)이 없어 ${저장못한행}행을 한 건도 저장하지 않았습니다. 학번이나 반·번호가 있는 파일로 다시 올려 주세요.`
+        ? `학생을 알아낼 열(학번, 반과 번호, 또는 이름)이 없어 ${저장못한행}행을 한 건도 저장하지 않았습니다. 그중 하나가 있는 파일로 다시 올려 주세요.`
         : `학생을 알아내지 못한 ${저장못한행}행은 저장하지 않았습니다.`
     });
   }

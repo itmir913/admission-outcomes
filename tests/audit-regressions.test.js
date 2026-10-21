@@ -291,14 +291,18 @@ describe('3차 감사 — 자료가 사라지던 자리들', () => {
     const sheet = {
       grid: [
         ['학번', '대학명', '최종', '비고', '비고'],
-        ['20250012345', '가온대학교', '합격', '장학금', '기숙사']
+        ['20250012345', '가온대학교', '합격', '장학금', '기숙사'],
+        // 한쪽만 채워진 행. 행마다 번호를 다시 정하면 5열 값이 4열 자리에 들어앉는다
+        ['20250012346', '한결대학교', '합격', '', '통학']
       ],
       headerRows: 1,
       columns: { 'identity.hakbun': 0, univ: 1, final: 2 },
       cohortYear: 2025
     };
     const { applications } = await buildDataset([sheet]);
-    expect(Object.values(applications[0].extra)).toEqual(expect.arrayContaining(['장학금', '기숙사']));
+    expect(applications[0].extra).toEqual({ '비고(4)': '장학금', '비고(5)': '기숙사' });
+    // 4열이 빈 행에서도 5열 값은 5열 자리에 들어간다
+    expect(applications[1].extra).toEqual({ '비고(5)': '통학' });
   });
 
   it('학생을 알아낼 열이 없으면 저장하지 않았다고 알린다', async () => {

@@ -18,14 +18,28 @@ import { inferCohortYear } from './year.js';
 import { buildDataset, isIdentityLabel } from './buildRecords.js';
 
 /**
- * 학생을 알아낼 열이 있는지 (§3의 주키 재료).
+ * 학생을 알아낼 열이 있는지.
  *
  * 없으면 모든 행이 학생에 묶이지 못해 **한 건도 저장되지 않는다.** 불러오기 전에
  * 알려야 한다 — 읽은 행 수만 보고 들어온 줄 알면 빈 보관소를 보고도 모른다 (§5).
+ *
+ * **`identityKeys`와 같은 규칙으로 본다.** 주키(학번, 또는 반+번호)만 인정하면,
+ * 이름 키로 멀쩡히 식별되는 파일이 「저장할 수 없습니다」로 막힌다 — 실제로는
+ * 저장되는데 그렇게 적는 셈이고, 사람은 그 파일을 영영 들여올 수 없다 (§3의 보조 수단).
  */
+function hasPrimaryIdentity(columns = {}) {
+  const has = (key) => columns[key] !== undefined;
+  if (has('identity.hakbun')) return true;
+  return has('identity.class') && has('identity.number');
+}
+
 function hasIdentity(columns = {}) {
-  if (columns['identity.hakbun'] !== undefined) return true;
-  return columns['identity.class'] !== undefined && columns['identity.number'] !== undefined;
+  const has = (key) => columns[key] !== undefined;
+  // 주키
+  if (has('identity.hakbun')) return true;
+  if (has('identity.class') && has('identity.number')) return true;
+  // 주키를 만들 수 없을 때의 보조 수단. 이름만 있는 파일도 들여올 수 있어야 한다
+  return has('identity.name');
 }
 
 /**
@@ -58,6 +72,7 @@ function hasIdentity(columns = {}) {
  * @property {string|null} label 화면에 보일 양식 이름
  * @property {boolean} readable 분석할 수 있는 상태인지 (대학명 열이 있어야 한다)
  * @property {boolean} identifiable 학생을 알아낼 열이 있는지 (없으면 한 건도 저장되지 않는다)
+ * @property {boolean} nameOnlyIdentity 주키 없이 이름만으로 식별하는 시트인지
  * @property {number} columnCount 전체 열 수
 
 /**
@@ -86,6 +101,7 @@ export function readSheetColumns(grid, match) {
       label: match.profile.programLabel ?? match.profile.id,
       readable: columns.univ !== undefined,
       identifiable: hasIdentity(columns),
+      nameOnlyIdentity: hasIdentity(columns) && !hasPrimaryIdentity(columns),
       columnCount: Object.keys(columns).length
     };
   }
@@ -109,6 +125,7 @@ export function readSheetColumns(grid, match) {
     label: '이름으로 알아냄',
     readable: resolved.columns.univ !== undefined,
     identifiable: hasIdentity(resolved.columns),
+    nameOnlyIdentity: hasIdentity(resolved.columns) && !hasPrimaryIdentity(resolved.columns),
     columnCount: resolved.labels.length
   };
 }
@@ -334,7 +351,8 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
     warnings.push({
       type: 'sheet-empty',
       sheet: sheet.id,
-      message: `${sheet.fileName}의 ${sheet.sheetName} 시트에서 지원 기록을 한 건도 만들지 못했습니다. 이 시트가 예전에 넣어 둔 기록은 지워집니다.`
+      // 사람이 이 글을 읽는 시점에는 이미 지워져 있다. 미래형으로 적으면 막을 수 있다고 믿는다
+      message: `${sheet.fileName}의 ${sheet.sheetName} 시트에서 지원 기록을 한 건도 만들지 못했습니다. 이 시트가 예전에 넣어 둔 기록은 지웠습니다 — 머리글 줄 수나 양식이 달라졌는지 확인해 주세요.`
     });
   }
 

@@ -181,7 +181,8 @@ export async function saveDataset(db, dataset) {
       const target = await promisify(suneung.get([into, row.area]));
       /*
        * 두 쪽 다 예전에 보관된 값이라 **어느 쪽이 새것인지 알 수 없다.** 그래서
-       * 보관소의 다른 자리(「방금 올린 값이 이긴다」)와 달리 먼저 있던 값을 지킨다.
+       * 살아남는 ID(`into`)의 값을 지킨다 — ID를 고르는 규칙과 같은 규칙을 따른다.
+       * 시간 순서가 아니다. `into`는 사전순으로 앞선 sid이지 먼저 보관된 sid가 아니다.
        */
       suneung.put({ ...새값우선(row, target ?? {}), sid: into, area: row.area });
       suneung.delete([from, row.area]);
@@ -266,13 +267,27 @@ export async function saveDataset(db, dataset) {
      * 보관된 다른 시트를 숨긴다.
      */
     const 옛기록 = await promisify(files.get(file.hash));
-    files.put(옛기록 ? {
+    if (!옛기록) {
+      files.put(file);
+      continue;
+    }
+    const yearBySheet = { ...(옛기록.yearBySheet ?? {}), ...(file.yearBySheet ?? {}) };
+    /*
+     * 연도 목록은 **시트별로 확정한 값에서 뽑는다.** 합집합으로 쌓으면, 연도를
+     * 잘못 넣은 것을 알아채고 고쳐 다시 올려도 틀린 해가 기록에 영원히 남아
+     * 「현재 엑셀 파일」 패널이 있지도 않은 해를 말한다 (§2·§5).
+     */
+    const 적어둔연도 = [...new Set(Object.values(yearBySheet).filter((year) => year !== null && year !== undefined))];
+    files.put({
       ...옛기록,
       ...file,
       sheets: [...new Set([...(옛기록.sheets ?? []), ...(file.sheets ?? [])])],
-      cohortYears: [...new Set([...(옛기록.cohortYears ?? []), ...(file.cohortYears ?? [])])],
-      yearBySheet: { ...(옛기록.yearBySheet ?? {}), ...(file.yearBySheet ?? {}) }
-    } : file);
+      // 시트별 기록이 없는 옛 레코드만 합집합으로 물러난다
+      cohortYears: 적어둔연도.length > 0
+        ? 적어둔연도
+        : [...new Set([...(옛기록.cohortYears ?? []), ...(file.cohortYears ?? [])])],
+      yearBySheet
+    });
   }
 
   /*

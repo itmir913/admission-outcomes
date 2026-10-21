@@ -64,7 +64,8 @@ export function matchesFilter(row, filter) {
   if (filter.op === 'contains') {
     const needle = String(filter.text ?? '').trim().toLowerCase();
     if (needle === '') return true;
-    if (isBlank(value)) return false;
+    // 1단계의 `null`은 빈칸이 아니라 「해당 없음」이다. 표에 그렇게 적혀 있으므로 찾혀야 한다
+    if (isBlank(value) && !뜻순서[filter.key]) return false;
     return 화면글자(row, filter.key, value).toLowerCase().includes(needle);
   }
 
@@ -72,9 +73,18 @@ export function matchesFilter(row, filter) {
   // 빈 목록을 "전부 제외"로 읽으면 체크를 다 해제했을 때 화면이 갑자기 빈다
   const chosen = filter.values ?? [];
   if (chosen.length === 0) return true;
-  // 빈칸을 고를 수 있어야 한다. `null`과 `''`을 한 가지로 본다
+  // 빈칸을 선택할 수 있어야 한다. `null`과 `''`을 한 가지로 본다
   if (isBlank(value)) return chosen.some((candidate) => isBlank(candidate));
-  return chosen.some((candidate) => candidate === value || String(candidate) === String(value));
+  /*
+   * **값 목록에 적힌 글자로 견준다.**
+   *
+   * 값 목록은 화면 글자로 묶어 세는데(`facetCounts`) 거르는 쪽이 원값을 보면,
+   * 「2건」이라 적힌 줄을 눌렀을 때 1행만 남는다 — 2.345와 2.344는 표에도 목록에도
+   * 같은 2.35로 적히지만 원값은 다르다. 세는 기준과 거르는 기준은 하나여야 한다.
+   */
+  const label = valueLabel(filter.key, value);
+  return chosen.some((candidate) => candidate === value
+    || (!isBlank(candidate) && valueLabel(filter.key, candidate) === label));
 }
 
 /**
@@ -98,7 +108,8 @@ export function searchHaystack(row, keys) {
   const parts = [];
   for (const key of list) {
     const value = row[key];
-    if (isBlank(value)) continue;
+    // 뜻이 있는 열의 빈칸은 「해당 없음」처럼 화면에 글자가 적힌다. 건너뛰면 그 글자로 못 찾는다
+    if (isBlank(value) && !뜻순서[key]) continue;
     const label = 화면글자(row, key, value);
     parts.push(label.toLowerCase());
     /*

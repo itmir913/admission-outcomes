@@ -68,9 +68,9 @@ export function uploadBlockers(sheets, decisions) {
       problems.push(`${sheet.fileName}: 대학명 열을 찾지 못했습니다`);
       continue;
     }
-    // 학생을 알아낼 열이 없으면 읽은 행이 한 건도 저장되지 않는다 (§3)
+    // 학생을 알아낼 열이 하나도 없으면 읽은 행이 한 건도 저장되지 않는다 (§3)
     if (sheet.reading.identifiable === false) {
-      problems.push(`${sheet.fileName}: 학번이나 반·번호 열이 없어 저장할 수 없습니다`);
+      problems.push(`${sheet.fileName}: 학번·반·번호·이름 중 하나도 없어 저장할 수 없습니다`);
       continue;
     }
     if (decision.cohortYear === null && needsFileYear(sheet)) {
@@ -298,6 +298,17 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
             sheet.duplicate ? el('span', { class: 'tag tag-wait', text: '이미 불러온 파일' }) : null
           ])
         ]),
+
+        /*
+         * 이름만으로 식별하는 시트는 **미리 알린다.** §3이 허용하는 보조 수단이지만
+         * 동명이인이 한 사람으로 묶이고, 묶인 뒤에는 화면에서 알아볼 수 없다 (§5).
+         */
+        reading?.readable && reading.nameOnlyIdentity
+          ? el('p', {
+              class: 'mt-3 rounded-lg bg-wait-soft px-4 py-2 text-base text-wait',
+              text: '학번도 반·번호도 없어 이름만으로 학생을 가립니다. 동명이인이 있으면 한 사람으로 묶입니다.'
+            })
+          : null,
 
         sheet.duplicate
           ? el('p', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-2 text-base text-wait' }, [

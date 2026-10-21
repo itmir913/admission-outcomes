@@ -11,6 +11,7 @@
 import { el, clear, formatNumber, debounce } from './dom.js';
 import { valueLabel, isBlank, GROUP_LABEL, GROUP_ORDER, primaryGpaField } from '../analysis/registry.js';
 import { facetCounts } from '../analysis/query.js';
+import { STAGE1_FAIL_LABEL } from '../core/outcome.js';
 
 /** 처음부터 열어 두는 필터. 상담에서 가장 먼저 거는 것들이다. */
 const OPENING = ['cohortYear', 'outcome', 'univ', 'track', 'admType', 'period', 'region'];
@@ -85,11 +86,6 @@ export function createFilters({ mount, read, onChange, onClose }) {
   }
 
   // ── 값 선택 (글자·enum 열) ─────────────────────────────────────────────
-  /** 이 열이 빈칸인 행 수. 범위를 줄이면 빠지는 건수다 */
-  function 빈칸수(field, rows) {
-    return (rows ?? []).reduce((count, row) => count + (isBlank(row[field.key]) ? 1 : 0), 0);
-  }
-
   function valueBlock(field, filter, counts, redraw, rows) {
     const chosen = new Set((filter?.values ?? []).map((value) => (isBlank(value) ? null : value)));
     const needle = (localSearch.get(field.key) ?? '').trim().toLowerCase();
@@ -105,8 +101,8 @@ export function createFilters({ mount, read, onChange, onClose }) {
      * 화면에서 본 말로 목록을 찾은 사람은 그런 항목이 없다고 읽는다 (§5).
      */
     const 품은말 = (value) => (field.key === 'outcome' && value === 'none'
-      && (rows ?? []).some((row) => row['#outcome']?.label === '1단계 불합격')
-      ? '기록 없음(1단계 불합격 포함)'
+      && (rows ?? []).some((row) => row['#outcome']?.label === STAGE1_FAIL_LABEL)
+      ? `기록 없음(${STAGE1_FAIL_LABEL} 포함)`
       : valueLabel(field.key, value));
 
     const entries = [...건수.entries()]
@@ -168,7 +164,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
    * 그래서 끄는 동안에는 숫자만 제자리에서 고쳐 쓰고, 손을 떼거나(`change`)
    * 잠시 멈췄을 때만(`RANGE_SETTLE`) 확정한다.
    */
-  function rangeBlock(field, filter, rows) {
+  function rangeBlock(field, filter, 빈칸건수) {
     const low = field.range?.min ?? 0;
     const high = field.range?.max ?? 0;
     // 내신은 소수 둘째 자리까지 온다. 정수로 반올림하면 1.95와 2.04가 한 칸이 된다
@@ -255,10 +251,10 @@ export function createFilters({ mount, read, onChange, onClose }) {
        * 선택지가 없어서 다시 넣을 조작도 없으니, 내신을 적지 않은 학생이 손잡이를
        * 1px 끄는 순간 통째로 빠져 버린다. 적어도 몇 건인지는 보여야 한다 (§5).
        */
-      빈칸수(field, rows) > 0
+      빈칸건수 > 0
         ? el('p', {
             class: 'mt-1 text-base text-ink-soft',
-            text: `이 열이 빈칸인 ${빈칸수(field, rows)}건은 범위를 줄이면 함께 빠집니다.`
+            text: `이 열이 빈칸인 ${빈칸건수}건은 범위를 줄이면 함께 빠집니다.`
           })
         : null
     ]);
@@ -324,7 +320,8 @@ export function createFilters({ mount, read, onChange, onClose }) {
     // 숫자여도 값이 몇 가지뿐이면 목록에서 선택하는 편이 낫다.
     // 고3 년도·수능 등급은 다중 선택이, 내신·백분위는 범위가 자연스럽다
     const body = field.numeric && field.cardinality > SEARCHABLE_AT
-      ? rangeBlock(field, filter, rows)
+      // 같은 패널의 두 숫자가 다른 바탕 위에 서지 않도록, 빈칸 건수도 값 목록과 같은 셈을 쓴다
+      ? rangeBlock(field, filter, facetCounts(rows, filters, field.key, { search }).get(null) ?? 0)
       : valueBlock(field, filter, facetCounts(rows, filters, field.key, { search }), redraw, rows);
 
     // 팝오버에는 제목줄이 따로 있다. 여기서 또 그리면 같은 제목이 두 번 나온다
