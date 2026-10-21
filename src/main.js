@@ -84,6 +84,9 @@ const table = createTable({
     const found = state.view.filters.find((filter) => filter.key === key && filter.op === 'contains');
     return found?.text ?? '';
   },
+  // 글자 검색은 칸에 그대로 보이지만, 값 목록으로 건 필터는 단추 말고 알릴 자리가 없다
+  columnFiltered: (key) =>
+    state.view.filters.some((filter) => filter.key === key && filter.op !== 'contains'),
   onColumnFilter: (key, anchor) => 팝오버열기(key, anchor),
   onColumnSearch: (key, text) => {
     const rest = state.view.filters.filter(

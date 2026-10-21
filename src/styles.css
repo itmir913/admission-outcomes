@@ -300,8 +300,15 @@
   @media (hover: hover) {
     .col-search button:hover { @apply bg-canvas text-ink; }
   }
+  /* 값 필터가 걸린 열. 채워 칠해 두어야 여덟 열 건너편에서도 보인다 */
+  .col-search button[data-filtered="true"] {
+    @apply bg-brand font-bold text-white;
+  }
   .col-search button[aria-expanded="true"] {
     @apply bg-brand-soft text-brand;
+  }
+  .col-search button[aria-expanded="true"][data-filtered="true"] {
+    @apply bg-brand text-white;
   }
 
   /*

@@ -82,7 +82,7 @@ export function cellText(key, value) {
  * @param {(row: object) => void} [options.onRowOpen]
  * @param {(state: object) => void} [options.onStateChange] 정렬·너비가 바뀔 때
  */
-export function createTable({ scroller, colgroup, headRow, searchRow, body, empty, onRowOpen, onStateChange, onColumnSearch, columnSearch = () => '', onColumnFilter }) {
+export function createTable({ scroller, colgroup, headRow, searchRow, body, empty, onRowOpen, onStateChange, onColumnSearch, columnSearch = () => '', columnFiltered = () => false, onColumnFilter }) {
   /** @type {object[]} */
   let rows = [];
   /** @type {Map<string, object>} */
@@ -220,9 +220,17 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
             text: '≡',
             attrs: {
               type: 'button',
-              'aria-label': `${field?.label ?? key} 값 목록`,
+              /*
+               * **걸린 열은 단추가 말한다.** 값 목록으로 거르면 머리줄에는 아무 흔적이
+               * 남지 않아, 왜 행이 줄었는지 알려면 위쪽 칩줄까지 올라가야 했다.
+               * 색만으로 알리지 않도록 읽어 주는 이름에도 적는다 (§9).
+               */
+              'aria-label': columnFiltered(key)
+                ? `${field?.label ?? key} 값 목록 — 지금 걸려 있음`
+                : `${field?.label ?? key} 값 목록`,
+              'data-filtered': columnFiltered(key) ? 'true' : null,
               'aria-expanded': String(openFilterKey === key),
-              title: '값 목록에서 선택'
+              title: columnFiltered(key) ? '이 열에 값 필터가 걸려 있습니다' : '값 목록에서 선택'
             },
             on: {
               click: (event) => {
