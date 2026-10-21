@@ -316,8 +316,12 @@ export function resolveColumns(grid, headerRows = 1, sampleRows = 200) {
     if (ratio === null || ratio >= FIT_FLOOR) continue;
     columns.delete(key);
     taken.delete(index);
-    why.set(index, `${labels[index].label}의 값이 ${range.label}에 맞지 않아 ${key}로 보지 않았습니다`);
-    notes.push(`${labels[index].label} 열은 값이 ${range.label} 밖이라 ${key}로 배정하지 않았습니다.`);
+    /*
+     * 사람이 읽는 문장에 내부 키(`suneung.국어.grade`)를 적지 않는다. 읽는 쪽에는
+     * 뜻도 통하지 않고, 「비고를 수능 등급으로 보려 했다」처럼 엉뚱하게 들린다.
+     */
+    why.set(index, `${labels[index].label}의 값이 ${range.label} 범위에 맞지 않아 그 자리로 보지 않았습니다`);
+    notes.push(`${labels[index].label} 열은 값이 ${range.label} 범위 밖이라 해석하지 않고 원본 그대로 두었습니다.`);
   }
 
   // 4. `학년` 열에 학년(3)이 아니라 연도(2026)가 들어 있는 양식이 있다 (§3의 함정).

@@ -98,8 +98,19 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const 건수 = new Map(counts);
     for (const value of chosen) if (!건수.has(value)) 건수.set(value, 0);
 
+    /*
+     * **「기록 없음」이 무엇을 품고 있는지 적는다.**
+     *
+     * 표에는 「1단계 불합격」이라 적힌 건이 값 목록에서는 「기록 없음」에 섞여 있다.
+     * 화면에서 본 말로 목록을 찾은 사람은 그런 항목이 없다고 읽는다 (§5).
+     */
+    const 품은말 = (value) => (field.key === 'outcome' && value === 'none'
+      && (rows ?? []).some((row) => row['#outcome']?.label === '1단계 불합격')
+      ? '기록 없음(1단계 불합격 포함)'
+      : valueLabel(field.key, value));
+
     const entries = [...건수.entries()]
-      .map(([value, count]) => ({ value, count, label: valueLabel(field.key, value) }))
+      .map(([value, count]) => ({ value, count, label: 품은말(value) }))
       .filter((entry) => entry.count > 0 || chosen.has(entry.value))
       .filter((entry) => !needle || entry.label.toLowerCase().includes(needle))
       .sort(entryOrder(field));
