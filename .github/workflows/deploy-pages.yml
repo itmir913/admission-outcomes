@@ -16,10 +16,9 @@
 
 name: Deploy to GitHub Pages
 
-# **자동 실행을 멈춰 두었다.** 이 저장소는 비공개이고, 무료 플랜에서는 비공개
-# 저장소에 Pages를 켤 수 없다("Your current plan does not support GitHub Pages
-# for this repository"). 배포할 곳이 정해지면 push 방아쇠를 되살린다.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 # 배포가 겹치지 않게 한 번에 하나만 돌린다.
