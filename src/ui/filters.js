@@ -196,7 +196,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
         [lowSlider, shown.min], [highSlider, shown.max]]) {
         if (node !== skip) node.value = String(value);
       }
-      echo.textContent = `${formatNumber(lowered)} ~ ${formatNumber(raised)} · 자료 범위 ${formatNumber(low)} ~ ${formatNumber(high)}`;
+      echo.textContent = `${formatNumber(lowered)} ~ ${formatNumber(raised)} · 데이터 범위 ${formatNumber(low)} ~ ${formatNumber(high)}`;
     }
 
     /** @param {HTMLInputElement} node @param {'min'|'max'} side */

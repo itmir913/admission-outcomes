@@ -612,7 +612,7 @@ pick('#파일열기').addEventListener('click', async () => {
 });
 
 async function wipe() {
-  if (!confirm('불러온 자료를 모두 지웁니다. 되돌릴 수 없습니다.\n\n원본 엑셀은 그대로 있으니 다시 불러올 수 있습니다. 계속할까요?')) return;
+  if (!confirm('불러온 데이터를 모두 지웁니다. 되돌릴 수 없습니다.\n\n원본 엑셀은 그대로 있으니 다시 불러올 수 있습니다. 계속할까요?')) return;
   busy(true);
   await clearAll(state.db);
   forgetView();
@@ -646,7 +646,7 @@ async function start() {
   } catch (error) {
     dom.시작화면.prepend(el('p', {
       class: 'card mb-6 border-fail/40 bg-fail-soft px-5 py-4 text-base text-fail',
-      text: error?.message ?? '이 브라우저에서는 자료를 보관할 수 없습니다.'
+      text: error?.message ?? '이 브라우저에서는 데이터를 보관할 수 없습니다.'
     }));
     refresh();
     return;

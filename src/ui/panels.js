@@ -74,7 +74,7 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
     onClose: () => dialog.close(),
     footer: el('div', { class: 'flex w-full items-center gap-3' }, [
       el('button', {
-        class: 'btn btn-danger mr-auto', text: '자료 초기화', attrs: { type: 'button' },
+        class: 'btn btn-danger mr-auto', text: '데이터 초기화', attrs: { type: 'button' },
         on: { click: onClearAll }
       }),
       el('button', { class: 'btn', text: '닫기', attrs: { type: 'button' }, on: { click: () => dialog.close() } }),
@@ -213,7 +213,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
       ])
     ]),
     el('section', {}, [
-      el('h3', { class: 'text-lg font-bold tracking-tight', text: '자료에 있는 열' }),
+      el('h3', { class: 'text-lg font-bold tracking-tight', text: '데이터에 있는 열' }),
       el('p', { class: 'text-base text-ink-soft', text: '누르면 켜지고 꺼집니다. 해석하지 못한 열도 그대로 쓸 수 있습니다.' }),
       pickList
     ])
