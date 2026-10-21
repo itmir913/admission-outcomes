@@ -272,6 +272,14 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
 
     file.sheets.push(sheet.sheetName);
     if (!file.cohortYears.includes(cohortYear)) file.cohortYears.push(cohortYear);
+    /*
+     * **시트마다 확정한 연도를 따로 적어 둔다.**
+     *
+     * 파일 단위 목록(`cohortYears`)만 두면 시트가 둘이고 해가 다른 파일에서 「연도가
+     * 섞였다」로 보여, 다시 올릴 때 두 시트 다 빈칸이 된다. 또박또박 적어 둔 값을
+     * 두고 사람에게 다시 치게 하는 셈이다 (§2).
+     */
+    file.yearBySheet = { ...(file.yearBySheet ?? {}), [sheet.sheetName]: cohortYear };
     files.set(sheet.fileHash, file);
   }
 

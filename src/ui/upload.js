@@ -99,6 +99,9 @@ export function chosenCount(sheets, decisions) {
  * @returns {number|null}
  */
 function 지난연도(sheet) {
+  // 시트마다 적어 둔 값이 있으면 그것이 가장 정확하다
+  const perSheet = sheet?.duplicate?.yearBySheet?.[sheet.sheetName];
+  if (typeof perSheet === 'number') return perSheet;
   const years = sheet?.duplicate?.cohortYears ?? [];
   return years.length === 1 ? years[0] : null;
 }
@@ -272,7 +275,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         sheet.duplicate
           ? el('p', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-2 text-base text-wait' }, [
               `같은 내용을 이미 불러왔습니다. 다시 넣으면 그 파일이 넣었던 기록을 갈아 끼웁니다 — 건수가 두 배로 늘지는 않습니다.${
-                지난연도(sheet) === null ? '' : ` 고3 년도는 지난번에 정한 ${지난연도(sheet)}으로 채워 두었습니다.`}`
+                지난연도(sheet) === null ? '' : ` 고3 년도는 지난번에 정한 ${지난연도(sheet)}년으로 채워 두었습니다.`}`
             ])
           : null,
 
