@@ -235,7 +235,13 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const filter = filters.find((item) => item.key === field.key);
     const active = Boolean(filter);
 
-    const head = el('div', { class: 'flex min-h-9 items-center gap-1' }, [
+    /*
+     * 제목과 두 단추 사이를 띄운다. gap-1(4px)로 붙여 두었더니 「해제」와 「✕」가
+     * 한 덩어리로 보여, 어느 쪽이 값만 지우고 어느 쪽이 열을 빼는지 눈으로 구분되지
+     * 않았다. 카드 여백을 늘리는 대신 단추 사이만 벌린다 — 여백을 늘리면 좁은
+     * 사이드바에서 값 목록이 그만큼 줄어든다.
+     */
+    const head = el('div', { class: 'flex min-h-9 items-center gap-2' }, [
       el('h3', { class: 'min-w-0 flex-1 truncate text-base font-semibold', text: field.label, attrs: { title: field.label } }),
       /*
        * 두 단추가 하는 일이 다르다. 하나는 선택한 값을 해제하고, 하나는 이 열을 목록에서 뺀다.
@@ -245,7 +251,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
        * 손가락 밑에서 밀려난다.
        */
       el('button', {
-        class: `btn btn-sm px-2 text-base ${active
+        class: `btn btn-sm px-2.5 text-base ${active
           ? 'border-brand/30 bg-brand-soft text-brand'
           : 'invisible pointer-events-none border-transparent'}`,
         text: '해제',
