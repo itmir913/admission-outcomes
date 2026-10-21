@@ -131,7 +131,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         submitButton.disabled = true;
         submitButton.textContent = '불러오는 중…';
         cancelButton.disabled = true;
-        footerNote.textContent = '불러오고 있습니다. 끝나면 이 창이 닫힙니다.';
+        footerNote.textContent = '불러오는 중입니다. 끝나면 이 창이 닫힙니다.';
         footerNote.className = 'mr-auto text-base text-ink-soft';
         return;
       }
@@ -236,7 +236,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
 
         !reading?.readable
           ? el('p', { class: 'mt-3 rounded-lg bg-fail-soft px-4 py-2 text-base text-fail' }, [
-              '대학명 열을 찾지 못해 체크를 꺼 두었습니다. 나머지만 불러오면 됩니다. 대학 이름이 든 열의 머리글을 「대학명」으로 고쳐 다시 올리면 해석됩니다.'
+              '대학명 열을 찾지 못해 꺼 두었습니다. 나머지만 불러와도 됩니다. 대학 이름이 든 열의 머리글을 「대학명」으로 고치면 읽어 냅니다.'
             ])
           : null,
 
@@ -251,7 +251,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
               reading.unresolved.length > 0
                 ? el('p', {
                     class: 'mt-1 text-base',
-                    text: `해석하지 못한 ${reading.unresolved.length}개는 원본 이름 그대로 보존합니다 — ${reading.unresolved.slice(0, 6).map((item) => item.label).join(', ')}${reading.unresolved.length > 6 ? ' …' : ''}`
+                    text: `해석하지 못한 ${reading.unresolved.length}개는 원본 이름 그대로 둡니다 — ${reading.unresolved.slice(0, 6).map((item) => item.label).join(', ')}${reading.unresolved.length > 6 ? ' …' : ''}`
                   })
                 : null,
               ...reading.notes.map((note) => el('p', { class: 'mt-1 text-base', text: note }))
@@ -321,7 +321,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
 
     openDialog(dialog, dialogFrame({
       title: '불러올 자료를 확인해 주세요',
-      note: '고3 년도는 사람이 확정합니다. 아래 값은 파일에서 읽어 낸 제안일 뿐입니다.',
+      note: '아래 고3 년도는 엑셀 파일에서 불러온 값입니다. 고3 실제 연도인지 학년도인지 확인해 주세요.',
       body,
       onClose: () => finish(false),
       footer: el('div', { class: 'flex w-full items-center gap-3' }, [

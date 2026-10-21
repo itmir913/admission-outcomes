@@ -62,7 +62,7 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
       el('p', {}, [
         '이 보관소는 ',
         el('strong', { class: 'text-ink', text: '원본이 아니라 캐시' }),
-        '입니다. 시크릿 모드·캐시 삭제·PC 교체로 사라집니다. 원본 엑셀은 학교가 보관해 주세요.'
+        '입니다. 시크릿 모드·캐시 삭제·PC 교체로 사라집니다. 원본 엑셀은 따로 보관해 주세요.'
       ])
     ])
   ]);

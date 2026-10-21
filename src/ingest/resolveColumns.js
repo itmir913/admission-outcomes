@@ -314,7 +314,7 @@ export function resolveColumns(grid, headerRows = 1, sampleRows = 200) {
       columns.delete('schoolYear');
       columns.set('sourceYear', schoolYearAt);
       taken.set(schoolYearAt, 'sourceYear');
-      notes.push(`'${labels[schoolYearAt].label}' 열에 학년이 아니라 연도가 들어 있어 연도 열로 보았습니다. 고3 년도인지 학년도인지는 사람이 정합니다.`);
+      notes.push(`'${labels[schoolYearAt].label}' 열에 학년이 아니라 연도가 들어 있어 연도 열로 보았습니다. 고3 실제 연도인지 학년도인지 확인해 주세요.`);
     }
   }
 
