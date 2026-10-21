@@ -166,9 +166,11 @@ function readExtra(row, columns, labels) {
      * 번호를 붙여 보관하면 그 이름이 보관소와 화면에 그대로 남는다 — §1이 막는 그 길이
      * 이름 없는 열로 다시 열린다. 보존(§4)과 개인정보(§1)가 부딪히면 §1이 이긴다.
      *
-     * 대신 **소리 없이 버리지는 않는다.** 몇 번째 열을 버렸는지 사람에게 알린다 (§5).
+     * 버렸다고 **알리지는 않는다.** 이름이 없으니 무엇을 버렸는지 알려 줄 말이 없고,
+     * 「25번째 열」은 사람이 할 수 있는 일이 없는 알림이다. 쓸모없는 알림이 쌓이면
+     * 옆에 선 진짜 알림까지 함께 무시된다.
      */
-    if (label === '') { dropped.push(`${index + 1}번째 열(머리글 없음)`); continue; }
+    if (label === '') continue;
     if (isIdentityLabel(label)) { dropped.push(label); continue; }
     const text = String(value).trim();
     /*
@@ -259,23 +261,11 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
   }
 
   if (droppedIdentityLabels.size > 0) {
-    // 머리글이 없어 신원 여부를 판정할 수 없는 열과, 이름으로 신원 열이라 본 것을 나누어 적는다
-    const 이름없음 = [...droppedIdentityLabels].filter((label) => label.endsWith('(머리글 없음)'));
-    const 신원 = [...droppedIdentityLabels].filter((label) => !label.endsWith('(머리글 없음)'));
-    if (신원.length > 0) {
-      warnings.push({
-        type: 'identity-column-dropped',
-        labels: 신원,
-        message: `개인정보로 보이는 열(${신원.join(', ')})은 보관하지 않고 버렸습니다.`
-      });
-    }
-    if (이름없음.length > 0) {
-      warnings.push({
-        type: 'unnamed-column-dropped',
-        labels: 이름없음,
-        message: `머리글이 없는 열(${이름없음.join(', ')})은 보관하지 않았습니다. 그 열에 무엇이 들었는지 알 수 없어 개인정보일 수 있습니다 — 머리글을 적어 다시 올리면 함께 읽습니다.`
-      });
-    }
+    warnings.push({
+      type: 'identity-column-dropped',
+      labels: [...droppedIdentityLabels],
+      message: `개인정보로 보이는 열(${[...droppedIdentityLabels].join(', ')})은 보관하지 않고 버렸습니다.`
+    });
   }
 
   const { sids, students: identified, merges, warnings: idWarnings } = await assignStudentIds(
