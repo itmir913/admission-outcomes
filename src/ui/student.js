@@ -281,7 +281,7 @@ export function openStudent(dialog, { sid, rows }) {
                 el('summary', {
                   // 화살표는 브라우저 기본 표식을 그대로 쓴다. 접힌 것인지 펴진 것인지를
                   // 글귀만으로 알리면, 누를 수 있다는 사실 자체가 드러나지 않는다
-                  class: 'cursor-pointer rounded-lg border border-line bg-surface px-4 py-2 pl-7 text-base font-medium hover:bg-brand-soft',
+                  class: 'cursor-pointer rounded-lg border border-line bg-surface py-2 pl-2 pr-4 text-base font-medium marker:text-ink-soft hover:bg-brand-soft',
                   text: `반영비를 다르게 계산한 ${접을내신.length}개 더보기`
                 }),
                 el('div', { class: 'mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5' },
