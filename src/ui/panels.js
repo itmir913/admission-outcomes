@@ -26,7 +26,7 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
   const body = el('div', {}, [
     files.length === 0
       ? el('p', { class: 'py-8 text-center text-lg text-ink-soft', text: '불러온 파일이 없습니다.' })
-      : el('ul', { class: 'space-y-3' }, files.map((file) => el('li', { class: 'card flex flex-wrap items-center gap-3 px-5 py-4' }, [
+      : el('ul', { class: 'space-y-3' }, files.map((file) => el('li', { class: 'card flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center' }, [
           el('div', { class: 'min-w-0 flex-1' }, [
             el('p', { class: 'truncate text-lg font-semibold', text: file.name, attrs: { title: file.name } }),
             el('p', {
@@ -43,8 +43,12 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
               ].filter(Boolean).join(' · ')
             })
           ]),
+          /*
+           * 좁은 화면에서는 단추가 한 줄을 통째로 쓴다. 옆자리를 지키면 파일 이름이
+           * 두세 글자 폭으로 눌려 「예시_…」만 남고, 무엇을 빼는 단추인지 알 수 없다.
+           */
           el('button', {
-            class: 'btn btn-sm btn-danger', text: '이 파일 제외',
+            class: 'btn btn-sm btn-danger w-full shrink-0 sm:w-auto', text: '이 파일 제외',
             attrs: { type: 'button' },
             on: {
               click: () => {
@@ -72,9 +76,10 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
     note: `${files.length}개`,
     body,
     onClose: () => dialog.close(),
-    footer: el('div', { class: 'flex w-full items-center gap-3' }, [
+    // 좁은 화면에서 셋을 한 줄에 두면 「닫기」가 두 글자로 접힌다. 한 줄씩 쌓는다
+    footer: el('div', { class: 'flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-3' }, [
       el('button', {
-        class: 'btn btn-danger mr-auto', text: '데이터 초기화', attrs: { type: 'button' },
+        class: 'btn btn-danger sm:mr-auto', text: '데이터 초기화', attrs: { type: 'button' },
         on: { click: onClearAll }
       }),
       el('button', { class: 'btn', text: '닫기', attrs: { type: 'button' }, on: { click: () => dialog.close() } }),
