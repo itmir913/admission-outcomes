@@ -88,6 +88,19 @@
    */
   body {
     @apply flex h-screen flex-col overflow-hidden bg-canvas text-ink font-sans antialiased;
+
+    /*
+     * **한글은 어절 단위로 끊는다.**
+     *
+     * 브라우저 기본값은 한글을 글자 단위로 끊어서 「불러옵니다」가 「불/러옵니다」로
+     * 갈라진다. 읽는 눈이 거기서 한 번 멈춘다. keep-all 이면 띄어쓰기에서만 끊는다.
+     *
+     * **둘을 반드시 함께 쓴다.** keep-all 만 두면 띄어쓰기 없는 긴 이름
+     * (「아주아주길고긴이름을가진국립대학교」, 엑셀에서 그대로 들어온다)이 끊을 자리를
+     * 잃고 상자를 뚫고 나간다. 어쩔 수 없을 때는 낱말 안에서라도 끊게 열어 둔다.
+     */
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   /* 키보드로 다니는 사람에게 지금 어디인지 늘 보이게 한다 */
@@ -157,7 +170,7 @@
    * 두 줄이 되는 편이 낫다. 지우는 ✕ 는 끝에 붙어 함께 접힌다.
    */
   .chip {
-    @apply inline-flex min-h-9 shrink-0 items-center gap-2 break-words rounded-md
+    @apply inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md
       border border-brand/25 bg-brand-soft px-3 py-1 text-base font-medium text-brand;
     max-width: 100%;
   }

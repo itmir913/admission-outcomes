@@ -48,16 +48,17 @@ function 찾기(글, 정규식) {
 
 describe('긴 값이 상자를 뚫지 않는다', () => {
   /*
-   * `break-keep`은 낱말 안에서 끊지 말라는 뜻이다. 띄어쓰기가 있는 글에서는 보기
-   * 좋지만, 붙여 쓴 이름 하나가 상자보다 길면 끊을 자리가 아예 없어진다.
-   * 끊어서 못나 보이는 쪽이, 잘려서 안 보이는 쪽보다 낫다.
+   * 한글을 어절 단위로 끊으려면 `word-break: keep-all` 이 필요하고, 그것만 두면
+   * 띄어쓰기 없는 긴 이름이 끊을 자리를 잃는다. **둘은 반드시 짝으로 선다.**
+   * 하나만 남으면 글이 글자 단위로 끊기거나(읽기 나쁨) 상자를 뚫는다(보이지 않음).
    */
-  it('break-keep 으로 끊을 길을 막지 않는다', () => {
-    const offenders = [];
-    for (const { 경로, 글 } of 파일()) {
-      for (const hit of 찾기(글, /\bbreak-keep\b/)) offenders.push(`${경로}:${hit.line} ${hit.text}`);
-    }
-    expect(offenders).toEqual([]);
+  it('어절 단위 줄바꿈과 비상구가 짝으로 서 있다', () => {
+    const css = readFileSync(join(ROOT, 'src/styles.css'), 'utf8');
+    const start = css.indexOf('  body {');
+    const body = start < 0 ? '' : css.slice(start, css.indexOf('\n  }', start));
+    expect(body, 'body 규칙을 찾지 못했다').not.toBe('');
+    expect(body).toMatch(/word-break:\s*keep-all/);
+    expect(body).toMatch(/overflow-wrap:\s*(anywhere|break-word)/);
   });
 
   /*
@@ -68,7 +69,6 @@ describe('긴 값이 상자를 뚫지 않는다', () => {
     const css = readFileSync(join(ROOT, 'src/styles.css'), 'utf8');
     const 블록 = /\.chip \{[\s\S]*?\n {2}\}/.exec(css)?.[0] ?? '';
     expect(블록, '.chip 규칙을 찾지 못했다').not.toBe('');
-    expect(블록).toMatch(/\bbreak-words\b/);
     expect(블록).toMatch(/max-width:\s*100%/);
     expect(블록).not.toMatch(/\bwhitespace-nowrap\b/);
   });
@@ -91,23 +91,17 @@ describe('긴 값이 상자를 뚫지 않는다', () => {
   });
 
   /*
-   * 엑셀 값을 그대로 넣는 자리는 **말줄임(truncate)이나 줄바꿈(break-words) 중
-   * 하나**를 달고 있어야 한다. 둘 다 없으면 긴 값이 상자를 밀어낸다.
-   *
-   * 값이 들어가는 자리를 기계가 다 알 수는 없으므로, 이 검사가 보는 것은
-   * **그런 자리로 이미 밝혀진 곳**뿐이다. 새로 생기는 자리는 사람이 여기에 더한다.
+   * **지역 규칙이 전역 비상구를 덮어쓰지 않게 한다.** `break-words`(overflow-wrap:
+   * break-word)는 body 의 `anywhere` 보다 약하다. 끊을 자리가 없는 긴 이름 앞에서
+   * 상자 너비를 다시 글자 길이에 맞추므로, 적어 두면 오히려 뚫린다.
    */
-  it('사용자 값이 든 줄은 말줄임이나 줄바꿈을 단다', () => {
-    const student = readFileSync(join(ROOT, 'src/ui/student.js'), 'utf8');
-    const 값자리 = [
-      /el\('h4', \{ class: '([^']*)'[^}]*row\.univ/,
-      /el\('p', \{ class: '([^']*)'[^}]*row\.dept/
-    ];
+  it('더 약한 줄바꿈 규칙으로 전역 설정을 덮지 않는다', () => {
     const offenders = [];
-    for (const 정규식 of 값자리) {
-      const found = 정규식.exec(student);
-      if (!found) { offenders.push(`자리를 찾지 못했다: ${정규식}`); continue; }
-      if (!/\b(truncate|break-words)\b/.test(found[1])) offenders.push(`끊을 길이 없다: ${found[1]}`);
+    for (const { 경로, 글 } of 파일()) {
+      if (경로.endsWith('tests/overflow.test.js')) continue;
+      // 주석에서 그 이름을 말하는 것은 괜찮다. 클래스로 적힌 것만 본다
+      const 클래스 = /(class[:=] *["'`][^"'`]*|@apply[^;]*)break-words/;
+      for (const hit of 찾기(글, 클래스)) offenders.push(`${경로}:${hit.line} ${hit.text}`);
     }
     expect(offenders).toEqual([]);
   });

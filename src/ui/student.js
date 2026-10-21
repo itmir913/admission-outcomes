@@ -123,13 +123,15 @@ function applicationCard(row) {
        * 대학이고 어디부터가 학과인지는 가운뎃줄이 나눈다.
        */
       el('div', { class: 'mt-1 flex flex-wrap items-baseline gap-x-2 text-lg' }, [
-        el('h4', { class: 'break-words font-bold', text: String(row.univ ?? '(대학 미상)') }),
+        el('h4', { class: 'font-bold', text: String(row.univ ?? '(대학 미상)') }),
         isBlank(row.dept) ? null : el('span', { class: 'text-line', attrs: { 'aria-hidden': 'true' }, text: '|' }),
         /*
          * 말줄임하지 않는다. 학과 이름의 끝자락이 어느 전공인지를 말해 주는 일이 잦다.
-         * **낱말 중간에서도 끊는다** — 띄어쓰기 없는 긴 이름은 끊지 않으면 상자를 뚫고 나간다.
+         * 낱말 중간에서 끊는 일은 body 의 `overflow-wrap: anywhere` 가 맡는다. 여기에
+         * `break-words` 를 따로 적었더니 오히려 그 규칙을 덮어써서, 띄어쓰기 없는 긴
+         * 이름이 다시 상자를 뚫었다 — 덮어쓰는 쪽이 더 약한 규칙이었다.
          */
-        isBlank(row.dept) ? null : el('p', { class: 'break-words font-medium text-ink-soft', text: String(row.dept) })
+        isBlank(row.dept) ? null : el('p', { class: 'font-medium text-ink-soft', text: String(row.dept) })
       ].filter(Boolean)),
 
       el('dl', { class: 'mt-2 grid grid-cols-2 gap-x-4 gap-y-2' }, [
