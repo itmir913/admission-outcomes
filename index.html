@@ -58,18 +58,23 @@
     <p id="요약" class="hidden min-w-0 truncate text-base text-ink-soft sm:block"></p>
 
     <div class="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-      <button type="button" id="파일열기" class="btn btn-sm">현재 엑셀 파일</button>
+      <!--
+        좁은 화면에서는 **이름을 줄인다.** 넷을 한 줄에 세우면 320px에서 글자가
+        잘려 나가는데, §1 이 늘 보이라고 못 박은 것은 이 둘이다. 줄이는 것은
+        이름이지 단추가 아니다.
+      -->
+      <button type="button" id="파일열기" class="btn btn-sm"><span class="hidden sm:inline">현재 </span>엑셀 파일</button>
       <!-- 「전체 지우기」는 화면 상단에 늘 보인다. 설정 깊숙이 숨기지 않는다 (§1) -->
-      <button type="button" id="전체지우기" class="btn btn-sm btn-danger">데이터 초기화</button>
+      <button type="button" id="전체지우기" class="btn btn-sm btn-danger"><span class="hidden sm:inline">데이터 </span>초기화</button>
       <!--
         오프라인 꾸러미. **고정 태그 `offline`을 가리킨다** — 판이 올라가도 주소가
         그대로라 이 줄을 다시 고칠 일이 없다. 내려받는 것은 이 화면과 같은 단일
         HTML 한 장이고, 그 안에 코드와 스타일이 전부 들어 있다.
       -->
-      <a class="btn btn-sm btn-brand no-print px-2 sm:px-4" id="오프라인받기"
+      <a class="btn btn-sm btn-brand no-print hidden px-2 sm:inline-flex sm:px-4" id="오프라인받기"
          href="https://github.com/itmir913/admission-outcomes/releases/download/offline/admission-outcomes-offline.zip"
          target="_blank" rel="noopener noreferrer"
-         title="인터넷 없는 곳에서 쓸 수 있는 파일 한 장을 zip으로 내려받습니다">오프라인<span class="hidden sm:inline"> 버전</span></a>
+         title="인터넷 없는 곳에서 쓸 수 있는 파일 한 장을 zip으로 내려받습니다">오프라인 버전</a>
     </div>
   </header>
 
@@ -141,6 +146,18 @@
       </div>
 
       <!--
+        머리줄에서 「오프라인 버전」을 감춘 좁은 화면에서는 **여기가 그 길이다.**
+        단추 넷을 한 줄에 세울 수 없어 하나를 내렸고, 앱을 챙겨 가는 일은
+        처음 들어왔을 때 하는 일이라 시작 화면이 제자리다.
+      -->
+      <p class="text-center text-base text-ink-soft sm:hidden">
+        인터넷이 없는 곳에서 쓰시려면
+        <a class="font-semibold text-brand underline underline-offset-2"
+           href="https://github.com/itmir913/admission-outcomes/releases/download/offline/admission-outcomes-offline.zip"
+           target="_blank" rel="noopener noreferrer">오프라인 버전 내려받기</a>
+      </p>
+
+      <!--
         예시 양식은 **투하 영역 밖에, 제 카드로 둔다.** 그 상자는 「내 파일을 넣는 곳」이고
         이것은 반대 방향이라, 안에 두면 「파일 선택」과 헷갈린다. 글줄로만 두었더니
         이번에는 투하 영역에 딸린 각주처럼 보여, 나란히 선 카드로 세운다.
@@ -179,10 +196,15 @@
         읽을 것 끝에 자연스럽게 따라오게 한다.
       -->
       <footer class="no-print border-t border-line pt-5 lg:col-span-2 text-center text-base text-ink-soft">
-        <p>
+        <!--
+          **줄이 접히면 가운뎃점을 지운다.** 글줄로 두었더니 좁은 화면에서 첫 줄 끝에
+          점만 덩그러니 남아, 두 줄이 서로 어긋나 보였다. 격자로 세워 줄마다 가운데로
+          모으고, 점은 한 줄에 다 설 때만 보인다.
+        -->
+        <p class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
           <a class="font-medium text-brand underline underline-offset-2 hover:text-brand/80"
              href="https://github.com/itmir913/admission-outcomes" target="_blank" rel="noopener noreferrer">GitHub 저장소</a>
-          <span class="px-2 text-line" aria-hidden="true">·</span>
+          <span class="hidden text-line sm:inline" aria-hidden="true">·</span>
           <a class="font-medium text-brand underline underline-offset-2 hover:text-brand/80"
              href="mailto:hello@luminousky.com">hello@luminousky.com</a>
         </p>
