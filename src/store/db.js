@@ -186,11 +186,24 @@ export async function saveDataset(db, dataset) {
   }
   // 같은 파일을 다시 올리면 그 파일이 넣었던 기록을 먼저 걷어낸다.
   // 걷어내지 않으면 재업로드마다 지원 건이 두 배로 쌓인다
+  /*
+   * **시트 단위로 걷어낸다.**
+   *
+   * 파일 하나를 통째로 지우면, 시트 두 장짜리 파일에서 한 장만 빼고 다시 올렸을 때
+   * 뺀 시트가 넣었던 기록까지 사라진다. 화면은 「그 파일이 넣었던 기록을 갈아 끼웁니다」
+   * 라고만 알리므로 사람은 한 장이 사라진 것을 모른다. 이번에 다시 넣는 시트만 걷는다.
+   */
+  const incomingSheets = new Set(
+    (dataset.applications ?? [])
+      .filter((row) => row.fileHash)
+      .map((row) => `${row.fileHash}\u001f${row.sourceSheet ?? ''}`)
+  );
   const incomingFiles = new Set(
     (dataset.applications ?? []).map((row) => row.fileHash).filter(Boolean)
   );
   for (const fileHash of incomingFiles) {
     for (const old of await promisify(applications.index('fileHash').getAll(fileHash))) {
+      if (!incomingSheets.has(`${old.fileHash}\u001f${old.sourceSheet ?? ''}`)) continue;
       applications.delete(old.id);
     }
   }
