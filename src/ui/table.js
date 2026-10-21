@@ -31,7 +31,7 @@ export function suggestWidth(field) {
   // 익명 ID는 `2025-A3F2-7K9M` 꼴이라 14글자다. 줄이면 주키가 말줄임표로 끝난다
   if (field.key === 'sid') return 182;
   if (field.key === 'univ' || field.key === 'dept' || field.key === 'admName') return 200;
-  // 정렬 배지(①)와 화살표가 이름 옆에 붙는다. 100px면 「고3 년도」가 「고…」로 잘린다
+  // 정렬 화살표가 이름 옆에 붙는다. 100px면 「고3 년도」가 「고…」로 잘린다
   if (field.group === 'gpa' || field.type === 'year') return 120;
   if (field.numeric) return 110;
   return DEFAULT_WIDTH;
@@ -60,8 +60,6 @@ export function visibleWindow(scrollTop, viewportHeight, rowCount) {
   };
 }
 
-/** 정렬 순번 배지. 1·2·3위를 눈으로 세게 한다. */
-const ORDER_BADGE = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 
 /** 셀 하나를 화면 글자로. */
 export function cellText(key, value) {
@@ -158,11 +156,14 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
       const pinned = index < state.pinned;
 
       const label = el('span', { class: 'truncate', text: field?.label ?? key });
+      /*
+       * 머리줄에는 **화살표만** 둔다.
+       *
+       * 몇째로 정렬됐는지는 표 위 정렬 칩줄이 숫자로 적고 있다. 여기에 ①②③을
+       * 겹쳐 적었더니 같은 말이 두 번일 뿐 아니라, 동그라미 숫자가 열다섯까지밖에
+       * 없어 열이 더 많은 표에서는 적을 글자가 떨어졌다.
+       */
       const marks = el('span', { class: 'sort-mark shrink-0', text: sort ? (sort.dir === 'asc' ? '▲' : '▼') : '' });
-      // 여러 열로 정렬 중일 때만 순번을 붙인다. 하나뿐이면 ①이 군더더기다
-      const badge = state.sorts.length > 1 && rank !== -1
-        ? el('span', { class: 'shrink-0 text-base font-bold', text: ORDER_BADGE[rank] ?? `${rank + 1}` })
-        : null;
 
       // 머리 칸도 몸 칸도 왼쪽이다. 숫자 열이라고 오른쪽으로 보내지 않는다
       const button = el('button', {
@@ -181,7 +182,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
             paint();
           }
         }
-      }, [label, badge, marks]);
+      }, [label, marks]);
 
       /*
        * 손잡이는 **눈에 보여야 한다.** 투명하게 두고 글귀로 "드래그하세요"라고
