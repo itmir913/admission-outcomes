@@ -19,6 +19,9 @@ const PART_TYPE = fields.partTypes;
 /** 값이 비었다는 뜻으로 쓰이는 표기들. 엑셀에서 자리를 채우려고 넣는다. */
 const BLANK_MARKS = new Set(['-', '--', '.', '없음', '해당없음', '미해당', 'N/A', 'n/a']);
 
+/** 숫자로만 적힌 칸. 앞자리 0이 붙은 것은 코드로 보고 제외한다 */
+const NUMERIC_TEXT = /^-?(0|[1-9]\d*)(\.\d+)?$/;
+
 /** @param {string} key */
 function typeOf(key) {
   if (SCALAR_TYPE.has(key)) return SCALAR_TYPE.get(key);
@@ -117,7 +120,17 @@ function readExtra(row, columns, labels) {
     const value = row?.[index];
     if (value === null || value === undefined || String(value).trim() === '') continue;
     if (isIdentityLabel(label)) { dropped.push(label); continue; }
-    extra[label] = String(value).trim();
+    const text = String(value).trim();
+    // 빈칸 표시는 빈칸으로 둔다. `-`를 글자로 담아 두면 그 열은 영영 숫자 열이 못 된다
+    if (BLANK_MARKS.has(text)) continue;
+    /*
+     * 숫자로만 적힌 칸은 숫자로 담는다. 글자로 담아 두면 해석하지 못한 등급 열에
+     * 범위 필터도 정렬도 걸리지 않는다 — 화면에는 숫자가 보이는데 숫자로 다룰 수가 없다.
+     *
+     * **앞자리 0은 숫자로 보지 않는다.** `007` 같은 칸은 코드지 수가 아니고,
+     * 숫자로 바꾸면 0이 지워져 다른 값이 된다.
+     */
+    extra[label] = NUMERIC_TEXT.test(text) ? Number(text) : text;
   }
   return { extra, dropped };
 }
