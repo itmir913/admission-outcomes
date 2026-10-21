@@ -17,7 +17,7 @@ import { classifyOutcome } from '../src/core/outcome.js';
 import { tallyOutcomes, passRate, rateNote } from '../src/ui/outcome.js';
 import { sortRows, searchHaystack } from '../src/analysis/query.js';
 import { visibleWindow } from '../src/ui/table.js';
-import { facetCounts, applyQuery } from '../src/analysis/query.js';
+import { facetCounts, facetBuckets, applyQuery } from '../src/analysis/query.js';
 import { bucketLabel } from '../src/analysis/registry.js';
 import { uploadBlockers, prefilledYear } from '../src/ui/upload.js';
 
@@ -501,6 +501,32 @@ describe('7차 감사 — 조용히 묶이고 조용히 틀리던 자리', () =>
     }
     // 뜻이 있는 값은 그대로 쓴다
     expect(await 표기별('30101')).toBe(1);
+  });
+
+  it('로마자 이름 Na를 빈칸으로 보지 않는다', async () => {
+    const sheet = {
+      grid: [['이름', '대학명', '최종'], ['Na', '가온대학교', '합격'], ['Kim', '한결대학교', '합격']],
+      headerRows: 1,
+      columns: { 'identity.name': 0, univ: 1, final: 2 },
+      cohortYear: 2025
+    };
+    const { applications, students } = await buildDataset([sheet]);
+    // 「나」씨를 로마자로 적으면 Na다. 학번 칸의 NA와 같은 잣대를 들이대면 그 행이 사라진다
+    expect(applications).toHaveLength(2);
+    expect(students).toHaveLength(2);
+  });
+
+  it('값 목록의 이름은 건수와 같은 행에서 모은다', () => {
+    const 건 = (code, label, year) => ({ outcome: code, cohortYear: year, '#outcome': { code, label } });
+    const rows = [
+      건('none', '기록 없음', 2024), 건('none', '기록 없음', 2024), 건('none', '기록 없음', 2024),
+      건('none', '1단계 불합격', 2025), 건('none', '1단계 불합격', 2025)
+    ];
+    const 걸린필터 = [{ key: 'cohortYear', op: 'in', values: [2025] }];
+    const bucket = facetBuckets(rows, 걸린필터, 'outcome').get('none');
+    expect(bucket.count).toBe(2);
+    // 남은 2건은 전부 1단계 탈락이다. 전체 자료에서 모으면 「포함」이라 적힌다
+    expect(bucketLabel('outcome', 'none', bucket.texts).label).toBe('기록 없음(1단계 불합격)');
   });
 
   it('보존한 열에도 전각 빈칸 표기를 값으로 담지 않는다', async () => {
