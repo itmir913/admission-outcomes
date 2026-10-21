@@ -55,7 +55,7 @@ function summaryCard(tally) {
       cell('합격', tally.합격, 'text-pass'),
       cell('충원합격', tally.충원합격, 'text-wait'),
       cell('불합격', tally.불합격, 'text-fail'),
-      cell('정보 없음', tally.미상, 'text-ink-soft')
+      cell('판정 미상', tally.미상, 'text-ink-soft')
     ]),
     el('div', { class: 'border-t border-line-soft px-4 py-3' }, [outcomeBar(tally)])
   ]);
