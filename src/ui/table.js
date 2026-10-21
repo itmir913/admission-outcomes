@@ -178,9 +178,15 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
        * **다시 들어갈 자리가 생기면 되돌려 붙인다.** 빼기만 하면, 끌어 넓혔다가
        * 같은 끌기 안에서 도로 줄여도 고정이 돌아오지 않는다 — 사람은 아까 너비로
        * 되맞췄는데 왜 그대로인지 알 수 없다.
+       *
+       * 경계선은 **마지막 고정 칸에만** 둔다. 고정 수가 늘면 옛 경계가 앞자리에
+       * 남아 선이 둘이 되고, 거기까지만 고정된 것처럼 보인다 — 좁은 화면에서
+       * 고정이 어디서 끝나는지 알려 주는 단서가 그 선뿐이다 (§9).
        */
       for (let index = 0; index < 고정수 && index < row.children.length; index += 1) {
-        /** @type {HTMLElement} */ (row.children[index]).classList.add('pinned');
+        const cell = /** @type {HTMLElement} */ (row.children[index]);
+        cell.classList.add('pinned');
+        cell.classList.toggle('pin-edge', index === 고정수 - 1);
       }
       if (고정수 > 0) {
         const edge = /** @type {HTMLElement} */ (row.children[고정수 - 1]);
@@ -565,23 +571,37 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     renderColgroup();
     renderHead();
     repaintBody();
-    /*
-     * **자리를 받은 뒤에 한 번 더 본다.**
-     *
-     * 처음 그릴 때 표가 아직 폭을 못 받았으면 고정 열 수를 하나로 잡아 둔다.
-     * 그 뒤 레이아웃이 끝나도 스크롤 상자의 크기가 바뀌지 않으면 관찰자는 깨어나지
-     * 않아서, 넓은 화면인데 한 열만 고정된 채로 남는다. 그릴 때마다 한 틱 뒤에
-     * 다시 재어 어긋나면 머리줄만 고쳐 그린다.
-     */
-    globalThis.requestAnimationFrame?.(() => {
-      if (유효고정() !== 그린고정수) {
-        renderHead();
-        renderBody(true);
-      }
-    });
+    늦은보정();
   }
 
-  scroller.addEventListener('scroll', () => renderBody(), { passive: true });
+  /**
+   * **자리를 받은 뒤에 다시 잰다.**
+   *
+   * 처음 그릴 때 표가 아직 폭을 못 받았으면 고정 열 수를 잘못 잡는다. 그 뒤
+   * 레이아웃이 끝나도 스크롤 상자의 크기가 더 바뀌지 않으면 관찰자는 깨어나지
+   * 않아, 그려 둔 고정 수가 틀린 채로 남는다 — 좁은 화면에서는 고정 열이 서로를
+   * 덮어 자료 열에 닿을 수 없게 된다. 화면은 아무 말도 하지 않는다 (§5).
+   *
+   * **한 프레임만 보지 않는다.** 그 프레임 안에 레이아웃이 끝나지 않는 경우가
+   * 네 번에 한 번꼴로 실제로 났다. 몇 번 더 재고, 스크롤할 때도 한 번 본다.
+   */
+  function 늦은보정() {
+    const 재기 = () => {
+      if (유효고정() === 그린고정수) return;
+      renderHead();
+      renderBody(true);
+    };
+    globalThis.requestAnimationFrame?.(() => {
+      재기();
+      globalThis.requestAnimationFrame?.(재기);
+    });
+    globalThis.setTimeout?.(재기, 150);
+  }
+
+  scroller.addEventListener('scroll', () => {
+    if (유효고정() !== 그린고정수) renderHead();
+    renderBody();
+  }, { passive: true });
 
   // 창 크기가 바뀌면 보이는 행 수도 바뀐다. 다시 그리지 않으면 아래쪽이 빈 채로 남는다
   if (globalThis.ResizeObserver) {
