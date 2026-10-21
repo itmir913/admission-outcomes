@@ -686,6 +686,33 @@ describe('10차 감사 — 다른 학생으로 둔 둘이 같은 키를 들고 �
     }
   });
 
+  it('판을 올리기 전에 합쳐져 버린 레코드를 알린다', async () => {
+    // 종류를 적어 두지 않은 옛 레코드에 모순된 짝이 붙으면 합쳐지고, 다시 올려도 낫지 않는다
+    const 옛레코드 = await assignStudentIds([행(2025, { number: '7', name: '김가온' })]);
+    const 옛것 = 옛레코드.students.map(({ sid, cohortYear, keyHashes }) => ({ sid, cohortYear, keyHashes }));
+    const 붙은뒤 = await assignStudentIds([행(2025, { number: '8', name: '김가온' })], { existing: 옛것 });
+    expect(붙은뒤.students).toHaveLength(1);
+
+    // 옛 레코드는 종류를 적어 두지 않았으므로, 그 종류가 채워진 다음 업로드에서 드러난다
+    const 채워진뒤 = await assignStudentIds([행(2025, { number: '7', name: '김가온' })], {
+      existing: 붙은뒤.students
+    });
+    const 다음번 = await assignStudentIds([행(2025, { number: '7', name: '김가온' })], {
+      existing: 채워진뒤.students
+    });
+    expect(다음번.warnings.some((warning) => warning.type === 'stored-student-conflict')).toBe(true);
+
+    // 멀쩡한 레코드(학번 하나가 반 둘을 묶는 경우)는 알리지 않는다
+    const 멀쩡한것 = await assignStudentIds([
+      행(2025, { hakbun: '30101', classNo: '3', number: '1' }),
+      행(2025, { hakbun: '30101', classNo: '4', number: '2' })
+    ]);
+    const 이어서 = await assignStudentIds([행(2025, { hakbun: '30101' })], {
+      existing: 멀쩡한것.students
+    });
+    expect(이어서.warnings.some((warning) => warning.type === 'stored-student-conflict')).toBe(false);
+  });
+
   it('같은 파일을 네 번 올려도 학생 수가 늘지도 줄지도 않는다', async () => {
     for (const 이름 of ['가', '김가온', '최여울', '홍길동', '강민재', '윤서아']) {
       const db = await freshDatabase();
