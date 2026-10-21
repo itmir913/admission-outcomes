@@ -171,15 +171,22 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
     try {
       entries = unzipSync(bytes, {
         filter: (entry) => {
-          seen += 1;
-          if (seen > limits.maxEntries) { tooManyEntries = true; return false; }
+          // **엑셀만 센다.** macOS가 넣는 `__MACOSX/._*` 부산물까지 세면 엑셀 101개짜리
+          // 압축이 202개로 잡혀, 멀쩡한 묶음이 손댈 길 없이 통째로 막혔다
           if (isNoise(entry.name)) return false;
           const inner = baseName(entry.name);
           if (!isExcelName(inner)) {
             if (inner.toLowerCase().endsWith('.zip')) nested.push(decodeEntryName(inner));
             return false;
           }
+          seen += 1;
+          if (seen > limits.maxEntries) { tooManyEntries = true; return false; }
           declaredBytes += entry.originalSize ?? 0;
+          /*
+           * 한도를 넘으면 **그 압축은 통째로 거절한다.** 예전에는 넘은 뒤의 것만
+           * 빼고 앞쪽 파일을 그대로 가져왔다. 건너뛴 목록에는 압축 이름만 올라가서,
+           * 사람은 전부 거절된 줄 아는데 일부는 이미 들어와 있었다 (§5).
+           */
           if (declaredBytes > limits.maxTotalBytes) { tooLarge = true; return false; }
           return true;
         }
@@ -193,7 +200,10 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
       skipped.push({ name, reason: `압축 안에 파일이 너무 많습니다(${seen}개 이상).` });
       continue;
     }
-    if (tooLarge) skipped.push({ name, reason: '전체 용량이 너무 큽니다.' });
+    if (tooLarge) {
+      skipped.push({ name, reason: '전체 용량이 너무 큽니다. 압축을 나눠 올려 주세요.' });
+      continue;
+    }
     for (const inner of nested) {
       skipped.push({ name: inner, reason: '압축 안의 압축은 해제하지 않습니다.' });
     }
@@ -204,7 +214,7 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
       files.push({ name: decodeEntryName(baseName(entryName)), bytes: innerBytes, container: name });
       found += 1;
     }
-    if (found === 0 && !tooLarge) {
+    if (found === 0) {
       skipped.push({ name, reason: '압축 안에 엑셀 파일이 없습니다.' });
     }
   }
