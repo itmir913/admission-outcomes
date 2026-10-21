@@ -146,7 +146,7 @@
    * 두 줄이 되는 편이 낫다. 지우는 ✕ 는 끝에 붙어 함께 접힌다.
    */
   .chip {
-    @apply inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md
+    @apply inline-flex min-h-9 shrink-0 items-center gap-2 break-words rounded-md
       border border-brand/25 bg-brand-soft px-3 py-1 text-base font-medium text-brand;
     max-width: 100%;
   }
