@@ -297,6 +297,30 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
    * 「1학기 명단」과 「2학기 추가 명단」처럼 흔한 길이다. 보관된 학생의 키 종류를
    * 함께 적어 두었다면 그 모순도 여기서 드러난다.
    */
+  /**
+   * 보관된 레코드 하나가 **서로 다른 두 학생을 합쳐 놓은 것인지.**
+   *
+   * 한 종류의 키를 둘 이상 들고 있는데 그것을 묶어 줄 **더 강한 종류가 없으면**,
+   * 그 레코드는 둘을 합친 것이다 — 번호 7과 번호 8은 같은 사람일 수 없다. 반대로
+   * 반·번호가 둘이라도 학번 하나가 그것을 묶고 있으면 한 사람이다(학기 중 반 편성).
+   */
+  const 합쳐진레코드인가 = (묶음) => {
+    const 종류별 = new Map();
+    for (const key of 묶음) {
+      if (!종류별.has(key.kind)) 종류별.set(key.kind, new Set());
+      종류별.get(key.kind).add(key.hash);
+    }
+    return [...종류별.entries()].some(([kind, 해시들]) => {
+      if (해시들.size < 2) return false;
+      const 강도 = KEY_KIND[kind].strength;
+      const 묶어주는것 = [...종류별.entries()]
+        .some(([other, 값들]) => KEY_KIND[other].strength > 강도 && 값들.size === 1);
+      return !묶어주는것;
+    });
+  };
+
+  /** 서로 다른 학생이 한 ID로 합쳐진 채 보관돼 있는 레코드 수 */
+  let 합쳐진레코드 = 0;
   for (const student of existing) {
     const kinds = student.keyKinds ?? {};
     const 묶음 = (student.keyHashes ?? [])
@@ -305,6 +329,7 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
       .filter((key) => key.kind && key.strength);
     if (묶음.length > 1) 쌓기(묶음);
     for (const key of 묶음) if (!kindByHash.has(key.hash)) kindByHash.set(key.hash, key.kind);
+    if (합쳐진레코드인가(묶음)) 합쳐진레코드 += 1;
   }
   /** @type {Set<string>} 서로 다른 학생을 가리키는 것이 드러난 해시 */
   const 오염된해시 = new Set();
@@ -451,6 +476,22 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
   }
   students.length = 0;
   students.push(...한번씩.values());
+
+  /*
+   * **이미 합쳐진 것은 쪼개지 않고 알린다.**
+   *
+   * 쪼개면 보관된 익명 ID가 바뀌고(§3), 어느 지원 건이 누구 것인지도 알 수 없다.
+   * 다시 올려도 낫지 않는다 — 키는 그대로 만들어지고 그 키가 합쳐진 레코드를
+   * 가리키므로 고아가 생기지 않는다. 사람이 「데이터 초기화」를 해야 하는 경우라,
+   * 적어도 그 사실이 화면에 보여야 한다 (§5).
+   */
+  if (합쳐진레코드 > 0) {
+    warnings.push({
+      type: 'stored-student-conflict',
+      count: 합쳐진레코드,
+      message: `보관된 학생 ${합쳐진레코드}명은 서로 다른 학생이 한 익명 ID로 합쳐져 있는 것으로 보입니다. 판을 올리기 전에 들어간 자료입니다 — 다시 불러와도 낫지 않으니, 「데이터 초기화」 후 처음부터 다시 불러와 주세요.`
+    });
+  }
 
   if (잇지않은행 > 0) {
     warnings.push({
