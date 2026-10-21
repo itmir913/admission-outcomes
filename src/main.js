@@ -143,17 +143,33 @@ function paintSummary(visible, total) {
     el('p', { class: 'stat-value', text: value })
   ]);
 
+  const cells = [
+    // 거른 상태에서는 「전체」가 아니다. 그때는 분모를 괄호로 밝힌다
+    cell(걸러짐 ? `지원 (전체 ${total}건 중)` : '전체 지원', tally.지원),
+    cell('학생', tally.학생),
+    cell('합격', tally.합격, 'text-pass'),
+    cell('충원합격', tally.충원합격, 'text-wait'),
+    cell('불합격', tally.불합격, 'text-fail'),
+    cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`),
+    tally.미상 > 0 ? cell('판정 미상', tally.미상, 'text-ink-soft') : null
+  ].filter(Boolean);
+
+  /*
+   * **마지막 칸이 혼자 남으면 그 줄을 다 쓴다.**
+   *
+   * 판정 미상이 있는 해는 칸이 일곱이라 2·3·6 어느 쪽으로도 나누어떨어지지 않는다.
+   * 좁은 칸 하나가 넓은 줄에 혼자 놓이면 옆이 비어, 세어 보지 않은 칸이 더 있는
+   * 것처럼 보인다. 혼자일 때만 늘린다 — 둘 이상 남으면 서로 짝이 되어 보인다.
+   */
+  const 남은칸 = (열수) => cells.length % 열수;
+  cells.at(-1).classList.add(
+    남은칸(2) === 1 ? 'col-span-2' : 'col-span-1',
+    남은칸(3) === 1 ? 'sm:col-span-3' : 'sm:col-span-1',
+    남은칸(6) === 1 ? 'lg:col-span-6' : 'lg:col-span-1'
+  );
+
   clear(dom.요약띠).append(el('div', { class: 'card overflow-hidden' }, [
-    el('div', { class: 'stat-grid' }, [
-      // 거른 상태에서는 「전체」가 아니다. 그때는 분모를 괄호로 밝힌다
-      cell(걸러짐 ? `지원 (전체 ${total}건 중)` : '전체 지원', tally.지원),
-      cell('학생', tally.학생),
-      cell('합격', tally.합격, 'text-pass'),
-      cell('충원합격', tally.충원합격, 'text-wait'),
-      cell('불합격', tally.불합격, 'text-fail'),
-      cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`),
-      tally.미상 > 0 ? cell('판정 미상', tally.미상, 'text-ink-soft') : null
-    ].filter(Boolean)),
+    el('div', { class: 'stat-grid' }, cells),
     el('div', { class: 'border-t border-line-soft px-4 py-3' }, [outcomeBar(tally)]),
     el('p', {
       class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-base text-ink-soft',
