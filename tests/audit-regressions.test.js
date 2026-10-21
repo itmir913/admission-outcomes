@@ -503,6 +503,23 @@ describe('7차 감사 — 조용히 묶이고 조용히 틀리던 자리', () =>
     expect(await 표기별('30101')).toBe(1);
   });
 
+  it('보존한 열에도 전각 빈칸 표기를 값으로 담지 않는다', async () => {
+    const sheet = {
+      grid: [
+        ['학번', '대학명', '최종', '비고', '모집인원'],
+        ['30101', '가온대학교', '합격', '－', 0]
+      ],
+      headerRows: 1,
+      columns: { 'identity.hakbun': 0, univ: 1, final: 2 },
+      cohortYear: 2025
+    };
+    const { applications } = await buildDataset([sheet]);
+    // `－`를 글자로 담으면 값이 든 것처럼 보이고 필터 목록에 한 줄로 선다
+    expect(applications[0].extra?.['비고']).toBeUndefined();
+    // 0은 그 칸에서 멀쩡한 값이다
+    expect(applications[0].extra?.['모집인원']).toBe(0);
+  });
+
   it('값 목록 한 줄이 무엇을 품었는지 적고, 접힌 표기도 찾을 수 있다', () => {
     // 전부가 그 표기인 줄과 일부만 그런 줄을 다르게 적는다
     const 일부 = bucketLabel('outcome', 'none', ['기록 없음', '1단계 불합격', '기록 없음']);

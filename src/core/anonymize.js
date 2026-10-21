@@ -74,16 +74,19 @@ const DASHES = /^[-‐‑‒–—―ー－]+$/;
  * 묶이고, 행 수는 맞으므로 화면에는 아무 표시도 나지 않는다 (§3·§5).
  *
  * @param {string} normalized NFKC로 고르고 공백을 없앤 글자
+ * @param {{zeroIsBlank?: boolean}} [options] 식별 열이 아니면 0은 멀쩡한 값이다
  */
-export function isBlankMark(normalized) {
+export function isBlankMark(normalized, { zeroIsBlank = true } = {}) {
   if (normalized === '') return true;
   if (BLANK_MARKS.has(normalized) || BLANK_MARKS.has(normalized.toUpperCase())) return true;
   if (DASHES.test(normalized)) return true;
   /*
    * **학번·반·번호에 0은 있을 수 없다.** 빈 숫자 칸을 0으로 내보내는 양식이 있고,
    * 그 0이 가장 강한 주키로 받아들여지면 그 해의 그 행들이 전부 한 학생이 된다.
+   *
+   * 다른 칸에서는 0이 멀쩡한 값이다 — 충원 0명, 내신 0.
    */
-  return /^0+$/.test(normalized);
+  return zeroIsBlank && /^0+$/.test(normalized);
 }
 
 /** 식별 값의 표기 차이를 없앤다. NFKC로 전각 숫자(３０１０１)와 반각을 같게 만든다 */
