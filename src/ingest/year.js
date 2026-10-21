@@ -195,7 +195,16 @@ export function inferCohortYear({
   const declared = yearColumn === null || yearColumn === undefined
     ? null
     : readYearColumn(grid, yearColumn, { currentYear, headerRows });
-  const found = declared ?? findYearColumn(grid, { currentYear, headerRows });
+  /*
+   * **연도 열이 어디인지 이미 알 때는 다른 열을 뒤지지 않는다.**
+   *
+   * 그 열이 드문드문 차 있어 읽어 내지 못하면(누적 파일에서 흔하다) 예전에는
+   * 아무 열이나 훑어 연도처럼 생긴 값을 찾았다. 입학예정연도·생년 같은 열이
+   * 걸리면 그 열의 기준으로 **진짜 연도 열을 행마다 변환**해 한 해가 통째로 밀린다.
+   * 모르면 모른다고 두고 사람에게 묻는다 (§5).
+   */
+  const hasDeclaredColumn = yearColumn !== null && yearColumn !== undefined;
+  const found = declared ?? (hasDeclaredColumn ? null : findYearColumn(grid, { currentYear, headerRows }));
 
   if (found) {
     const basis = declared ? (columnBasis ?? found.basis) : found.basis;

@@ -113,7 +113,22 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
   const knownFiles = new Map(existingFiles.map((file) => [file.hash, file]));
 
   const prepared = [];
+  /*
+   * **같은 내용을 한 번에 두 번 올리는 일을 여기서 걸러 낸다.**
+   *
+   * 보관소의 중복 방지는 "그 파일이 넣었던 기록을 지우고 다시 넣는" 방식이라,
+   * 한 번의 커밋 안에 같은 파일이 두 장 들어오면 막지 못한다 — 건수가 그대로
+   * 두 배가 되고 화면 어디에도 표식이 없다. 「결과.xlsx」와 「결과 (1).xlsx」를
+   * 함께 담은 zip은 아주 흔하다.
+   */
+  const seen = new Set();
   for (const sheet of sheets) {
+    const id = `${sheet.fileHash}#${sheet.sheetName}`;
+    if (seen.has(id)) {
+      skipped.push({ name: sheet.fileName, reason: '같은 내용을 이 묶음에서 이미 읽었습니다' });
+      continue;
+    }
+    seen.add(id);
     const match = await matchProfile(profiles, { grid: sheet.grid });
     const reading = readSheetColumns(sheet.grid, match);
     const body = sheet.grid.slice(reading.headerStart);
@@ -137,8 +152,15 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
      * 값이 올해를 넘으면 고3 년도일 수 없으므로 학년도다. 둘 다 없으면 사람에게 묻는다.
      * 화면과 저장 쪽이 이 판단을 따로 하면 둘이 어긋나고, 어긋난 쪽이 조용히 이긴다.
      */
+    /*
+     * 추론이 정한 기준은 **그 기준을 읽어 낸 열이 곧 연도 열일 때만** 쓴다.
+     * 다른 열에서 건너온 기준으로 연도 열을 행마다 변환하면 한 해가 통째로 밀린다.
+     */
+    const 같은열 = yearGuess.source === 'cell'
+      && yearGuess.yearColumn !== null
+      && yearGuess.yearColumn === reading.columns.sourceYear;
     reading.effectiveBasis = reading.yearBasis
-      ?? (['senior', 'admission'].includes(yearGuess.basis) ? yearGuess.basis : null);
+      ?? (같은열 && ['senior', 'admission'].includes(yearGuess.basis) ? yearGuess.basis : null);
     reading.perRowYear = reading.columns.sourceYear !== undefined && Boolean(reading.effectiveBasis);
 
     prepared.push({

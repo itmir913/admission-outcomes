@@ -113,10 +113,16 @@ function readExtra(row, columns, labels) {
   const used = new Set(Object.values(columns));
   const extra = {};
   const dropped = [];
-  for (let index = 0; index < labels.length; index += 1) {
+  /*
+   * **머리글보다 넓은 행까지 훑는다.** 머리글 칸만 지워진 파일이 실재하는데,
+   * 머리글 너비까지만 보면 그 열이 통째로 사라지고 「해석하지 못한 열」에도 잡히지
+   * 않아 사람이 알 길이 없었다(§4·§5).
+   */
+  const width = Math.max(labels.length, row?.length ?? 0);
+  for (let index = 0; index < width; index += 1) {
     if (used.has(index)) continue;
-    const label = labels[index].label;
-    if (!label) continue;
+    // 이름 없는 열도 자리를 잃지 않게 번호로 부른다. 왼쪽 이름을 빌려 쓰면 값이 덮인다
+    const label = labels[index]?.label || `(${index + 1}번째 열)`;
     const value = row?.[index];
     if (value === null || value === undefined || String(value).trim() === '') continue;
     if (isIdentityLabel(label)) { dropped.push(label); continue; }

@@ -153,9 +153,24 @@ export function findSections(labels) {
     gpa = { start, end };
   }
 
+  /*
+   * 수능 구역의 오른쪽 끝도 **사전에 있는 이름을 만나면 끊는다.**
+   *
+   * 줄 끝까지 두었더니 수능 블록 뒤에 오는 `최종`·`등록여부`·`예비순위`가 통째로
+   * 수능 구역에 삼켜졌다. 예비순위는 값이 1~9라 교차검증도 못 잡아
+   * `suneung.예비순위.grade`라는 가짜 영역이 조용히 생기고, 최종·등록은 미해결로
+   * 떨어져 **합격 결과가 집계에서 사라진다.** 내신 구역에 둔 보호를 여기에도 둔다.
+   */
+  let suneungEnd = labels.length;
+  if (suneungStart !== -1) {
+    for (let index = suneungStart + 1; index < labels.length; index += 1) {
+      if (namesAScalar(labels[index])) { suneungEnd = index; break; }
+    }
+  }
+
   return {
     gpa,
-    suneung: suneungStart === -1 ? null : { start: suneungStart, end: labels.length }
+    suneung: suneungStart === -1 ? null : { start: suneungStart, end: suneungEnd }
   };
 }
 

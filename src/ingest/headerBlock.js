@@ -50,11 +50,22 @@ export function fillMergedRow(row, width) {
 export function buildHeaderLabels(grid, headerRows = 1) {
   const rows = (grid ?? []).slice(0, Math.max(1, headerRows));
   const width = rows.reduce((max, row) => Math.max(max, row?.length ?? 0), 0);
-  const top = fillMergedRow(rows[0], width);
-
+  /*
+   * **머리글이 한 줄이면 왼쪽 이름을 끌어오지 않는다.**
+   *
+   * 두 줄짜리 머리글에서 윗줄의 빈칸은 병합셀이라 왼쪽 이름을 물려받는 것이 맞다.
+   * 그런데 한 줄짜리에서는 빈칸이 그저 **이름 없는 열**이다. 끌어오면 바로 왼쪽 열과
+   * 같은 이름을 갖게 되고, 두 열의 값이 `extra`의 한 자리를 다투다 한쪽이 소리 없이
+   * 사라진다. 게다가 그 이름이 멀쩡히 해석된 열의 이름과 같아져, 화면은 그 열을
+   * 해석하지 못한 것처럼 알린다.
+   */
   if (headerRows <= 1) {
-    return top.map((value) => ({ top: value, sub: '', label: value }));
+    const single = (rows[0] ?? []).slice(0, width).map((cell) => cellText(cell));
+    while (single.length < width) single.push('');
+    return single.map((value) => ({ top: value, sub: '', label: value }));
   }
+
+  const top = fillMergedRow(rows[0], width);
 
   // 셋째 줄 이상은 아래 줄끼리 이어 붙인다
   const lower = [];
