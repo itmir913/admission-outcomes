@@ -216,8 +216,15 @@
     @apply flex min-w-0 flex-col justify-center gap-0.5 bg-surface px-4 py-3;
     outline: 1px solid var(--color-line);
   }
+  /*
+   * **이름은 자르지 않고 두 줄로 흐르게 둔다.**
+   *
+   * 「지원 (전체 241건 중)」이 1px 차이로 말줄임에 걸려 「전체 241건 …」으로
+   * 잘렸다. 무엇의 건수인지가 사라지면 옆의 숫자를 되검산할 수 없다. 칸 높이는
+   * 값 글자가 정하고 있어 한 줄 늘어날 자리가 있다 (§5).
+   */
   .stat-name {
-    @apply truncate text-base text-ink-soft;
+    @apply text-base leading-snug text-ink-soft;
   }
   .stat-value {
     @apply text-2xl font-bold tabular-nums;
