@@ -713,6 +713,23 @@ describe('10차 감사 — 다른 학생으로 둔 둘이 같은 키를 들고 �
     expect(이어서.warnings.some((warning) => warning.type === 'stored-student-conflict')).toBe(false);
   });
 
+  it('종류를 일부만 아는 레코드를 두고 합쳐졌다고 말하지 않는다', async () => {
+    // 옛 판이 넣어 둔 학번 레코드(종류 기록 없음)에 반·번호만 있는 파일을 이어 붙이는 길
+    const 옛것 = await assignStudentIds([
+      행(2025, { hakbun: '30101', classNo: '1', number: '1' }),
+      행(2025, { hakbun: '30101', classNo: '2', number: '2' })
+    ]);
+    const 종류없이 = 옛것.students.map(({ sid, cohortYear, keyHashes }) => ({ sid, cohortYear, keyHashes }));
+    let 보관된것 = 종류없이;
+    for (const [classNo, number] of [['1', '1'], ['2', '2'], ['1', '1']]) {
+      const 이번 = await assignStudentIds([행(2025, { classNo, number })], { existing: 보관된것 });
+      보관된것 = 이번.students;
+      // 학번 하나가 반 둘을 묶고 있는 정상 학생이다. 지우라고 말하면 안 된다
+      expect(이번.warnings.some((warning) => warning.type === 'stored-student-conflict')).toBe(false);
+    }
+    expect(보관된것).toHaveLength(1);
+  });
+
   it('같은 파일을 네 번 올려도 학생 수가 늘지도 줄지도 않는다', async () => {
     for (const 이름 of ['가', '김가온', '최여울', '홍길동', '강민재', '윤서아']) {
       const db = await freshDatabase();
