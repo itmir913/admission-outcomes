@@ -12,7 +12,14 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 const relaxCspForDev = () => ({
   name: 'relax-csp-for-dev',
   apply: 'serve',
-  transformIndexHtml: (html) => html.replace("connect-src 'none'", "connect-src 'self' ws: wss:")
+  transformIndexHtml: (html) => html
+    .replace("connect-src 'none'", "connect-src 'self' ws: wss:")
+    /*
+     * 개발 클라이언트는 연결이 끊기면 **blob으로 만든 SharedWorker**를 띄워 서버를
+     * 다시 찔러 본다. worker-src 를 따로 적지 않으면 script-src 가 대신 쓰이는데
+     * 거기에 blob: 이 없어 콘솔이 CSP 위반으로 가득 찬다. 여는 것은 개발 서버뿐이다.
+     */
+    .replace("script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline'; worker-src 'self' blob:")
 });
 
 export default defineConfig({
