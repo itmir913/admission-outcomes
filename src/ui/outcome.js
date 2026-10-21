@@ -61,10 +61,14 @@ export function passRate(tally) {
 export function outcomeBar(tally) {
   if (tally.지원 === 0) return null;
   const parts = [
-    { name: '합격', mark: '●', count: tally.합격, tone: 'bg-pass text-white' },
-    { name: '충원합격', mark: '△', count: tally.충원합격, tone: 'bg-wait text-white' },
-    { name: '불합격', mark: '✕', count: tally.불합격, tone: 'bg-fail text-white' },
-    { name: '판정 미상', mark: '·', count: tally.미상, tone: 'bg-line text-ink' }
+    { name: '합격', mark: '●', count: tally.합격, tone: 'bg-pass text-white', ink: 'text-pass-deep' },
+    { name: '충원합격', mark: '△', count: tally.충원합격, tone: 'bg-wait text-white', ink: 'text-wait-deep' },
+    { name: '불합격', mark: '✕', count: tally.불합격, tone: 'bg-fail text-white', ink: 'text-fail-deep' },
+    /*
+     * 미상의 모양은 `?`다. 가운뎃점은 이 화면에서 머리글을 잇는 글자라서(`국어·수학`)
+     * 모양이 아니라 글자 사이에 낀 먼지처럼 보인다.
+     */
+    { name: '판정 미상', mark: '?', count: tally.미상, tone: 'bg-line text-ink', ink: 'text-ink-soft' }
   ].filter((part) => part.count > 0);
 
   const 몫 = (count) => (count / tally.지원) * 100;
@@ -95,8 +99,10 @@ export function outcomeBar(tally) {
       text: 글자(part)
     }))),
     el('ul', {
-      class: 'mt-2 flex flex-wrap gap-x-4 gap-y-1 text-base text-ink-soft'
+      class: 'mt-2 flex flex-wrap gap-x-4 gap-y-1 text-base'
     }, parts.map((part) => el('li', {
+      // 범례 글자는 띠의 색을 이어받는다. 어느 칸을 가리키는 말인지 색이 먼저 말해 준다
+      class: `${part.ink} font-medium`,
       text: `${part.mark} ${part.name} ${part.count}건 (${몫(part.count).toFixed(1)}%)`
     })))
   ]);

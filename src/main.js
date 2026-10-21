@@ -270,7 +270,16 @@ function 팝오버그리기() {
         attrs: { type: 'button' }, on: { click: 팝오버닫기 }
       })
     ]),
-    el('div', { class: 'max-h-80 overflow-y-auto px-3 py-2' }, [body].filter(Boolean))
+    /*
+     * 높이를 재는 것은 **안쪽 값 목록 하나뿐이다.**
+     *
+     * 여기에도 320px 같은 고정 상한을 두었더니, 목록(256px)에 검색칸과 여백을
+     * 더한 값이 그 상한을 몇 px 넘겨 바깥 막대가 하나 더 생겼다. 막대 둘이
+     * 나란히 서면 어느 쪽이 무엇을 미는지 알 수 없다. 바깥은 화면이 아주
+     * 낮을 때만 미끄러지게 두고, 보통은 안쪽 목록만 미끄러진다. 3rem은 머리줄
+     * 몫이다 — 이걸 빼 두어야 창 전체가 80vh 안에 들어와 화면 밖으로 흐르지 않는다.
+     */
+    el('div', { class: 'max-h-[calc(80vh-3rem)] overflow-y-auto px-3 py-2' }, [body].filter(Boolean))
   );
 }
 

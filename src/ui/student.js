@@ -75,7 +75,7 @@ function collect(row, prefix) {
  * 좌측 색 띠 + 결과 태그의 모양(●△✕)이 함께 뜻을 나른다. 색만으로 구분하지 않는다.
  */
 function applicationCard(row) {
-  const outcome = row['#outcome'] ?? { code: 'none', label: '기록 없음', mark: '·' };
+  const outcome = row['#outcome'] ?? { code: 'none', label: '기록 없음', mark: '?' };
   const tone = outcome.code === 'pass' ? 'pass' : outcome.code === 'waitPass' ? 'wait'
     : outcome.code === 'fail' ? 'fail' : outcome.code === 'unknown' ? 'unknown' : 'none';
   const stripe = { pass: 'bg-pass', wait: 'bg-wait', fail: 'bg-fail', unknown: 'bg-wait', none: 'bg-line' }[tone];
