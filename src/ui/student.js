@@ -122,18 +122,11 @@ function applicationCard(row) {
        * 두 줄이 되어, 열 몇 건을 훑을 때 눈이 멈출 자리가 배로 늘었다. 어디까지가
        * 대학이고 어디부터가 학과인지는 가운뎃줄이 나눈다.
        */
-      el('div', { class: 'mt-1 flex min-w-0 items-baseline gap-2 text-lg' }, [
-        el('h4', {
-          class: 'min-w-0 shrink-0 truncate font-bold',
-          text: String(row.univ ?? '(대학 미상)'),
-          attrs: { title: String(row.univ ?? '') }
-        }),
+      el('div', { class: 'mt-1 flex flex-wrap items-baseline gap-x-2 text-lg' }, [
+        el('h4', { class: 'break-keep font-bold', text: String(row.univ ?? '(대학 미상)') }),
         isBlank(row.dept) ? null : el('span', { class: 'text-line', attrs: { 'aria-hidden': 'true' }, text: '|' }),
-        isBlank(row.dept) ? null : el('p', {
-          class: 'min-w-0 truncate font-medium text-ink-soft',
-          text: String(row.dept),
-          attrs: { title: String(row.dept) }
-        })
+        // 말줄임하지 않는다. 학과 이름의 끝자락이 어느 전공인지를 말해 주는 일이 잦다
+        isBlank(row.dept) ? null : el('p', { class: 'break-keep font-medium text-ink-soft', text: String(row.dept) })
       ].filter(Boolean)),
 
       el('dl', { class: 'mt-2 grid grid-cols-2 gap-x-4 gap-y-2' }, [
