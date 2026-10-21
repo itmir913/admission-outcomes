@@ -565,3 +565,61 @@ describe('7차 감사 — 조용히 묶이고 조용히 틀리던 자리', () =>
     expect(applyQuery(rows, { filters: [filter] })[0].x).toBe('B');
   });
 });
+
+describe('9차 감사 — 식별자가 어긋나는데도 합쳐지던 자리', () => {
+  const 시트 = (grid, columns) => ({ grid, headerRows: 1, columns, cohortYear: 2025 });
+
+  it('이름이 같아도 번호가 다르면 합치지 않는다', async () => {
+    const { students, warnings } = await buildDataset([시트(
+      [['번호', '이름', '대학명', '최종'],
+        ['7', '김가온', '가온대학교', '합격'],
+        ['8', '김가온', '한결대학교', '합격']],
+      { 'identity.number': 0, 'identity.name': 1, univ: 2, final: 3 }
+    )]);
+    // 같은 해 같은 반에서 7번과 8번은 같은 학생일 수 없다
+    expect(students).toHaveLength(2);
+    expect(warnings.some((warning) => warning.type === 'identity-conflict')).toBe(true);
+  });
+
+  it('반·번호가 겹쳐도 학번이 다르면 합치지 않는다', async () => {
+    const { students, warnings } = await buildDataset([시트(
+      [['학번', '반', '번호', '대학명', '최종'],
+        ['30107', '3', '7', '가온대학교', '합격'],
+        ['30207', '3', '7', '한결대학교', '합격']],
+      { 'identity.hakbun': 0, 'identity.class': 1, 'identity.number': 2, univ: 3, final: 4 }
+    )]);
+    // 전입생에게 반·번호를 다시 매긴 파일에서 실제로 겹친다. 경고 하나 없이 섞이던 자리다
+    expect(students).toHaveLength(2);
+    expect(warnings.some((warning) => warning.type === 'identity-conflict')).toBe(true);
+  });
+
+  it('학번이 같으면 반·번호가 달라도 합친다', async () => {
+    const { students } = await buildDataset([시트(
+      [['학번', '반', '번호', '대학명', '최종'],
+        ['30101', '3', '1', '가온대학교', '합격'],
+        ['30101', '4', '2', '한결대학교', '합격']],
+      { 'identity.hakbun': 0, 'identity.class': 1, 'identity.number': 2, univ: 3, final: 4 }
+    )]);
+    // 학기 중에 반이 바뀐 것이지 다른 사람이 아니다
+    expect(students).toHaveLength(1);
+  });
+
+  it('이름이 N/A나 0인 행들을 한 학생으로 묶지 않는다', async () => {
+    for (const mark of ['N/A', 'Ｎ／Ａ', 'n/a', '0', '000']) {
+      const { students } = await buildDataset([시트(
+        [['이름', '대학명', '최종'],
+          [mark, '가온대학교', '합격'],
+          [mark, '한결대학교', '합격'],
+          [mark, '서림대학교', '합격']],
+        { 'identity.name': 0, univ: 1, final: 2 }
+      )]);
+      expect(students, mark).toHaveLength(0);
+    }
+    // 맨글자 NA는 「나」씨의 로마자 표기다. 이름으로 쓴다
+    const { students } = await buildDataset([시트(
+      [['이름', '대학명', '최종'], ['NA', '가온대학교', '합격'], ['Kim', '한결대학교', '합격']],
+      { 'identity.name': 0, univ: 1, final: 2 }
+    )]);
+    expect(students).toHaveLength(2);
+  });
+})

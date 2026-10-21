@@ -252,19 +252,23 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
   const sets = new DisjointSet();
   /** @type {Map<string, number>} 해시 → 묶음 번호 */
   const clusterByHash = new Map();
-  /** @type {{cohortYear: number|null, hashes: Set<string>, best: {strength: number, hash: string}|null, sid: string|null}[]} */
+  /** @type {{cohortYear: number|null, hashes: Set<string>, kinds: Map<string, Set<string>>, best: {strength: number, hash: string}|null, sid: string|null}[]} */
   const clusters = [];
 
   const newCluster = (cohortYear) => {
     const index = sets.make();
-    clusters[index] = { cohortYear, hashes: new Set(), best: null, sid: null };
+    clusters[index] = { cohortYear, hashes: new Set(), kinds: new Map(), best: null, sid: null };
     return index;
   };
 
-  const absorb = (index, hash, strength, cohortYear, sid = null) => {
+  const absorb = (index, hash, strength, cohortYear, sid = null, kind = null) => {
     const root = sets.find(index);
     const cluster = clusters[root];
     cluster.hashes.add(hash);
+    if (kind) {
+      if (!cluster.kinds.has(kind)) cluster.kinds.set(kind, new Set());
+      cluster.kinds.get(kind).add(hash);
+    }
     if (cluster.cohortYear === null) cluster.cohortYear = cohortYear;
     if (!cluster.best || strength > cluster.best.strength) cluster.best = { strength, hash };
     if (sid && !cluster.sid) cluster.sid = sid;
@@ -286,27 +290,61 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
   /** @type {(number|null)[]} */
   const clusterOfEntry = [];
 
+  /*
+   * **이은 키보다 강한 종류에서 어긋나면 합치지 않는다** (§3).
+   *
+   * 한 행이 여러 묶음을 가리키는 것은 대개 「그 식별자들이 한 사람의 것」이라는
+   * 증거다. 그런데 자료가 **아니라고 말하는** 경우가 있다 — 같은 이름으로 이어졌지만
+   * 번호가 다르거나, 반·번호가 겹쳤지만 학번이 다른 때다. 그때 합치면 서로 다른
+   * 학생의 지원 이력이 한 ID 아래 섞이고, 행 수는 맞아서 화면에는 표시가 없다.
+   *
+   * 반대로 **약한 쪽이 어긋나는 것은 합쳐야 한다** — 학번이 같은데 반·번호가 다른
+   * 것은 학기 중에 반이 바뀐 것이지 다른 사람이 아니다.
+   */
+  const 어긋난다 = (root, rowKeys) => {
+    const cluster = clusters[sets.find(root)];
+    // 보관돼 있던 학생은 키 종류를 적어 두지 않았다. 모르면 검토할 거리가 없다 (§5)
+    if (!cluster || cluster.kinds.size === 0) return false;
+    let 이은강도 = -1;
+    for (const key of rowKeys) {
+      if (cluster.hashes.has(key.hash)) 이은강도 = Math.max(이은강도, key.strength);
+    }
+    if (이은강도 < 0) return false;
+    return rowKeys.some((key) => {
+      if (key.strength <= 이은강도) return false;
+      const 쌓인것 = cluster.kinds.get(key.kind);
+      return Boolean(쌓인것 && 쌓인것.size > 0 && !쌓인것.has(key.hash));
+    });
+  };
+
+  let 잇지않은행 = 0;
+
   allowedByEntry.forEach((keys, index) => {
     if (keys.length === 0) { clusterOfEntry[index] = null; return; }
-    const hashes = keys.map((key) => ({ hash: hashByText.get(key.text), strength: key.strength }));
+    const hashes = keys.map((key) => ({
+      hash: hashByText.get(key.text), strength: key.strength, kind: key.kind
+    }));
     const matched = [...new Set(hashes.map((item) => clusterByHash.get(item.hash)).filter((value) => value !== undefined))];
+    const 이을것 = matched.filter((root) => !어긋난다(root, hashes));
+    if (이을것.length < matched.length) 잇지않은행 += 1;
 
     let target;
-    if (matched.length === 0) {
+    if (이을것.length === 0) {
       target = newCluster(entries[index].cohortYear);
     } else {
-      // 한 행이 여러 묶음을 가리킨다면 그 식별자들이 한 사람의 것이라는 증거다.
       // 예: 반·번호만 있던 묶음과 학번만 있던 묶음을, 둘 다 실린 행이 이어 준다.
       // 합치지 않으면 같은 학생이 익명 ID를 둘 갖게 되고 스스로 낫지 않는다
-      target = matched[0];
-      for (const other of matched.slice(1)) sets.union(target, other);
+      target = 이을것[0];
+      for (const other of 이을것.slice(1)) sets.union(target, other);
     }
     // 주키가 없는 행이 이미 저장돼 있던 학생에 이름으로 붙는 경우, 그 이름이 예전 자료에서도
     // 유일했는지 확인할 방법이 없다. 붙이되 몇 건인지 알린다
     const onlyName = keys.every((key) => KEY_KIND[key.kind].usesName);
     if (onlyName && hashes.some((item) => storedHashes.has(item.hash))) unverifiedNameLinks += 1;
 
-    for (const item of hashes) absorb(target, item.hash, item.strength, entries[index].cohortYear);
+    for (const item of hashes) {
+      absorb(target, item.hash, item.strength, entries[index].cohortYear, null, item.kind);
+    }
     clusterOfEntry[index] = sets.find(target);
   });
 
@@ -352,6 +390,14 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     for (const other of stored.slice(1)) merges.push({ from: other, into: sid });
     sidByRoot.set(root, sid);
     students.push({ sid, cohortYear: merged.cohortYear, keyHashes: [...merged.hashes].sort() });
+  }
+
+  if (잇지않은행 > 0) {
+    warnings.push({
+      type: 'identity-conflict',
+      count: 잇지않은행,
+      message: `식별자가 서로 어긋나 잇지 않은 행이 ${잇지않은행}건 있습니다. 학번이 다른데 반·번호가 겹치거나, 이름이 같은데 번호가 다른 경우입니다 — 다른 학생으로 두었습니다.`
+    });
   }
 
   if (merges.length > 0) {
