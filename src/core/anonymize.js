@@ -248,31 +248,65 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     hashByText.set(text, toHex(await sha256Text(salt + UNIT + text)));
   }));
 
+  /*
+   * ── 오염된 해시를 먼저 구별한다 ──────────────────────────────────────────
+   *
+   * **자료가 아니라고 말하는 키는 아무도 잇지 못한다.**
+   *
+   * 이름이 같은데 번호가 다른 행들, 반·번호가 겹치는데 학번이 다른 행들 — 그때
+   * 둘을 잇는 약한 키(이름·반번호)는 **누구를 가리키는지 알 수 없는 키**다. 그 키로
+   * 이으면 서로 다른 학생이 한 ID 아래 섞이고(§3), 묶는 동안 하나씩 떼어내는 식으로
+   * 막으면 **행 순서가 답을 정한다** — 이름만 있는 행이 7번에게 붙을지 8번에게 붙을지를
+   * 자료가 아니라 차례가 정한다.
+   *
+   * 그래서 묶기 전에 한 번 훑어 그런 키를 표시해 둔다. 오염된 키는 잇는 데 쓰지 않고
+   * 보관하지도 않는다. 다만 **익명 ID를 뽑는 재료로는 그대로 쓴다** — 빼면 그 키밖에
+   * 없는 행이 묶음을 못 만들어 통째로 저장되지 않는다 (§5의 데이터 누락).
+   */
+  /** @type {Map<string, Map<string, Set<string>>>} 해시 → (더 강한 종류 → 그 행들이 가진 해시들) */
+  const 더강한것 = new Map();
+  for (const keys of allowedByEntry) {
+    for (const key of keys) {
+      const hash = hashByText.get(key.text);
+      if (!더강한것.has(hash)) 더강한것.set(hash, new Map());
+      const 쌓인것 = 더강한것.get(hash);
+      for (const other of keys) {
+        if (other.strength <= key.strength) continue;
+        if (!쌓인것.has(other.kind)) 쌓인것.set(other.kind, new Set());
+        쌓인것.get(other.kind).add(hashByText.get(other.text));
+      }
+    }
+  }
+  /** @type {Set<string>} 서로 다른 학생을 가리키는 것이 드러난 해시 */
+  const 오염된해시 = new Set();
+  for (const [hash, 쌓인것] of 더강한것) {
+    for (const 값들 of 쌓인것.values()) {
+      if (값들.size > 1) { 오염된해시.add(hash); break; }
+    }
+  }
+
   // ── 3. 겹치는 해시를 가진 행끼리 묶는다 ────────────────────────────────────
   const sets = new DisjointSet();
   /** @type {Map<string, number>} 해시 → 묶음 번호 */
   const clusterByHash = new Map();
-  /** @type {{cohortYear: number|null, hashes: Set<string>, kinds: Map<string, Set<string>>, best: {strength: number, hash: string}|null, sid: string|null}[]} */
+  /** @type {{cohortYear: number|null, hashes: Set<string>, best: {strength: number, hash: string}|null, sid: string|null}[]} */
   const clusters = [];
 
   const newCluster = (cohortYear) => {
     const index = sets.make();
-    clusters[index] = { cohortYear, hashes: new Set(), kinds: new Map(), best: null, sid: null };
+    clusters[index] = { cohortYear, hashes: new Set(), best: null, sid: null };
     return index;
   };
 
-  const absorb = (index, hash, strength, cohortYear, sid = null, kind = null) => {
+  const absorb = (index, hash, strength, cohortYear, sid = null) => {
     const root = sets.find(index);
     const cluster = clusters[root];
     cluster.hashes.add(hash);
-    if (kind) {
-      if (!cluster.kinds.has(kind)) cluster.kinds.set(kind, new Set());
-      cluster.kinds.get(kind).add(hash);
-    }
     if (cluster.cohortYear === null) cluster.cohortYear = cohortYear;
     if (!cluster.best || strength > cluster.best.strength) cluster.best = { strength, hash };
     if (sid && !cluster.sid) cluster.sid = sid;
-    clusterByHash.set(hash, root);
+    // 오염된 해시로는 아무도 잇지 못한다. 자리표에 올리지 않는다
+    if (!오염된해시.has(hash)) clusterByHash.set(hash, root);
   };
 
   // 이미 저장된 학생을 먼저 심는다. 그 ID가 이어져야 한다
@@ -290,61 +324,31 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
   /** @type {(number|null)[]} */
   const clusterOfEntry = [];
 
-  /*
-   * **이은 키보다 강한 종류에서 어긋나면 합치지 않는다** (§3).
-   *
-   * 한 행이 여러 묶음을 가리키는 것은 대개 「그 식별자들이 한 사람의 것」이라는
-   * 증거다. 그런데 자료가 **아니라고 말하는** 경우가 있다 — 같은 이름으로 이어졌지만
-   * 번호가 다르거나, 반·번호가 겹쳤지만 학번이 다른 때다. 그때 합치면 서로 다른
-   * 학생의 지원 이력이 한 ID 아래 섞이고, 행 수는 맞아서 화면에는 표시가 없다.
-   *
-   * 반대로 **약한 쪽이 어긋나는 것은 합쳐야 한다** — 학번이 같은데 반·번호가 다른
-   * 것은 학기 중에 반이 바뀐 것이지 다른 사람이 아니다.
-   */
-  const 어긋난다 = (root, rowKeys) => {
-    const cluster = clusters[sets.find(root)];
-    // 보관돼 있던 학생은 키 종류를 적어 두지 않았다. 모르면 검토할 거리가 없다 (§5)
-    if (!cluster || cluster.kinds.size === 0) return false;
-    let 이은강도 = -1;
-    for (const key of rowKeys) {
-      if (cluster.hashes.has(key.hash)) 이은강도 = Math.max(이은강도, key.strength);
-    }
-    if (이은강도 < 0) return false;
-    return rowKeys.some((key) => {
-      if (key.strength <= 이은강도) return false;
-      const 쌓인것 = cluster.kinds.get(key.kind);
-      return Boolean(쌓인것 && 쌓인것.size > 0 && !쌓인것.has(key.hash));
-    });
-  };
-
   let 잇지않은행 = 0;
 
   allowedByEntry.forEach((keys, index) => {
     if (keys.length === 0) { clusterOfEntry[index] = null; return; }
-    const hashes = keys.map((key) => ({
-      hash: hashByText.get(key.text), strength: key.strength, kind: key.kind
-    }));
+    const hashes = keys.map((key) => ({ hash: hashByText.get(key.text), strength: key.strength }));
+    if (hashes.some((item) => 오염된해시.has(item.hash))) 잇지않은행 += 1;
+    // 오염된 해시는 자리표에 없으므로 아무 묶음도 가리키지 못한다
     const matched = [...new Set(hashes.map((item) => clusterByHash.get(item.hash)).filter((value) => value !== undefined))];
-    const 이을것 = matched.filter((root) => !어긋난다(root, hashes));
-    if (이을것.length < matched.length) 잇지않은행 += 1;
 
     let target;
-    if (이을것.length === 0) {
+    if (matched.length === 0) {
       target = newCluster(entries[index].cohortYear);
     } else {
+      // 한 행이 여러 묶음을 가리킨다면 그 식별자들이 한 사람의 것이라는 증거다.
       // 예: 반·번호만 있던 묶음과 학번만 있던 묶음을, 둘 다 실린 행이 이어 준다.
       // 합치지 않으면 같은 학생이 익명 ID를 둘 갖게 되고 스스로 낫지 않는다
-      target = 이을것[0];
-      for (const other of 이을것.slice(1)) sets.union(target, other);
+      target = matched[0];
+      for (const other of matched.slice(1)) sets.union(target, other);
     }
     // 주키가 없는 행이 이미 저장돼 있던 학생에 이름으로 붙는 경우, 그 이름이 예전 자료에서도
     // 유일했는지 확인할 방법이 없다. 붙이되 몇 건인지 알린다
     const onlyName = keys.every((key) => KEY_KIND[key.kind].usesName);
     if (onlyName && hashes.some((item) => storedHashes.has(item.hash))) unverifiedNameLinks += 1;
 
-    for (const item of hashes) {
-      absorb(target, item.hash, item.strength, entries[index].cohortYear, null, item.kind);
-    }
+    for (const item of hashes) absorb(target, item.hash, item.strength, entries[index].cohortYear);
     clusterOfEntry[index] = sets.find(target);
   });
 
@@ -389,14 +393,19 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     const sid = stored[0] ?? `${merged.cohortYear}-${group(encodeBase32(bytes, ANON_ID_CHARS), 4)}`;
     for (const other of stored.slice(1)) merges.push({ from: other, into: sid });
     sidByRoot.set(root, sid);
-    students.push({ sid, cohortYear: merged.cohortYear, keyHashes: [...merged.hashes].sort() });
+    /*
+     * 오염된 해시는 **보관하지 않는다.** 보관하면 다음 업로드에서 그 해시로 두
+     * 학생이 다시 이어진다 — 보관된 학생은 종류를 알 수 없어 검토를 못 하기 때문이다.
+     */
+    const 보관할것 = [...merged.hashes].filter((hash) => !오염된해시.has(hash)).sort();
+    students.push({ sid, cohortYear: merged.cohortYear, keyHashes: 보관할것 });
   }
 
   if (잇지않은행 > 0) {
     warnings.push({
       type: 'identity-conflict',
       count: 잇지않은행,
-      message: `식별자가 서로 어긋나 잇지 않은 행이 ${잇지않은행}건 있습니다. 학번이 다른데 반·번호가 겹치거나, 이름이 같은데 번호가 다른 경우입니다 — 다른 학생으로 두었습니다.`
+      message: `식별자가 서로 어긋나 잇지 않은 행이 ${잇지않은행}건 있습니다. 학번이 다른데 반·번호가 겹치거나, 이름이 같은데 번호가 다른 경우입니다 — 다른 학생으로 두었고, 그 이름이나 반·번호로는 더 잇지 않습니다.`
     });
   }
 
