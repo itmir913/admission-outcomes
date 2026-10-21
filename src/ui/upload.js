@@ -245,7 +245,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
             // 상태가 셋이다. 어떻게 읽어 냈는지에 따라 사람이 할 일이 다르다
             !reading?.readable
               // 표식은 **사람이 겪은 일**을 적는다. 「대학명 열」은 우리 사정이지 그 사람의 사정이 아니다
-              ? el('span', { class: 'tag tag-fail', text: '읽지 못하는 양식' })
+              ? el('span', { class: 'tag tag-fail', text: '인식할 수 없는 양식' })
               : reading.source === 'profile'
                 ? el('span', { class: 'tag tag-pass', text: `${reading.label} 양식` })
                 : el('span', { class: 'tag tag-wait', text: '이름으로 알아냄' }),
@@ -265,7 +265,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
                * **제보에서도 헤더만 받는다.** 「샘플을 보내 주세요」라고 적으면
                * 학생 데이터가 든 원본이 메일로 오간다 — 시작 화면과 같은 말로 적는다.
                */
-              '이 시트에서 「대학명」 열을 찾지 못해 꺼 두었습니다. 다른 시트이거나 아직 읽지 못하는 양식입니다 — 나머지만 불러와도 됩니다. 엑셀의 1~2행(헤더)만 hello@luminousky.com 으로 보내 주시면 반영하겠습니다.'
+              '이 시트에서 「대학명」 열을 찾지 못해 꺼 두었습니다. 다른 시트이거나 아직 인식할 수 없는 양식입니다 — 나머지만 불러와도 됩니다. 엑셀의 1~2행(헤더)만 hello@luminousky.com 으로 보내 주시면 반영하겠습니다.'
             ])
           : null,
 
