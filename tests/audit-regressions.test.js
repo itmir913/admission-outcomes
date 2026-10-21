@@ -17,6 +17,8 @@ import { classifyOutcome } from '../src/core/outcome.js';
 import { tallyOutcomes, passRate, rateNote } from '../src/ui/outcome.js';
 import { sortRows, searchHaystack } from '../src/analysis/query.js';
 import { visibleWindow } from '../src/ui/table.js';
+import { facetCounts, applyQuery } from '../src/analysis/query.js';
+import { uploadBlockers } from '../src/ui/upload.js';
 
 let counter = 0;
 const freshDatabase = () => openDatabase(`audit-${(counter += 1)}-${Date.now()}`);
@@ -375,5 +377,49 @@ describe('3차 감사 — 자료가 사라지던 자리들', () => {
     }
     const result = expandUploads([{ name: 'mac.zip', bytes: makeZip(entries) }], { limits: { maxEntries: 4, maxTotalBytes: 512 * 1024 * 1024 } });
     expect(result.files).toHaveLength(3);
+  });
+});
+
+describe('4차 감사 — 고치면서 들여온 자리들', () => {
+  it('이름으로 식별되는 시트를 막지 않는다', async () => {
+    const sheet = {
+      grid: [['이름', '번호', '대학명', '최종'], ['김가온', '1', '가온대학교', '합격']],
+      headerRows: 1,
+      columns: { 'identity.name': 0, 'identity.number': 1, univ: 2, final: 3 },
+      cohortYear: 2025
+    };
+    const { applications, warnings } = await buildDataset([sheet]);
+    // 저장되는 자료를 「저장할 수 없습니다」로 막던 자리다
+    expect(applications).toHaveLength(1);
+    expect(warnings.some((warning) => warning.type === 'rows-not-saved')).toBe(false);
+    expect(uploadBlockers(
+      [{ id: 's', fileName: 'f.xlsx', reading: { readable: true, identifiable: true }, }],
+      { s: { include: true, cohortYear: 2025 } }
+    )).toEqual([]);
+  });
+
+  it('값 목록에 묶인 건수만큼 행이 남는다', () => {
+    // 소수 셋째 자리가 다른 두 값은 표에도 목록에도 같은 10.00으로 적힌다
+    const rows = [{ 'gpa.환산': 10.001 }, { 'gpa.환산': 10.002 }, { 'gpa.환산': 11.5 }];
+    const counts = facetCounts(rows, [], 'gpa.환산');
+    const [대표, 건수] = [...counts.entries()].find(([value]) => Math.floor(Number(value)) === 10);
+    expect(건수).toBe(2);
+    const kept = applyQuery(rows, { filters: [{ key: 'gpa.환산', op: 'in', values: [대표] }] });
+    expect(kept).toHaveLength(건수);
+  });
+
+  it('연도를 고쳐 다시 올리면 틀린 해가 남지 않는다', async () => {
+    const db = await freshDatabase();
+    const 기록 = (year) => ({
+      hash: 'F', name: '한장.xlsx', sheets: ['시트1'], cohortYears: [year], yearBySheet: { '시트1': year }
+    });
+    for (const year of [2024, 2025]) {
+      await saveDataset(db, {
+        students: [], applications: [], suneung: [],
+        files: [기록(year)], readSheets: [{ fileHash: 'F', sheetName: '시트1' }]
+      });
+    }
+    const { files } = await loadDataset(db);
+    expect(files[0].cohortYears).toEqual([2025]);
   });
 });
