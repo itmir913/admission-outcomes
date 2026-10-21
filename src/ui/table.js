@@ -11,7 +11,7 @@
  * 다 그리면 필터를 건드릴 때마다 화면이 멈춘다.
  */
 
-import { el, clear, formatNumber, debounce } from './dom.js';
+import { el, clear, debounce } from './dom.js';
 import { valueLabel, isBlank } from '../analysis/registry.js';
 import { toggleSort } from '../analysis/query.js';
 
@@ -71,8 +71,10 @@ export function visibleWindow(scrollTop, viewportHeight, rowCount, rowHeight = R
 
 /** 셀 하나를 화면 글자로. */
 export function cellText(key, value) {
+  // 1단계의 `null`은 「해당 없음」이라는 값이다. 빈칸으로 접으면 값 목록에서 선택한
+  // 「해당 없음」 1건이 표에서는 빈칸으로 보이고, 보고 그대로 쳐도 찾히지 않는다
+  if (key === 'stage1Passed') return valueLabel(key, value);
   if (isBlank(value)) return '';
-  if (typeof value === 'number') return formatNumber(value);
   return valueLabel(key, value);
 }
 

@@ -112,8 +112,5 @@ export function debounce(run, delay = 180) {
   };
 }
 
-/** 숫자를 화면용으로 정리한다. */
-export function formatNumber(value) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return String(value ?? '');
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
-}
+// 숫자 표기는 한 곳에서 정한다. 표·검색·값 목록이 같은 글자를 써야 한다
+export { formatNumber } from '../analysis/registry.js';

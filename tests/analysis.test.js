@@ -89,7 +89,8 @@ describe('레지스트리', () => {
   it('값의 가짓수와 건수를 센다', () => {
     const univ = find('univ');
     expect(univ.cardinality).toBe(2);
-    expect(univ.values[0]).toEqual({ value: '가온대학교', count: 2 });
+    // 가짓수는 화면에 적히는 글자로 센다. 숫자 10과 글자 '10'은 한 가지다
+    expect(find('gpa.전교과').cardinality).toBe(2);
   });
 
   it('전부 숫자인 열만 숫자로 본다', () => {

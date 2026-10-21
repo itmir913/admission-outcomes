@@ -99,10 +99,14 @@ export function searchHaystack(row, keys) {
   for (const key of list) {
     const value = row[key];
     if (isBlank(value)) continue;
-    parts.push(String(value).toLowerCase());
-    // 열별 검색칸과 같은 글자로 찾아야 한다 — 「1단계 불합격」은 이름표에만 있다
     const label = 화면글자(row, key, value);
-    if (label !== String(value)) parts.push(label.toLowerCase());
+    parts.push(label.toLowerCase());
+    /*
+     * **저장 코드는 훑지 않는다.** `pass`·`none` 같은 글자는 화면 어디에도 적혀
+     * 있지 않은데, 그걸로 검색이 걸리면 사람이 본 적 없는 말로 행이 걸러진다.
+     * 글자 그대로 보관한 열(`extra`)은 이름표가 곧 원문이라 그대로 걸린다.
+     */
+    if (!뜻순서[key] && label !== String(value)) parts.push(String(value).toLowerCase());
   }
   return parts.join(' ');
 }
@@ -116,7 +120,7 @@ export function searchHaystack(row, keys) {
  */
 const 뜻순서 = {
   outcome: ['pass', 'waitPass', 'fail', 'unknown', 'none'],
-  registered: ['registered', 'declined', 'none'],
+  registered: ['registered', 'declined', 'unknown', 'none'],
   stage1Passed: [true, false, null]
 };
 const 뜻차례 = (key, value) => {
@@ -253,7 +257,7 @@ export function facetCounts(rows, filters, key, { search = '', searchKeys } = {}
    */
   const others = filters.filter((filter) => filter.key !== key || filter.op === 'contains');
   const tokens = searchTokens(search);
-  /** @type {Map<unknown, number>} */
+  /** @type {Map<string, {value: unknown, count: number}>} */
   const counts = new Map();
 
   for (const row of rows) {
@@ -266,10 +270,18 @@ export function facetCounts(rows, filters, key, { search = '', searchKeys } = {}
       const haystack = searchHaystack(row, searchKeys);
       if (!tokens.every((token) => haystack.includes(token))) continue;
     }
+    /*
+     * **화면 글자로 묶는다.** 숫자 `10`과 글자 `'10'`은 화면에서 한 줄이고,
+     * 거르는 쪽도 둘을 함께 통과시킨다(아래 `in` 비교). 값 그대로 세면 똑같이
+     * 적힌 두 줄이 생기고, 어느 줄을 눌러도 적힌 건수보다 많은 행이 남는다.
+     */
     const value = isBlank(row[key]) ? null : row[key];
-    counts.set(value, (counts.get(value) ?? 0) + 1);
+    const bucket = value === null ? '' : valueLabel(key, value);
+    const seen = counts.get(bucket);
+    counts.set(bucket, { value: seen?.value ?? value, count: (seen?.count ?? 0) + 1 });
   }
-  return counts;
+  // 바구니는 묶는 데만 쓴다. 바깥은 대표값으로 받는다
+  return new Map([...counts.values()].map((entry) => [entry.value, entry.count]));
 }
 
 /**

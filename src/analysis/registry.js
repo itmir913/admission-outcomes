@@ -76,6 +76,17 @@ export function isBlank(value) {
   return value === null || value === undefined || value === '';
 }
 
+/**
+ * 숫자 하나를 화면 글자로.
+ *
+ * 표와 검색과 값 목록이 **같은 글자**를 써야 한다. 표에는 2.35가 보이는데 검색이
+ * 2.345만 받으면, 보고 그대로 친 사람에게 「그런 건이 없다」고 답한다 (§5).
+ */
+export function formatNumber(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return String(value ?? '');
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
 /** enum 값을 화면 말로 바꾼다. */
 export function valueLabel(key, value) {
   // 1단계는 통과·탈락·해당 없음 셋이고, 셋째가 `null`이다.
@@ -84,11 +95,9 @@ export function valueLabel(key, value) {
   if (isBlank(value)) return '(빈칸)';
   if (key === 'outcome') return outcomeLabel(String(value));
   if (key === 'registered') return outcomeLabel(String(value));
+  if (typeof value === 'number') return formatNumber(value);
   return String(value);
 }
-
-/** 값이 몇 가지나 되면 목록 대신 검색으로 고르게 할지. */
-const MANY_VALUES = 40;
 
 /**
  * @typedef {object} Field
@@ -125,7 +134,15 @@ export function buildRegistry(rows) {
       }
       if (isBlank(value)) continue;
       stat.filled += 1;
-      stat.counts.set(value, (stat.counts.get(value) ?? 0) + 1);
+      /*
+       * **화면에 적히는 글자로 센다.**
+       *
+       * 같은 열이 파일에 따라 숫자 `10`과 글자 `'10'`으로 올 때가 있다. 값 그대로
+       * 세면 한 가지가 두 가지로 보이고, 값 목록에 똑같이 적힌 두 줄이 생긴다.
+       */
+      const bucket = valueLabel(key, value);
+      const seen = stat.counts.get(bucket);
+      stat.counts.set(bucket, { value: seen?.value ?? value, count: (seen?.count ?? 0) + 1 });
       if (typeof value === 'number' && Number.isFinite(value)) {
         stat.numbers += 1;
         if (value < stat.min) stat.min = value;
@@ -144,9 +161,6 @@ export function buildRegistry(rows) {
       : null);
     const type = declared ?? (numeric ? 'number' : 'text');
 
-    const sorted = [...stat.counts.entries()]
-      .sort((left, right) => right[1] - left[1] || String(left[0]).localeCompare(String(right[0]), 'ko'));
-
     list.push({
       key,
       label: fieldLabel(key),
@@ -154,8 +168,6 @@ export function buildRegistry(rows) {
       type,
       filled: stat.filled,
       cardinality: stat.counts.size,
-      values: sorted.slice(0, MANY_VALUES).map(([value, count]) => ({ value, count })),
-      truncated: sorted.length > MANY_VALUES,
       range: numeric && stat.filled > 0 ? { min: stat.min, max: stat.max } : null,
       numeric
     });

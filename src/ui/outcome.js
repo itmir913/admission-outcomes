@@ -126,6 +126,12 @@ export function outcomeBar(tally) {
       // 범례 글자는 띠의 색을 이어받는다. 어느 칸을 가리키는 말인지 색이 먼저 말해 준다
       class: `${part.ink} font-medium`,
       text: `${part.mark} ${part.name} ${part.count}건 (${몫(part.count).toFixed(1)}%)`
-    })))
+    }))),
+    /*
+     * **분모를 적는다.** 띠의 비율은 지원 건수 전체로 나눈 값이고, 바로 옆 칸의
+     * 합격률은 최종 판정이 나온 건으로 나눈 값이다. 같은 자료에서 20.0%와 66.7%가
+     * 나란히 뜨는데 어느 쪽이 무엇을 나눈 수인지 적혀 있지 않았다 (§5).
+     */
+    el('p', { class: 'mt-1 text-base text-ink-soft', text: `위 비율은 전체 지원 ${tally.지원}건 기준입니다.` })
   ]);
 }

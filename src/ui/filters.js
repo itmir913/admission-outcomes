@@ -85,7 +85,12 @@ export function createFilters({ mount, read, onChange, onClose }) {
   }
 
   // ── 값 선택 (글자·enum 열) ─────────────────────────────────────────────
-  function valueBlock(field, filter, counts, redraw) {
+  /** 이 열이 빈칸인 행 수. 범위를 줄이면 빠지는 건수다 */
+  function 빈칸수(field, rows) {
+    return (rows ?? []).reduce((count, row) => count + (isBlank(row[field.key]) ? 1 : 0), 0);
+  }
+
+  function valueBlock(field, filter, counts, redraw, rows) {
     const chosen = new Set((filter?.values ?? []).map((value) => (isBlank(value) ? null : value)));
     const needle = (localSearch.get(field.key) ?? '').trim().toLowerCase();
 
@@ -152,7 +157,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
    * 그래서 끄는 동안에는 숫자만 제자리에서 고쳐 쓰고, 손을 떼거나(`change`)
    * 잠시 멈췄을 때만(`RANGE_SETTLE`) 확정한다.
    */
-  function rangeBlock(field, filter) {
+  function rangeBlock(field, filter, rows) {
     const low = field.range?.min ?? 0;
     const high = field.range?.max ?? 0;
     // 내신은 소수 둘째 자리까지 온다. 정수로 반올림하면 1.95와 2.04가 한 칸이 된다
@@ -231,7 +236,20 @@ export function createFilters({ mount, read, onChange, onClose }) {
         highInput
       ]),
       el('div', { class: 'dual-range-wrap mt-4' }, [lowSlider, highSlider]),
-      echo
+      echo,
+      /*
+       * **빠지는 건수를 적는다.**
+       *
+       * 범위를 조금만 줄여도 이 열이 빈칸인 행은 전부 빠진다. 숫자 열에는 「(빈칸)」
+       * 선택지가 없어서 다시 넣을 조작도 없으니, 내신을 적지 않은 학생이 손잡이를
+       * 1px 끄는 순간 통째로 빠져 버린다. 적어도 몇 건인지는 보여야 한다 (§5).
+       */
+      빈칸수(field, rows) > 0
+        ? el('p', {
+            class: 'mt-1 text-base text-ink-soft',
+            text: `이 열이 빈칸인 ${빈칸수(field, rows)}건은 범위를 줄이면 함께 빠집니다.`
+          })
+        : null
     ]);
   }
 
@@ -295,8 +313,8 @@ export function createFilters({ mount, read, onChange, onClose }) {
     // 숫자여도 값이 몇 가지뿐이면 목록에서 선택하는 편이 낫다.
     // 고3 년도·수능 등급은 다중 선택이, 내신·백분위는 범위가 자연스럽다
     const body = field.numeric && field.cardinality > SEARCHABLE_AT
-      ? rangeBlock(field, filter)
-      : valueBlock(field, filter, facetCounts(rows, filters, field.key, { search }), redraw);
+      ? rangeBlock(field, filter, rows)
+      : valueBlock(field, filter, facetCounts(rows, filters, field.key, { search }), redraw, rows);
 
     // 팝오버에는 제목줄이 따로 있다. 여기서 또 그리면 같은 제목이 두 번 나온다
     if (!withHead) return el('div', {}, [body]);
