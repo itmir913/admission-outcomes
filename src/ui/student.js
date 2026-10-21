@@ -86,14 +86,21 @@ function applicationCard(row) {
   ]));
 
   /*
-   * 지나온 자취는 **표식으로 적는다.** 1단계·예비순위·등록은 있을 때만 뜻이 있는 값이라,
-   * 이름과 값을 나란히 적는 자리에 두면 비어 있는 칸이 늘 네댓 개씩 생긴다.
+   * 머리줄에 서는 표식은 **판정에 딸린 사실**뿐이다 — 예비 몇 번이었는지, 등록했는지.
+   * 결과 옆에 붙어야 뜻이 통하는 값이라 결과와 같은 줄에 둔다. 전형·계열처럼
+   * 지원할 때 정해진 값은 아래 이름–값 자리로 내려보낸다.
    */
   const 표식 = (text, tone) => el('span', { class: `tag tag-${tone}`, text });
+  const 예비 = valueLabel('', row.waitRank);
 
   const marks = [
-    isBlank(row.stage1) ? null : 표식(`1단계 ${valueLabel('', row.stage1)}`, 'none'),
-    isBlank(row.waitRank) ? null : 표식(`예비 ${valueLabel('', row.waitRank)}`, 'wait'),
+    isBlank(row.waitRank)
+      ? null
+      /*
+       * 숫자면 몇 번째인지가 뜻이고, 글이면 그 글이 곧 뜻이다.
+       * 「후보순위없음」까지 노랗게 칠하면, 기다릴 자리가 있었다는 뜻으로 보인다.
+       */
+      : 표식(/^\d+$/.test(예비) ? `예비 ${예비}번` : 예비, /^\d+$/.test(예비) ? 'wait' : 'none'),
     row.registered && row.registered !== 'none'
       ? 표식(valueLabel('registered', row.registered), 'pass') : null
   ].filter(Boolean);
@@ -103,33 +110,40 @@ function applicationCard(row) {
     el('div', { class: 'min-w-0 flex-1 px-4 py-3' }, [
       el('div', { class: 'flex flex-wrap items-center gap-2' }, [
         el('span', { class: 'tag tag-none', text: `${row.cohortYear}년 고3` }),
-        el('h4', { class: 'min-w-0 flex-1 truncate text-lg font-bold', text: String(row.univ ?? '(대학 미상)') }),
-        el('span', { class: `tag tag-${tone}` }, [
+        ...marks,
+        el('span', { class: `tag tag-${tone} ml-auto` }, [
           el('span', { attrs: { 'aria-hidden': 'true' }, text: outcome.mark }),
           el('span', { text: outcome.label })
         ])
       ]),
 
-      // 대학 다음에 오는 것은 언제나 모집단위다. 이름표를 달지 않아도 무엇인지 안다
-      isBlank(row.dept) ? null : el('p', {
-        class: 'mt-1 truncate text-lg font-medium',
-        text: String(row.dept),
-        attrs: { title: String(row.dept) }
-      }),
+      /*
+       * 대학과 모집단위는 **한 줄에 나란히** 둔다. 둘을 위아래로 쌓았더니 카드마다
+       * 두 줄이 되어, 열 몇 건을 훑을 때 눈이 멈출 자리가 배로 늘었다. 어디까지가
+       * 대학이고 어디부터가 학과인지는 가운뎃줄이 나눈다.
+       */
+      el('div', { class: 'mt-1 flex min-w-0 items-baseline gap-2 text-lg' }, [
+        el('h4', {
+          class: 'min-w-0 shrink-0 truncate font-bold',
+          text: String(row.univ ?? '(대학 미상)'),
+          attrs: { title: String(row.univ ?? '') }
+        }),
+        isBlank(row.dept) ? null : el('span', { class: 'text-line', attrs: { 'aria-hidden': 'true' }, text: '|' }),
+        isBlank(row.dept) ? null : el('p', {
+          class: 'min-w-0 truncate font-medium text-ink-soft',
+          text: String(row.dept),
+          attrs: { title: String(row.dept) }
+        })
+      ].filter(Boolean)),
 
       el('dl', { class: 'mt-2 grid grid-cols-2 gap-x-4 gap-y-2' }, [
         line('전형유형', row.admType),
         line('전형명', row.admName),
         line('계열', row.track),
-        line('모집시기', row.period)
-      ].filter(Boolean)),
-
-      marks.length > 0 ? el('div', { class: 'mt-2 flex flex-wrap gap-2' }, marks) : null,
-
-      isBlank(row.failReason) ? null : el('p', {
-        class: 'mt-2 rounded-lg bg-fail-soft px-3 py-1.5 text-base text-fail',
-        text: `불합격 사유 ${valueLabel('', row.failReason)}`
-      })
+        line('모집시기', row.period),
+        line('1단계', row.stage1),
+        line('불합격 사유', row.failReason)
+      ].filter(Boolean))
     ].filter(Boolean))
   ]);
 }
