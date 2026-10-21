@@ -244,7 +244,7 @@ describe('배정하지 않고 넘어가는 자리', () => {
     ];
     const resolved = resolveColumns(grid, 1);
     expect(resolved.columns.quota).toBeUndefined();
-    expect(resolved.notes.join(' ')).toContain('해석하지 않고 원본 그대로 두었습니다');
+    expect(resolved.notes.join(' ')).toContain('그 자리로 보지 않았습니다');
   });
 
   it('값이 비어 있으면 취소하지 않는다 - 검증할 거리가 없는 것과 틀린 것은 다르다', () => {
