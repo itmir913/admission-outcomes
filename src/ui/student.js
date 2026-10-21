@@ -145,7 +145,91 @@ export function openStudent(dialog, { sid, rows }) {
     byArea.set(area, parts);
   }
 
-  const PART_LABEL = { subject: '과목', stdScore: '표점', percentile: '백분위', grade: '등급' };
+  /*
+   * 수능은 **성적표 모양 그대로** 보여 준다. 영역마다 카드를 세우면 같은 항목이
+   * 카드마다 다른 높이에 적혀, 국어와 수학의 백분위를 견주려면 눈이 지그재그로 움직인다.
+   * 한 줄에 한 영역, 한 칸에 한 항목이면 세로로 훑어 바로 비교된다.
+   *
+   * 열은 **자료에 있는 항목만** 세운다. 원점수는 우리 사전에 없는 항목이라 칸도 두지 않는다 —
+   * 빈 칸이 늘어서면 "있는데 못 읽었다"로 보인다(§5).
+   */
+  const SUNEUNG_COLUMNS = [
+    ['subject', '선택과목'],
+    ['stdScore', '표준점수'],
+    ['percentile', '백분위'],
+    ['grade', '등급']
+  ];
+  // 성적표에 적히는 차례. 여기 없는 영역은 뒤에 붙인다
+  const AREA_ORDER = ['국어', '수학', '영어', '한국사', '탐구1', '탐구2', '제2외국어'];
+
+  const areaRows = [...byArea].sort(([left], [right]) => {
+    const l = AREA_ORDER.indexOf(left);
+    const r = AREA_ORDER.indexOf(right);
+    return (l < 0 ? AREA_ORDER.length : l) - (r < 0 ? AREA_ORDER.length : r)
+      || left.localeCompare(right, 'ko');
+  });
+  const usedColumns = SUNEUNG_COLUMNS.filter(([part]) =>
+    areaRows.some(([, parts]) => !isBlank(parts[part])));
+
+  const 칸 = (value, extra = '') => el('td', {
+    class: `border-t border-line px-3 py-2 text-center text-base tabular-nums ${extra}`,
+    text: isBlank(value) ? '-' : formatNumber(value)
+  });
+
+  function suneungTable() {
+    return el('div', { class: 'card mt-3 overflow-x-auto scroll-stable' }, [
+      el('table', { class: 'w-full border-collapse' }, [
+        el('thead', {}, [
+          el('tr', { class: 'bg-canvas' }, [
+            el('th', { class: 'px-3 py-2 text-center text-base font-semibold', text: '영역' }),
+            ...usedColumns.map(([part, label]) => el('th', {
+              class: `px-3 py-2 text-center text-base font-semibold ${part === 'grade' ? 'text-brand' : ''}`,
+              text: label
+            }))
+          ])
+        ]),
+        el('tbody', {}, areaRows.map(([area, parts]) => el('tr', {}, [
+          el('th', {
+            class: 'border-t border-line px-3 py-2 text-center text-base font-semibold',
+            attrs: { scope: 'row' },
+            text: area
+          }),
+          // 등급은 가장 자주 찾는 값이라 한 번에 눈에 들어와야 한다
+          ...usedColumns.map(([part]) => 칸(parts[part], part === 'grade' ? 'font-bold text-brand' : ''))
+        ])))
+      ])
+    ]);
+  }
+
+  /*
+   * 내신은 **조합까지 늘어놓고, 반영비만 접는다.**
+   *
+   * 상담에서 나란히 보는 것은 전교과와 국영수사과·국영수 같은 조합이다. 지원할
+   * 전형에 따라 보는 줄이 달라서, 하나만 두면 매번 접힌 것을 열어야 한다.
+   * 반면 `전교과(2/4/4)`처럼 반영비가 붙은 줄은 같은 조합을 비율만 바꿔 다시 센
+   * 값이라 수가 금세 불어난다 — 그쪽만 접는다.
+   *
+   * 나누는 기준은 **괄호**다. 조합 이름은 학교마다 다르므로 이름을 목록으로 박아
+   * 두면 다른 학교에서 통째로 빗나간다. 반영비가 붙었다는 사실은 양식과 무관하다.
+   */
+  const 전교과 = ['전교과', '전과목', '전교과목'];
+  const 반영비붙음 = (entry) => entry.label.includes('(');
+  const 조합순 = (left, right) => {
+    const l = 전교과.some((word) => left.label.startsWith(word));
+    const r = 전교과.some((word) => right.label.startsWith(word));
+    return Number(r) - Number(l) || left.label.localeCompare(right.label, 'ko');
+  };
+
+  const mainGpa = gpa.filter((entry) => !반영비붙음(entry)).sort(조합순);
+  const restGpa = gpa.filter(반영비붙음).sort(조합순);
+  // 전부 반영비가 붙은 양식이라면 접을 것이 아니라 그게 전부다
+  const 보일내신 = mainGpa.length > 0 ? mainGpa : restGpa;
+  const 접을내신 = mainGpa.length > 0 ? restGpa : [];
+
+  const gpaCard = (entry, big = false) => el('div', { class: 'card px-3 py-2' }, [
+    el('p', { class: 'truncate text-base text-ink-soft', text: entry.label, attrs: { title: entry.label } }),
+    el('p', { class: `${big ? 'text-3xl' : 'text-xl'} font-bold tabular-nums`, text: formatNumber(entry.value) })
+  ]);
 
   // 사이 간격을 **한 군데서** 준다. 조각마다 mt 를 달면 조각 하나가 빠질 때 간격이 어긋난다
   const body = el('div', { class: 'space-y-6' }, [
@@ -155,24 +239,24 @@ export function openStudent(dialog, { sid, rows }) {
       ? el('section', {}, [
           el('h3', { class: 'text-lg font-bold tracking-tight', text: '내신' }),
           el('div', { class: 'mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5' },
-            gpa.map((entry) => el('div', { class: 'card px-3 py-2' }, [
-              el('p', { class: 'truncate text-base text-ink-soft', text: entry.label, attrs: { title: entry.label } }),
-              el('p', { class: 'text-xl font-bold tabular-nums', text: formatNumber(entry.value) })
-            ])))
+            보일내신.map((entry, index) => gpaCard(entry, index === 0))),
+          접을내신.length > 0
+            ? el('details', { class: 'mt-3' }, [
+                el('summary', {
+                  class: 'cursor-pointer list-none rounded-lg border border-line bg-surface px-4 py-2 text-base font-medium hover:bg-brand-soft',
+                  text: `반영비를 달리 센 ${접을내신.length}개 보기`
+                }),
+                el('div', { class: 'mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5' },
+                  접을내신.map((entry) => gpaCard(entry)))
+              ])
+            : null
         ])
       : null,
 
     byArea.size > 0
       ? el('section', {}, [
           el('h3', { class: 'text-lg font-bold tracking-tight', text: '수능' }),
-          el('div', { class: 'mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5' },
-            [...byArea].map(([area, parts]) => el('div', { class: 'card px-3 py-2' }, [
-              el('p', { class: 'text-base font-semibold', text: area }),
-              ...Object.entries(parts).map(([part, value]) => el('p', {
-                class: 'text-base tabular-nums',
-                text: `${PART_LABEL[part] ?? part} ${formatNumber(value)}`
-              }))
-            ])))
+          suneungTable()
         ])
       : null,
 
