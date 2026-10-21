@@ -137,25 +137,6 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
      * 값이 올해를 넘으면 고3 년도일 수 없으므로 학년도다. 둘 다 없으면 사람에게 묻는다.
      * 화면과 저장 쪽이 이 판단을 따로 하면 둘이 어긋나고, 어긋난 쪽이 조용히 이긴다.
      */
-    /*
-     * **전에 넣어 본 파일이면 그때 확정한 고3 년도를 제안한다.**
-     *
-     * 파일 해시가 같다는 것은 내용이 한 바이트도 다르지 않다는 뜻이므로, 그때
-     * 사람이 정한 연도는 지금도 같은 뜻이다. 확정은 여전히 사람이 한다 — 입력란을
-     * 미리 채워 둘 뿐이고, 화면은 어디서 온 값인지 밝힌다.
-     *
-     * 연도가 둘 이상 섞인 파일은 손대지 않는다. 어느 쪽을 제안해도 절반은 틀린다.
-     */
-    const 지난기록 = knownFiles.get(sheet.fileHash);
-    const 지난연도 = 지난기록?.cohortYears ?? [];
-    if (yearGuess.cohortYear === null && 지난연도.length === 1) {
-      yearGuess.cohortYear = 지난연도[0];
-      yearGuess.source = 'previous';
-      yearGuess.confidence = 'low';
-      yearGuess.needsInput = true;
-      yearGuess.explanation = `전에 이 파일을 ${지난연도[0]}년 고3으로 넣었습니다. 맞는지 확인해 주세요.`;
-    }
-
     reading.effectiveBasis = reading.yearBasis
       ?? (['senior', 'admission'].includes(yearGuess.basis) ? yearGuess.basis : null);
     reading.perRowYear = reading.columns.sourceYear !== undefined && Boolean(reading.effectiveBasis);
@@ -171,7 +152,7 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
       profile: match.profile,
       match,
       yearGuess,
-      duplicate: 지난기록 ?? null,
+      duplicate: knownFiles.get(sheet.fileHash) ?? null,
       rowCount: Math.max(0, body.length - reading.headerRows),
       // 사람이 확인해 둔 프로파일로 읽었고 연도까지 확실할 때만 손댈 것이 없다.
       // 이름으로 해석한 것은 맞아 보여도 한 번은 눈으로 보게 한다

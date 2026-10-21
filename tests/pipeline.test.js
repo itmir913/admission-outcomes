@@ -43,45 +43,6 @@ describe('불러오기 준비', () => {
     expect(sheets[0].rowCount).toBe(4);
   });
 
-  /*
-   * 같은 파일을 다시 넣는 일은 흔하다 — 자료를 비웠다가 다시 올리거나, 다른 PC에서
-   * 받아 올 때. 해시가 같다는 것은 내용이 한 바이트도 다르지 않다는 뜻이므로,
-   * 그때 사람이 정한 연도를 다시 묻더라도 **빈칸으로 묻지는 않는다**.
-   */
-  it('전에 넣었던 파일이면 그때의 고3 년도를 제안한다', async () => {
-    const grid = senjinhakGrid(2026);
-    const bytes = makeWorkbook({ result: grid });
-    const profiles = await profilesFor(grid, { omitYearColumn: true });
-
-    const first = await prepareUploads([upload('a.xlsx', bytes)], { profiles, currentYear: NOW });
-    expect(first.sheets[0].yearGuess.cohortYear).toBeNull();
-
-    const again = await prepareUploads([upload('a.xlsx', bytes)], {
-      profiles,
-      currentYear: NOW,
-      existingFiles: [{ hash: first.sheets[0].fileHash, name: 'a.xlsx', cohortYears: [2024] }]
-    });
-    expect(again.sheets[0].yearGuess.cohortYear).toBe(2024);
-    // 제안일 뿐이다. 확정은 사람이 한다 (CLAUDE.md 2)
-    expect(again.sheets[0].yearGuess.needsInput).toBe(true);
-    expect(again.sheets[0].ready).toBe(false);
-    expect(again.sheets[0].yearGuess.explanation).toContain('2024');
-  });
-
-  it('연도가 둘 이상 섞여 있던 파일에는 연도를 제안하지 않는다', async () => {
-    const grid = senjinhakGrid(2026);
-    const bytes = makeWorkbook({ result: grid });
-    const profiles = await profilesFor(grid, { omitYearColumn: true });
-    const first = await prepareUploads([upload('a.xlsx', bytes)], { profiles, currentYear: NOW });
-
-    const again = await prepareUploads([upload('a.xlsx', bytes)], {
-      profiles,
-      currentYear: NOW,
-      existingFiles: [{ hash: first.sheets[0].fileHash, name: 'a.xlsx', cohortYears: [2024, 2025] }]
-    });
-    expect(again.sheets[0].yearGuess.cohortYear).toBeNull();
-  });
-
   it('아무것도 저장하지 않는다', async () => {
     // 사람이 확인하기 전에는 손대지 않는다
     const grid = senjinhakGrid(2026);
