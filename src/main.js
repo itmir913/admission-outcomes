@@ -548,6 +548,35 @@ pick('#열초기화').addEventListener('click', () => {
 
 pick('#인쇄').addEventListener('click', () => globalThis.print());
 
+/*
+ * 예시 양식 내려받기.
+ *
+ * **나가는 것은 이 도구가 지어낸 가짜뿐이다.** 보관소에 손대지 않고, 화면에 띄운
+ * 자료와도 무관하다 — 눌러 볼 양식이 없는 사람이 체험할 길일 뿐이다 (CLAUDE.md 1).
+ */
+pick('#예시받기').addEventListener('click', async () => {
+  busy(true);
+  try {
+    const { sampleWorkbook, SAMPLE_FILE_NAME } = await import('./sample/sampleWorkbook.js');
+    const url = URL.createObjectURL(new Blob([sampleWorkbook()], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }));
+    const link = el('a', { attrs: { href: url, download: SAMPLE_FILE_NAME } });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    // 브라우저가 다 읽을 때까지 기다렸다 거둔다. 바로 거두면 내려받기가 끊긴다
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  } catch (error) {
+    console.error(error);
+    alert(`예시 양식을 만들지 못했습니다.
+
+${error?.message ?? error}`);
+  } finally {
+    busy(false);
+  }
+});
+
 pick('#열선택').addEventListener('click', () => {
   openColumns(dom.열상자, {
     registry: state.registry,

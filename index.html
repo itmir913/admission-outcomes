@@ -81,12 +81,23 @@
                accept=".xlsx,.xlsm,.xlsb,.xls,.zip" />
       </div>
 
+      <!--
+        예시 양식은 **투하 영역 밖에 둔다.** 그 상자는 「내 파일을 넣는 곳」이고
+        이것은 반대 방향이라, 안에 두면 「파일 선택」과 헷갈린다.
+      -->
+      <p class="mt-4 text-center text-base text-ink-soft">
+        아직 양식이 없으신가요?
+        <button type="button" id="예시받기"
+                class="font-semibold text-brand underline underline-offset-2 hover:text-brand/80">예시 양식 내려받기</button>
+        <span class="block">자료는 전부 지어낸 것입니다.</span>
+      </p>
+
       <div class="card mt-6 px-6 py-5 text-base leading-relaxed text-ink-soft">
         <p class="font-semibold text-ink">개인정보</p>
         <ul class="mt-2 list-disc space-y-1 pl-5">
           <li><strong class="text-ink">이름과 학번은 보관하지 않습니다.</strong> 익명 ID를 만들 때만 쓰고 바로 버립니다.</li>
           <li><strong class="text-ink">서버로 아무것도 보내지 않습니다.</strong> 모두 이 브라우저 안에서 처리합니다.</li>
-          <li><strong class="text-ink">내보내기 기능이 없습니다.</strong> 원본 엑셀은 학교에서 관리합니다.</li>
+          <li><strong class="text-ink">자료를 내보내는 기능이 없습니다.</strong> 원본 엑셀은 학교에서 관리합니다.</li>
           <li>불러온 자료는 이 브라우저에만 남습니다. 위의 <strong class="text-ink">자료 초기화</strong>로 지웁니다.</li>
         </ul>
       </div>
