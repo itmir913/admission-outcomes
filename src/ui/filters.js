@@ -232,7 +232,16 @@ export function createFilters({ mount, read, onChange, onClose }) {
   }
 
   function block(field, filters, rows, search, { redraw = render, withHead = true } = {}) {
-    const filter = filters.find((item) => item.key === field.key);
+    /*
+     * **머리줄 검색(`contains`)은 이 칸의 필터가 아니다.**
+     *
+     * 한 열에 머리줄 검색과 값 선택이 함께 걸릴 수 있는데, 배열에서 검색이 앞에 오면
+     * 여기서 그것을 집어 `values`가 빈 집합이 됐다. 그러면 이미 선택한 값들이 꺼진 채로
+     * 보이고, 다음 값을 누르는 순간 **앞서 선택한 것이 조용히 사라진다.** 범위 칸도
+     * 같은 까닭으로 걸린 범위를 전체 범위처럼 보여 주다가, 한쪽을 건드리면 반대쪽이
+     * 풀렸다. 이 칸이 다루는 것만 집는다 (§5).
+     */
+    const filter = filters.find((item) => item.key === field.key && item.op !== 'contains');
     const active = Boolean(filter);
 
     /*

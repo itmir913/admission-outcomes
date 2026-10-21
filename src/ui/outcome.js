@@ -17,7 +17,7 @@ import { el } from './dom.js';
  * @param {object[]} rows
  */
 export function tallyOutcomes(rows) {
-  const tally = { 지원: rows.length, 합격: 0, 충원합격: 0, 불합격: 0, 미상: 0, 학생: 0 };
+  const tally = { 지원: rows.length, 합격: 0, 충원합격: 0, 불합격: 0, 미상: 0, 학생: 0, 최종판정: 0 };
   const students = new Set();
   for (const row of rows) {
     if (row.sid) students.add(row.sid);
@@ -26,6 +26,8 @@ export function tallyOutcomes(rows) {
     else if (code === 'waitPass') tally.충원합격 += 1;
     else if (code === 'fail') tally.불합격 += 1;
     else tally.미상 += 1;
+    // 최종 열에서 읽은 판정만 센다. 1단계 탈락은 세되 비율의 분모에는 넣지 않는다
+    if (row['#outcome']?.final && code !== 'unknown') tally.최종판정 += 1;
   }
   tally.학생 = students.size;
   return tally;
@@ -40,7 +42,12 @@ export function tallyOutcomes(rows) {
  * @returns {number|null} 셀 수 있는 건이 하나도 없으면 null
  */
 export function passRate(tally) {
-  const judged = tally.합격 + tally.충원합격 + tally.불합격;
+  /*
+   * 분모는 **최종 열에서 판정을 읽어 낸 건수**다. 1단계 탈락만 적힌 건은 빠진다 —
+   * 같은 파일의 1단계 합격은 아직 합격이 아니라 분자에 들어갈 수 없으므로,
+   * 분모에만 넣으면 발표 전 파일이 「합격률 0.0%」로 보인다 (§5).
+   */
+  const judged = tally.최종판정 ?? (tally.합격 + tally.충원합격 + tally.불합격);
   return judged === 0 ? null : (tally.합격 + tally.충원합격) / judged;
 }
 

@@ -25,6 +25,19 @@ import { isBlank, valueLabel } from './registry.js';
  */
 
 /**
+ * 그 칸에 **실제로 그려진 글자.**
+ *
+ * 결과 열은 저장값(`fail`)도 이름표(`불합격`)도 아닌 제3의 글자가 보일 때가 있다 —
+ * 「1단계 불합격」, 그리고 읽지 못한 표기는 원문 그대로. 화면에 적힌 말로 찾았는데
+ * 행이 사라지면 사람은 「그런 건이 없다」로 읽는다.
+ */
+function 화면글자(row, key, value) {
+  const outcome = row?.['#outcome'];
+  if (key === 'outcome' && outcome?.label) return String(outcome.label);
+  return valueLabel(key, value);
+}
+
+/**
  * 필터 하나가 행 하나를 통과시키는지.
  * @param {object} row
  * @param {Filter} filter
@@ -52,7 +65,7 @@ export function matchesFilter(row, filter) {
     const needle = String(filter.text ?? '').trim().toLowerCase();
     if (needle === '') return true;
     if (isBlank(value)) return false;
-    return valueLabel(filter.key, value).toLowerCase().includes(needle);
+    return 화면글자(row, filter.key, value).toLowerCase().includes(needle);
   }
 
   // `in`. 선택한 것이 없으면 아무것도 거르지 않는다 —
@@ -92,6 +105,13 @@ export function searchHaystack(row, keys) {
   }
   return parts.join(' ');
 }
+
+/** 판정이 화면에 늘어서는 차례. 합격 → 충원합격 → 불합격 → 읽지 못함 → 기록 없음 */
+const 판정순서 = ['pass', 'waitPass', 'fail', 'unknown', 'none'];
+const 판정차례 = (code) => {
+  const at = 판정순서.indexOf(String(code));
+  return at === -1 ? 판정순서.length : at;
+};
 
 /**
  * 값이 있는 것끼리 견준다. 빈칸 처리는 방향을 뒤집기 전에 따로 한다.
@@ -134,7 +154,11 @@ export function sortRows(rows, sorts = []) {
           return leftBlank ? 1 : -1;
         }
 
-        const order = compareValues(leftValue, rightValue);
+        const order = sort.key === 'outcome'
+          // 판정은 뜻에 차례가 있다. 저장값(`fail`·`pass`…)을 글자순으로 세우면
+          // 불합격이 합격 위에 오고 미상이 그 사이에 낀다
+          ? 판정차례(leftValue) - 판정차례(rightValue)
+          : compareValues(leftValue, rightValue);
         if (order !== 0) return sort.dir === 'desc' ? -order : order;
       }
       return left.index - right.index;
@@ -212,7 +236,12 @@ export function applyQuery(rows, { filters = [], search = '', sorts = [], search
  * @returns {Map<unknown, number>}
  */
 export function facetCounts(rows, filters, key, { search = '', searchKeys } = {}) {
-  const others = filters.filter((filter) => filter.key !== key);
+  /*
+   * 이 열의 **값 선택만** 뺀다. 같은 열의 머리줄 검색(`contains`)은 남겨 둬야
+   * 옆에 적는 건수가 눌렀을 때 남는 행 수와 맞는다 — 「3건」이라 적힌 것을 눌렀더니
+   * 표가 비는 일이 여기서 났다. 값 선택을 거는 쪽도 같은 열의 검색은 지우지 않는다.
+   */
+  const others = filters.filter((filter) => filter.key !== key || filter.op === 'contains');
   const tokens = searchTokens(search);
   /** @type {Map<unknown, number>} */
   const counts = new Map();
