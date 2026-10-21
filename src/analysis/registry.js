@@ -87,6 +87,37 @@ export function formatNumber(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+/**
+ * 값 목록 한 줄의 이름. **그 줄이 무엇을 품고 있는지까지 적는다.**
+ *
+ * 결과 열은 저장값 하나에 화면 글자가 여럿 달린다 — `none`에는 「기록 없음」과
+ * 「1단계 불합격」이, `unknown`에는 사전에 없는 표기들이 섞인다. 묶인 이름만
+ * 적으면, 표에서 본 말로 목록을 찾은 사람은 그런 항목이 없다고 읽는다. 읽지
+ * 못한 표기는 사람이 사전에 넣어야 할 말이라 더욱 보여야 한다 (§5).
+ *
+ * @param {string} key
+ * @param {unknown} value
+ * @param {string[]} 품은글자 그 줄에 묶인 행들의 화면 글자
+ * @returns {{label: string, terms: string[]}} 적을 이름과, 목록 안 찾기가 함께 볼 말들
+ */
+export function bucketLabel(key, value, 품은글자 = []) {
+  const 바탕 = valueLabel(key, value);
+  const 섞인것 = [...new Set(품은글자.filter((text) => text && text !== 바탕))];
+  if (섞인것.length === 0) return { label: 바탕, terms: [바탕] };
+  /*
+   * 전부가 그 표기인 줄(`unknown`)과 일부만 그런 줄(`none`)은 다르게 적는다.
+   * 「기록 없음(1단계 불합격)」은 그 줄 전부가 1단계 탈락이라는 뜻이 되어 버린다.
+   */
+  const 전부 = !품은글자.includes(바탕);
+  const 보일것 = 섞인것.slice(0, 2).join('·');
+  const 나머지 = 섞인것.length > 2 ? ` 외 ${섞인것.length - 2}` : '';
+  return {
+    label: `${바탕}(${보일것}${나머지}${전부 ? '' : ' 포함'})`,
+    // 「외 2」로 접힌 표기도 목록 안 찾기로 찾을 수 있어야 한다
+    terms: [바탕, ...섞인것]
+  };
+}
+
 /** enum 값을 화면 말로 바꾼다. */
 export function valueLabel(key, value) {
   // 1단계는 통과·탈락·해당 없음 셋이고, 셋째가 `null`이다.

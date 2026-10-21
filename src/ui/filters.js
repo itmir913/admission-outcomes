@@ -9,9 +9,8 @@
  */
 
 import { el, clear, formatNumber, debounce } from './dom.js';
-import { valueLabel, isBlank, GROUP_LABEL, GROUP_ORDER, primaryGpaField } from '../analysis/registry.js';
+import { valueLabel, isBlank, GROUP_LABEL, GROUP_ORDER, primaryGpaField, bucketLabel } from '../analysis/registry.js';
 import { facetCounts } from '../analysis/query.js';
-import { STAGE1_FAIL_LABEL } from '../core/outcome.js';
 
 /** 처음부터 열어 두는 필터. 상담에서 가장 먼저 거는 것들이다. */
 const OPENING = ['cohortYear', 'outcome', 'univ', 'track', 'admType', 'period', 'region'];
@@ -94,29 +93,15 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const 건수 = new Map(counts);
     for (const value of chosen) if (!건수.has(value)) 건수.set(value, 0);
 
-    /*
-     * **「기록 없음」이 무엇을 품고 있는지 적는다.**
-     *
-     * 표에는 「1단계 불합격」이라 적힌 건이 값 목록에서는 「기록 없음」에 섞여 있다.
-     * 화면에서 본 말로 목록을 찾은 사람은 그런 항목이 없다고 읽는다 (§5).
-     */
-    const 품은말 = (value) => {
-      if (field.key !== 'outcome') return valueLabel(field.key, value);
-      const 섞인것 = [...new Set((rows ?? [])
-        .filter((row) => row['#outcome']?.code === value)
-        .map((row) => row['#outcome']?.label)
-        .filter((label) => label && label !== valueLabel(field.key, value)))];
-      if (섞인것.length === 0) return valueLabel(field.key, value);
-      // 읽지 못한 표기는 사람이 사전에 넣어야 할 말이다. 목록에서 보이지 않으면 넣을 수 없다
-      const 보일것 = 섞인것.slice(0, 2).join('·');
-      const 나머지 = 섞인것.length > 2 ? ` 외 ${섞인것.length - 2}` : '';
-      return `${valueLabel(field.key, value)}(${보일것}${나머지})`;
-    };
+    // 결과 열은 한 줄에 화면 글자가 여럿 묶인다. 무엇이 묶였는지는 행이 안다
+    const 품은글자 = (value) => (field.key === 'outcome'
+      ? (rows ?? []).filter((row) => row['#outcome']?.code === value).map((row) => row['#outcome']?.label)
+      : []);
 
     const entries = [...건수.entries()]
-      .map(([value, count]) => ({ value, count, label: 품은말(value) }))
+      .map(([value, count]) => ({ value, count, ...bucketLabel(field.key, value, 품은글자(value)) }))
       .filter((entry) => entry.count > 0 || chosen.has(entry.value))
-      .filter((entry) => !needle || entry.label.toLowerCase().includes(needle))
+      .filter((entry) => !needle || entry.terms.some((term) => term.toLowerCase().includes(needle)))
       .sort(entryOrder(field));
 
     const list = el('div', { class: 'mt-2 max-h-64 scroll-stable space-y-0.5 overflow-y-auto' },
