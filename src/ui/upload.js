@@ -236,7 +236,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
 
         !reading?.readable
           ? el('p', { class: 'mt-3 rounded-lg bg-fail-soft px-4 py-2 text-base text-fail' }, [
-              '대학명 열을 찾지 못해 꺼 두었습니다. 나머지만 불러와도 됩니다. 대학 이름이 든 열의 머리글을 「대학명」으로 고치면 읽어 냅니다.'
+              '대학명 열을 찾지 못해 꺼 두었습니다. 나머지만 불러와도 됩니다. 대학 이름이 든 열의 헤더를 「대학명」으로 고치면 읽어 냅니다.'
             ])
           : null,
 
