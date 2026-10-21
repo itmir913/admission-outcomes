@@ -191,21 +191,30 @@ function outcomeBar(tally) {
 
   const 몫 = (count) => (count / tally.지원) * 100;
 
-  return el('div', { class: 'px-4 pb-3' }, [
+  // 제 이름을 적을 만큼 넓은 칸은 스스로 설명한다. 좁은 칸만 범례가 받는다
+  const 넉넉한가 = (part) => 몫(part.count) >= 10;
+  const 좁은칸 = parts.filter((part) => !넉넉한가(part));
+
+  return el('div', { class: 'border-t border-line-soft px-4 py-3' }, [
     el('div', {
-      class: 'flex h-7 w-full overflow-hidden rounded-md',
+      class: 'flex h-6 w-full overflow-hidden rounded',
       attrs: { role: 'img', 'aria-label': parts.map((part) => `${part.name} ${part.count}건`).join(', ') }
     }, parts.map((part) => el('div', {
-      class: `${part.tone} flex items-center justify-center overflow-hidden text-sm font-semibold`,
+      class: `${part.tone} flex items-center justify-center overflow-hidden whitespace-nowrap text-xs font-semibold`,
       // 칸 너비는 자료에서 나온다. 클래스로는 적을 수 없는 값이다 (§9의 예외)
       style: { width: `${몫(part.count).toFixed(2)}%` },
       attrs: { title: `${part.name} ${part.count}건 (${몫(part.count).toFixed(1)}%)` },
-      text: 몫(part.count) >= 9 ? `${part.mark} ${몫(part.count).toFixed(0)}%` : ''
+      text: 넉넉한가(part) ? `${part.mark} ${part.name} ${몫(part.count).toFixed(1)}%` : ''
     }))),
-    el('ul', { class: 'mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-soft' },
-      parts.map((part) => el('li', {
-        text: `${part.mark} ${part.name} ${part.count}건 (${몫(part.count).toFixed(1)}%)`
-      })))
+    /*
+     * 범례는 **좁은 칸이 있을 때만** 나온다. 넉넉한 칸의 이름을 여기 또 적으면
+     * 바로 위 통계 칸까지 합쳐 같은 숫자가 세 번 나온다.
+     */
+    좁은칸.length === 0 ? null : el('ul', {
+      class: 'mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-soft'
+    }, 좁은칸.map((part) => el('li', {
+      text: `${part.mark} ${part.name} ${몫(part.count).toFixed(1)}%`
+    })))
   ]);
 }
 
@@ -220,7 +229,7 @@ function paintSummary(visible, total) {
   ]);
 
   clear(dom.요약띠).append(el('div', { class: 'card overflow-hidden' }, [
-    el('div', { class: 'flex flex-wrap divide-x divide-line border-b border-line-soft' }, [
+    el('div', { class: 'flex flex-wrap divide-x divide-line' }, [
       cell(걸러짐 ? `지원 (전체 ${total})` : '지원', tally.지원),
       cell('학생', tally.학생),
       cell('합격', tally.합격, 'text-pass'),
