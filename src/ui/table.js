@@ -162,7 +162,9 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
      * 글자가 어디에도 들어가지 않는다 — 사람은 다 쳤다고 믿고 덜 걸러진 표를 본다.
      */
     const 치던칸 = document.activeElement;
-    const 치던열 = 치던칸?.closest?.('th')
+    // 같은 칸에 있는 「≡」 단추까지 검색칸으로 치면, 값 목록을 연 사람의 포커스가 뒤로 끌려간다
+    const 치던열 = 치던칸?.tagName === 'INPUT'
+      && 치던칸?.closest?.('th')
       && searchRow?.contains(치던칸)
       ? [...(searchRow?.children ?? [])].indexOf(치던칸.closest('th'))
       : -1;
@@ -382,6 +384,8 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
 
   /** 그려 본 행에서 잰 실제 높이. 재기 전에는 CSS 눈금을 쓴다 */
   let measuredRowHeight = ROW_HEIGHT;
+  /** 다시 재다가 또 다시 재는 일을 막는다 */
+  let 재측정중 = false;
 
   const windowRange = () =>
     visibleWindow(scroller.scrollTop - rowsTop(), scroller.clientHeight, rows.length, measuredRowHeight);
@@ -451,11 +455,14 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
      */
     const 실제행 = [...body.children].find((node) => node.getAttribute('aria-hidden') !== 'true');
     const 높이 = 실제행?.getBoundingClientRect().height ?? 0;
-    if (높이 > 0 && Math.abs(높이 - measuredRowHeight) > 0.5) {
+    // 한 번만 다시 그린다. 행마다 높이가 다른 날이 오면 두 값 사이를 오가며 멈추지 않는다
+    if (높이 > 0 && Math.abs(높이 - measuredRowHeight) > 0.5 && !재측정중) {
+      재측정중 = true;
       measuredRowHeight = 높이;
       // 자를 바꿨으니 빈자리도 다시 잰 값으로 그린다
       drawn = { start: -1, end: -1 };
       renderBody(true);
+      재측정중 = false;
     }
   }
 
