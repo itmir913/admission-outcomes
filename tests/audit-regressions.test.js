@@ -623,3 +623,63 @@ describe('9차 감사 — 식별자가 어긋나는데도 합쳐지던 자리', 
     expect(students).toHaveLength(2);
   });
 })
+
+describe('10차 감사 — 다른 학생으로 둔 둘이 같은 키를 들고 있던 자리', () => {
+  const 행 = (cohortYear, identity) => ({ cohortYear, identity });
+
+  it('두 학생이 같은 키 해시를 들지 않는다', async () => {
+    const { students } = await assignStudentIds([
+      행(2025, { number: '7', name: '김가온' }),
+      행(2025, { number: '8', name: '김가온' }),
+      행(2025, { hakbun: '30107', classNo: '3', number: '7' }),
+      행(2025, { hakbun: '30207', classNo: '3', number: '7' })
+    ]);
+    const 본것 = new Map();
+    for (const student of students) {
+      for (const hash of student.keyHashes) {
+        // 같은 해시를 둘이 들고 있으면 다음 업로드에서 그 해시로 되붙는다
+        expect(본것.get(hash) ?? student.sid).toBe(student.sid);
+        본것.set(hash, student.sid);
+      }
+    }
+    expect(students.length).toBeGreaterThan(1);
+  });
+
+  it('행 순서가 달라도 같은 묶음이 나온다 — 자료에 모순이 있어도', async () => {
+    const 행들 = [
+      행(2025, { name: '김가온' }),
+      행(2025, { number: '7', name: '김가온' }),
+      행(2025, { number: '8', name: '김가온' })
+    ];
+    const 지문 = async (순서) => {
+      const { sids } = await assignStudentIds(순서.map((at) => 행들[at]));
+      // 어느 행끼리 한 사람으로 묶였는지만 본다
+      return 순서.map((at, index) => 순서.map((other, 자리) => sids[index] === sids[자리]).join('')).join('|');
+    };
+    const 차례 = [[0, 1, 2], [1, 0, 2], [2, 1, 0], [1, 2, 0], [2, 0, 1], [0, 2, 1]];
+    const 모양 = await Promise.all(차례.map(지문));
+    expect(new Set(모양).size).toBe(1);
+  });
+
+  it('같은 파일을 네 번 올려도 학생 수가 늘지도 줄지도 않는다', async () => {
+    for (const 이름 of ['가', '김가온', '최여울', '홍길동', '강민재', '윤서아']) {
+      const db = await freshDatabase();
+      const sheet = {
+        grid: [['번호', '이름', '대학명', '최종'],
+          ['7', 이름, '가온대학교', '합격'],
+          ['8', 이름, '한결대학교', '합격']],
+        headerRows: 1,
+        columns: { 'identity.number': 0, 'identity.name': 1, univ: 2, final: 3 },
+        cohortYear: 2025,
+        source: { fileHash: 'F', sourceFile: '진학결과.xlsx', sourceSheet: 'S' }
+      };
+      for (let 차례 = 0; 차례 < 4; 차례 += 1) {
+        const dataset = await buildDataset([sheet], { existing: (await loadDataset(db)).students });
+        await saveDataset(db, { ...dataset, files: [], readSheets: [{ fileHash: 'F', sheetName: 'S' }] });
+        const { students, applications } = await loadDataset(db);
+        expect(students.length, `${이름} ${차례 + 1}회`).toBe(2);
+        expect(applications.length, `${이름} ${차례 + 1}회`).toBe(2);
+      }
+    }
+  });
+});
