@@ -311,7 +311,7 @@ export function facetBuckets(rows, filters, key, { search = '', searchKeys } = {
    */
   const others = filters.filter((filter) => filter.key !== key || filter.op === 'contains');
   const tokens = searchTokens(search);
-  /** @type {Map<string, {value: unknown, count: number, texts: string[]}>} */
+  /** @type {Map<string, {value: unknown, count: number, texts: Set<string>}>} */
   const counts = new Map();
 
   for (const row of rows) {
@@ -332,12 +332,14 @@ export function facetBuckets(rows, filters, key, { search = '', searchKeys } = {
     const value = isBlank(row[key]) ? null : row[key];
     const bucket = value === null ? '' : valueLabel(key, value);
     const seen = counts.get(bucket);
-    const texts = seen?.texts ?? [];
-    texts.push(화면글자(row, key, value));
+    // 글자는 **서로 다른 것만** 모은다. 대개 한 바구니의 글자는 다 같아서, 행마다 쌓으면 자리만 먹는다
+    const texts = seen?.texts ?? new Set();
+    texts.add(화면글자(row, key, value));
     counts.set(bucket, { value: seen?.value ?? value, count: (seen?.count ?? 0) + 1, texts });
   }
   // 바구니는 묶는 데만 쓴다. 바깥은 대표값으로 받는다
-  return new Map([...counts.values()].map((entry) => [entry.value, { count: entry.count, texts: entry.texts }]));
+  return new Map([...counts.values()]
+    .map((entry) => [entry.value, { count: entry.count, texts: [...entry.texts] }]));
 }
 
 /**
