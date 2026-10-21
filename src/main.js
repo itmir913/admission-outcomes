@@ -408,7 +408,10 @@ function refresh({ keepScroll = false } = {}) {
     sorts: state.view.sorts
   });
 
-  dom.표없음.textContent = '걸려 있는 필터에 맞는 지원 기록이 없습니다. 위 칩에서 필터를 하나씩 떼어 보세요.';
+  // 무엇 때문에 0건인지 말해 준다. 「없습니다」만으로는 어디를 되돌려야 하는지 모른다
+  dom.표없음.textContent = state.search.trim()
+    ? `「${state.search.trim()}」에 맞는 지원 기록이 없습니다. 검색어를 지우거나 줄여 보세요.`
+    : '걸려 있는 필터에 맞는 지원 기록이 없습니다. 위 칩에서 필터를 하나씩 떼어 보세요.';
 
   paintToolbar();
   팝오버그리기();
