@@ -112,7 +112,7 @@ export function chosenCount(sheets, decisions) {
 /**
  * **이미 보관된 같은 파일이면 그때 확정한 고3 년도를 꺼내 온다.**
  *
- * 다시 올리는 순간 그 파일이 넣었던 기록은 갈아 끼워진다. 그런데 연도 칸이 빈칸으로
+ * 다시 올리는 순간 그 파일이 넣었던 기록은 교체된다. 그런데 연도 칸이 빈칸으로
  * 뜨면 사람이 다시 쳐야 하고, 한 해 어긋나게 치면 같은 자료가 다른 해로 들어간다 (§2).
  * 내용이 한 바이트도 다르지 않으니 그때 정한 값이 지금도 같은 뜻이다. 미리 채우되
  * 확정은 여전히 사람이 한다. 연도가 둘 이상 섞여 있던 파일은 손대지 않는다.
@@ -345,7 +345,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
 
         sheet.duplicate
           ? el('p', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-2 text-base text-wait' }, [
-              `같은 내용을 이미 불러왔습니다. 다시 넣으면 그 파일이 넣었던 기록을 갈아 끼웁니다 — 건수가 두 배로 늘지는 않습니다.${
+              `같은 내용을 이미 불러왔습니다. 다시 불러오면 그 파일이 넣었던 기록을 교체합니다 — 건수가 두 배로 늘지는 않습니다.${
                 prefilledYear(sheet) === null ? '' : ` 고3 년도는 지난번에 정한 ${prefilledYear(sheet)}년으로 채워 두었습니다.`}`
             ])
           : null,
