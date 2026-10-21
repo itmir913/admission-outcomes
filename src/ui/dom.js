@@ -86,7 +86,7 @@ export function dialogFrame({ title, note, body, footer, onClose }) {
         on: { click: () => onClose?.() }
       })
     ]),
-    el('div', { class: 'min-h-0 flex-1 overflow-y-auto px-6 py-5' }, [body]),
+    el('div', { class: 'min-h-0 flex-1 scroll-stable overflow-y-auto px-6 py-5' }, [body]),
     footer ? el('div', { class: 'flex flex-wrap items-center justify-end gap-3 border-t border-line px-6 py-4' }, [footer]) : null
   ]);
 }

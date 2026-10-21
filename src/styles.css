@@ -101,7 +101,7 @@
   }
 
   .btn-sm {
-    @apply min-h-9 rounded-md px-3 text-sm;
+    @apply min-h-9 rounded-md px-3 text-base;
   }
 
   .card {
@@ -117,11 +117,11 @@
   /* `shrink-0`은 칩줄이 옆으로 흐르기 때문이다 — 좁다고 글자를 눌러 찌그러뜨리지 않는다 */
   .chip {
     @apply inline-flex min-h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-md
-      border border-brand/25 bg-brand-soft px-3 text-sm font-medium text-brand;
+      border border-brand/25 bg-brand-soft px-3 text-base font-medium text-brand;
   }
 
   .tag {
-    @apply inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-sm font-semibold;
+    @apply inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-base font-semibold;
   }
   .tag-pass { @apply bg-pass-soft text-pass; }
   .tag-wait { @apply bg-wait-soft text-wait; }
@@ -144,7 +144,7 @@
     @apply flex min-w-0 flex-1 basis-28 flex-col justify-center gap-0.5 px-4 py-3;
   }
   .stat-name {
-    @apply truncate text-sm text-ink-soft;
+    @apply truncate text-base text-ink-soft;
   }
   .stat-value {
     @apply text-2xl font-bold tabular-nums;
@@ -193,19 +193,25 @@
    * 그래서 바탕을 한 단계 내리고 아래에 선을 긋는다. 칸 사이에도 선을 두어
    * 열이 80개를 넘어도 어느 칸이 어느 열인지 눈이 따라갈 수 있게 한다.
    */
+  /*
+   * **머리는 통째로 붙는다.** 두 줄을 따로 붙이면 둘째 줄의 `top`을 첫 줄 높이와
+   * 손으로 맞춰야 하는데, 글자 크기가 바뀌면 그 값이 어긋나 둘 사이가 벌어진다.
+   * 그 틈으로 지나가던 자료 행이 비쳐 보였다. thead 하나만 붙이면 틈이 생길 자리가 없다.
+   */
+  .grid-table thead {
+    @apply sticky top-0 z-20;
+  }
   .grid-table thead th {
-    @apply sticky top-0 z-20 select-none bg-canvas text-sm font-semibold tracking-tight text-ink;
+    @apply select-none bg-canvas text-base font-semibold tracking-tight text-ink;
     box-shadow: inset -1px -1px 0 var(--color-line);
   }
 
   /*
    * 머리줄 둘째 칸 — 열별 검색 (참고 UI).
    *
-   * 첫 칸 바로 아래에 붙는다. 높이를 직접 적는 대신 행 높이를 그대로 쓴다 —
-   * 두 값이 어긋나면 스크롤할 때 첫 칸과 둘째 칸 사이가 벌어진다.
+   * 첫 칸 바로 아래에 온다. 붙이는 일은 thead 가 맡으므로 여기서는 자리를 적지 않는다.
    */
   .grid-table thead tr + tr th {
-    top: var(--spacing-row);
     @apply bg-surface px-1 py-1;
     box-shadow: inset -1px -1px 0 var(--color-line);
   }
@@ -219,7 +225,7 @@
       focus-within:border-brand;
   }
   .col-search input {
-    @apply min-h-8 min-w-0 flex-1 bg-transparent px-2 text-sm text-ink
+    @apply min-h-8 min-w-0 flex-1 bg-transparent px-2 text-base text-ink
       placeholder:text-ink-soft/50 focus:outline-none;
   }
   .col-search button {
@@ -351,6 +357,17 @@
    */
   .summary-rail {
     @apply sticky left-0 z-10 w-full px-4 pb-3 pt-3 lg:px-5;
+  }
+
+  /*
+   * 스크롤 막대 자리를 **미리 비워 둔다.**
+   *
+   * 자동으로 나타났다 사라지게 두면, 조건을 걸어 줄이 줄어드는 순간 막대가 사라지면서
+   * 안쪽 내용이 그 너비만큼 옆으로 뛴다. 방금 누르려던 단추가 손가락 밑에서 움직인다.
+   * 자리를 늘 잡아 두면 줄 수가 변해도 가로로는 아무것도 움직이지 않는다.
+   */
+  .scroll-stable {
+    scrollbar-gutter: stable;
   }
 
   /* 대화상자는 화면 가운데 선다. 브라우저 기본은 위쪽에 붙는다 */

@@ -30,7 +30,7 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
           el('div', { class: 'min-w-0 flex-1' }, [
             el('p', { class: 'truncate text-lg font-semibold', text: file.name, attrs: { title: file.name } }),
             el('p', {
-              class: 'mt-0.5 text-sm text-ink-soft',
+              class: 'mt-0.5 text-base text-ink-soft',
               text: [
                 file.container ? `${file.container} 안` : null,
                 (file.cohortYears ?? []).filter((year) => year !== null && year !== undefined).length > 0
@@ -55,7 +55,7 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
         ]))),
 
     storage
-      ? el('p', { class: 'mt-5 text-sm text-ink-soft', text: `브라우저 보관 ${megabytes(storage.usage)} / ${megabytes(storage.quota)}` })
+      ? el('p', { class: 'mt-5 text-base text-ink-soft', text: `브라우저 보관 ${megabytes(storage.usage)} / ${megabytes(storage.quota)}` })
       : null,
 
     el('div', { class: 'mt-5 rounded-xl bg-canvas px-4 py-3 text-base leading-relaxed text-ink-soft' }, [
@@ -102,9 +102,9 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
 
   // 두 목록이 각자 스크롤한다. 대화상자까지 함께 스크롤되면 스크롤바가 둘로 겹쳐
   // 어느 쪽이 움직이는지 알 수 없다
-  const shownList = el('ol', { class: 'mt-2 max-h-[22rem] space-y-1 overflow-y-auto pr-1' });
-  const pickList = el('div', { class: 'mt-2 max-h-[22rem] space-y-4 overflow-y-auto pr-1' });
-  const pinNote = el('p', { class: 'mt-1 text-sm text-ink-soft' });
+  const shownList = el('ol', { class: 'mt-2 max-h-[22rem] scroll-stable space-y-1 overflow-y-auto' });
+  const pickList = el('div', { class: 'mt-2 max-h-[22rem] scroll-stable space-y-4 overflow-y-auto' });
+  const pinNote = el('p', { class: 'mt-1 text-base text-ink-soft' });
 
   function move(key, delta) {
     const index = chosen.indexOf(key);
@@ -138,7 +138,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
       }, [
         el('span', { class: 'cursor-grab text-ink-soft', attrs: { 'aria-hidden': 'true' }, text: '⠿' }),
         el('span', { class: 'min-w-0 flex-1 truncate text-base', text: field?.label ?? key, attrs: { title: field?.label ?? key } }),
-        isPinned ? el('span', { class: 'shrink-0 text-xs font-semibold text-brand', text: '고정' }) : null,
+        isPinned ? el('span', { class: 'shrink-0 text-base font-semibold text-brand', text: '고정' }) : null,
         el('button', {
           class: 'btn btn-sm border-transparent px-2', text: '↑',
           attrs: { type: 'button', 'aria-label': `${field?.label ?? key} 위로` },
@@ -165,7 +165,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
       const inGroup = registry.filter((field) => field.group === group);
       if (inGroup.length === 0) continue;
       pickList.append(el('section', {}, [
-        el('h4', { class: 'text-sm font-bold text-ink-soft', text: GROUP_LABEL[group] ?? group }),
+        el('h4', { class: 'text-base font-bold text-ink-soft', text: GROUP_LABEL[group] ?? group }),
         el('div', { class: 'mt-1 flex flex-wrap gap-2' }, inGroup.map((field) => el('button', {
           class: `btn btn-sm ${shown.has(field.key) ? 'btn-primary' : ''} ${field.filled === 0 ? 'opacity-50' : ''}`,
           attrs: {
@@ -200,7 +200,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
   const body = el('div', { class: 'grid gap-5 md:grid-cols-2' }, [
     el('section', {}, [
       el('h3', { class: 'text-lg font-bold tracking-tight', text: '보이는 열' }),
-      el('p', { class: 'text-sm text-ink-soft', text: '끌어다 놓거나 화살표로 차례를 바꿉니다. 표의 머리줄을 끌어도 됩니다.' }),
+      el('p', { class: 'text-base text-ink-soft', text: '끌어다 놓거나 화살표로 차례를 바꿉니다. 표의 머리줄을 끌어도 됩니다.' }),
       shownList,
       el('div', { class: 'mt-4' }, [
         el('label', { class: 'text-base font-semibold', text: '왼쪽에 고정할 열 수' }),
@@ -214,7 +214,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
     ]),
     el('section', {}, [
       el('h3', { class: 'text-lg font-bold tracking-tight', text: '자료에 있는 열' }),
-      el('p', { class: 'text-sm text-ink-soft', text: '누르면 켜지고 꺼집니다. 해석하지 못한 열도 그대로 쓸 수 있습니다.' }),
+      el('p', { class: 'text-base text-ink-soft', text: '누르면 켜지고 꺼집니다. 해석하지 못한 열도 그대로 쓸 수 있습니다.' }),
       pickList
     ])
   ]);

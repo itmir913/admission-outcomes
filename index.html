@@ -30,7 +30,7 @@
     머리줄은 한 줄이다. 줄이 늘면 표가 그만큼 줄어드는데,
     이 도구에서 세로 한 줄은 지원 기록 한 건이다.
   -->
-  <header class="no-print flex h-bar shrink-0 items-center gap-4 border-b border-line bg-surface px-5">
+  <header class="no-print flex h-bar shrink-0 items-center gap-2 border-b border-line bg-surface px-3 sm:gap-4 sm:px-5">
     <!--
       필터 패널의 표시를 전환하는 단추 (#1). 참고 UI처럼 머리줄 맨 앞에 둔다 —
       화면 어디를 보고 있든 눈이 먼저 닿는 자리다.
@@ -38,8 +38,13 @@
     <button type="button" id="필터토글"
             class="btn btn-sm shrink-0 px-2.5 text-lg leading-none"
             aria-controls="필터판" aria-expanded="true" aria-label="필터 패널 숨기기">☰</button>
-    <h1 class="shrink-0 whitespace-nowrap text-lg font-bold tracking-tight">진학결과 분석</h1>
-    <p id="요약" class="min-w-0 truncate text-sm text-ink-soft"></p>
+    <!--
+      좁은 화면에서는 제목을 **눈에서만** 감춘다. §1 이 늘 보이라고 못 박은 것은
+      오른쪽 단추 둘이고, 제목은 그 자리를 뺏는 쪽이다. 화면 낭독기에는 남긴다 —
+      문서에 제목이 없으면 지금 어느 화면인지 들을 길이 사라진다.
+    -->
+    <h1 class="sr-only text-lg font-bold tracking-tight sm:not-sr-only sm:min-w-0 sm:truncate">진학결과 분석</h1>
+    <p id="요약" class="hidden min-w-0 truncate text-base text-ink-soft sm:block"></p>
 
     <div class="ml-auto flex shrink-0 items-center gap-2">
       <button type="button" id="파일열기" class="btn btn-sm">현재 엑셀 파일</button>
@@ -49,7 +54,7 @@
   </header>
 
   <!-- 자료가 없을 때: 불러오기 화면 -->
-  <section id="시작화면" class="hidden min-h-0 flex-1 overflow-y-auto">
+  <section id="시작화면" class="hidden min-h-0 flex-1 overflow-y-auto scroll-stable">
     <div class="mx-auto max-w-3xl px-6 py-14">
       <h2 class="text-3xl font-bold tracking-tight">과년도 진학결과를 불러옵니다</h2>
       <p class="mt-3 text-lg text-ink-soft">
@@ -90,10 +95,10 @@
       -->
       <div id="필터막" class="no-print absolute inset-0 z-30 hidden bg-ink/40 lg:hidden"></div>
       <aside id="필터판"
-             class="no-print absolute inset-y-0 left-0 z-40 w-80 shrink-0 overflow-y-auto border-r border-line bg-surface px-4 py-4 shadow-xl lg:static lg:shadow-none"></aside>
+             class="no-print absolute inset-y-0 left-0 z-40 w-80 max-w-[85vw] shrink-0 scroll-stable overflow-y-auto border-r border-line bg-surface px-4 py-4 shadow-xl lg:static lg:shadow-none"></aside>
 
 
-      <div id="표" tabindex="-1" class="print-open min-h-0 min-w-0 flex-1 overflow-auto">
+      <div id="표" tabindex="-1" class="print-open min-h-0 min-w-0 flex-1 scroll-stable overflow-auto">
         <!--
           요약 띠. **맨 위에 둔다** — 조건을 걸고 나서 가장 먼저 확인하는 것이
           "그래서 몇 건이 남았나"이기 때문이다. 조작 수단은 그 아래에 둔다.
@@ -108,7 +113,7 @@
           가로로만 왼쪽에 고정한다. 열이 80개 넘는 표를 옆으로 밀 때 검색칸까지
           따라 나가면 다시 쓰려고 되돌아와야 한다.
         -->
-        <div class="no-print sticky left-0 w-full px-4 pt-3 lg:px-5">
+        <div class="no-print sticky left-0 w-full px-4 py-3 lg:px-5">
           <div class="flex items-center gap-3">
             <div class="relative min-w-0 flex-1">
               <input type="search" id="검색" class="field pl-10" placeholder="대학·학과·전형 검색"
@@ -118,25 +123,20 @@
           </div>
 
           <!--
-            이 줄은 **늘 자리를 지킨다.** 칩은 걸고 떼는 것이라 수가 들쭉날쭉한데,
-            그때마다 줄이 생겼다 사라지면 표가 위아래로 들썩이고 방금 읽던 행을 놓친다.
-            오른쪽 단추들이 줄의 높이를 늘 붙잡아 둔다.
-
-            칩은 **줄을 바꾸지 않고 옆으로 흐른다.** 줄바꿈을 허용하면 칩 하나를 더 걸 때
-            줄이 둘이 되면서 표가 통째로 내려앉는다.
+            단추 줄이 **칩보다 위에 있다.** 칩은 걸고 떼는 것이라 수가 들쭉날쭉한데,
+            둘을 한 줄에 두면 칩이 늘어날 때마다 단추가 옆으로 밀리거나 줄이 접힌다.
+            위아래로 나누면 단추는 제자리를 지키고, 칩은 아래로만 자란다.
           -->
-          <div class="mt-3 flex items-start gap-3">
-            <div id="칩줄" class="flex min-h-9 min-w-0 flex-1 items-center gap-2 overflow-x-auto"></div>
-            <div class="flex shrink-0 items-center gap-1.5">
+          <div class="flex flex-wrap items-center justify-end gap-1.5">
               <!--
                 열 고정 (#3). 대화상자 안에만 있어서 표를 볼 때는 조정할 길이 없었다.
                 0까지 내리면 고정이 해제된다.
               -->
               <div class="flex min-h-9 items-center gap-1 rounded-md border border-line bg-surface px-2">
-                <span class="text-sm text-ink-soft">열 고정</span>
+                <span class="text-base text-ink-soft">열 고정</span>
                 <button type="button" id="고정줄이기" class="btn btn-sm min-h-7 border-transparent px-1.5"
                         aria-label="고정할 열 하나 줄이기">−</button>
-                <span id="고정수" class="min-w-4 text-center text-sm font-semibold tabular-nums"
+                <span id="고정수" class="min-w-4 text-center text-base font-semibold tabular-nums"
                       aria-live="polite"></span>
                 <button type="button" id="고정늘리기" class="btn btn-sm min-h-7 border-transparent px-1.5"
                         aria-label="고정할 열 하나 늘리기">+</button>
@@ -146,8 +146,13 @@
               <button type="button" id="정렬초기화" class="btn btn-sm">정렬 초기화</button>
               <button type="button" id="필터초기화" class="btn btn-sm">필터 초기화</button>
               <button type="button" id="인쇄" class="btn btn-sm">인쇄</button>
-            </div>
           </div>
+
+          <!--
+            걸린 조건들. **비어 있으면 자리를 차지하지 않고**, 생기면 아래로 밀려
+            표를 내린다. 줄바꿈을 허용해 칩이 많아도 전부 드러난다.
+          -->
+          <div id="칩줄" class="mt-3 flex flex-wrap items-center gap-2 empty:mt-0"></div>
         </div>
 
         <div id="알림줄" class="sticky left-0 w-full space-y-2 px-4 pt-3 empty:pt-0 lg:px-5"></div>

@@ -191,28 +191,27 @@ function outcomeBar(tally) {
 
   const 몫 = (count) => (count / tally.지원) * 100;
 
-  // 제 이름을 적을 만큼 넓은 칸은 스스로 설명한다. 좁은 칸만 범례가 받는다
-  const 넉넉한가 = (part) => 몫(part.count) >= 10;
-  const 좁은칸 = parts.filter((part) => !넉넉한가(part));
+  /*
+   * 칸 안에는 **비율만** 적는다. 이름까지 넣었더니 폭이 좁은 화면에서 글자가 잘렸다 —
+   * 칸 너비는 비율이 정하는데 글자 길이는 이름이 정해서, 둘이 맞을 보장이 없다.
+   * 이름은 아래 범례가 맡는다. 범례는 색·모양과 이름을 잇는 열쇠이기도 하다.
+   */
+  const 적을만한가 = (part) => 몫(part.count) >= 8;
 
   return el('div', { class: 'border-t border-line-soft px-4 py-3' }, [
     el('div', {
       class: 'flex h-6 w-full overflow-hidden rounded',
       attrs: { role: 'img', 'aria-label': parts.map((part) => `${part.name} ${part.count}건`).join(', ') }
     }, parts.map((part) => el('div', {
-      class: `${part.tone} flex items-center justify-center overflow-hidden whitespace-nowrap text-xs font-semibold`,
+      class: `${part.tone} flex items-center justify-center overflow-hidden whitespace-nowrap text-base font-semibold`,
       // 칸 너비는 자료에서 나온다. 클래스로는 적을 수 없는 값이다 (§9의 예외)
       style: { width: `${몫(part.count).toFixed(2)}%` },
       attrs: { title: `${part.name} ${part.count}건 (${몫(part.count).toFixed(1)}%)` },
-      text: 넉넉한가(part) ? `${part.mark} ${part.name} ${몫(part.count).toFixed(1)}%` : ''
+      text: 적을만한가(part) ? `${part.mark} ${몫(part.count).toFixed(1)}%` : ''
     }))),
-    /*
-     * 범례는 **좁은 칸이 있을 때만** 나온다. 넉넉한 칸의 이름을 여기 또 적으면
-     * 바로 위 통계 칸까지 합쳐 같은 숫자가 세 번 나온다.
-     */
-    좁은칸.length === 0 ? null : el('ul', {
-      class: 'mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-soft'
-    }, 좁은칸.map((part) => el('li', {
+    el('ul', {
+      class: 'mt-2 flex flex-wrap gap-x-4 gap-y-1 text-base text-ink-soft'
+    }, parts.map((part) => el('li', {
       text: `${part.mark} ${part.name} ${몫(part.count).toFixed(1)}%`
     })))
   ]);
@@ -240,7 +239,7 @@ function paintSummary(visible, total) {
     ].filter(Boolean)),
     outcomeBar(tally),
     el('p', {
-      class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-sm text-ink-soft',
+      class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-base text-ink-soft',
       text: tally.미상 > 0
         ? '합격률 = (합격 + 충원합격) ÷ 판정을 읽어 낸 지원 건수. 판정 미상 건은 분모에서 빠집니다.'
         : '합격률 = (합격 + 충원합격) ÷ 지원 건수. 사람 수가 아니라 지원 건수 기준입니다.'
@@ -262,7 +261,7 @@ function paintChips() {
       class: 'chip border-pass/30 bg-pass-soft text-pass'
     }, [
       el('span', {
-        class: 'rounded bg-pass px-1.5 text-xs font-bold text-white',
+        class: 'rounded bg-pass px-1.5 text-base font-bold text-white',
         text: String(rank + 1)
       }),
       el('span', { text: `${fieldLabel(sort.key)} ${sort.dir === 'asc' ? '▲' : '▼'}` }),
@@ -433,7 +432,7 @@ function updateView(patch) {
  * 기본값은 화면 폭이 정한다. 사람이 한 번이라도 전환하면 그 선택이 `body`의 클래스로
  * 올라와 기본값을 덮고, 그 뒤로는 화면 폭이 바뀌어도 사람의 선택이 이긴다.
  */
-function 필터판보이기(on) {
+function 필터판보이기(on, { 기억 = true } = {}) {
   document.body.classList.toggle('filters-on', on);
   document.body.classList.toggle('filters-off', !on);
   // 막은 좁은 화면에서만 뜻이 있다. 넓은 화면에서는 패널이 표를 덮지 않는다
@@ -443,7 +442,8 @@ function 필터판보이기(on) {
   토글.setAttribute('aria-label', on ? '필터 패널 숨기기' : '필터 패널 표시');
   // 접혀 있다는 것을 단추 자신이 보여 준다. 글자가 ☰ 하나뿐이라 색으로 구분한다
   토글.classList.toggle('btn-primary', !on);
-  if (state.view.filtersOpen !== on) updateView({ filtersOpen: on });
+  // 좁은 화면이라 닫아 둔 것은 사람의 선택이 아니다. 적어 두면 넓은 화면의 선택을 덮는다
+  if (기억 && state.view.filtersOpen !== on) updateView({ filtersOpen: on });
 }
 
 /** 지금 패널이 떠 있는가. 클래스가 없으면 화면 폭이 정한 기본값을 본다. */
@@ -650,8 +650,16 @@ pick('#전체지우기').addEventListener('click', wipe);
 
 async function start() {
   state.view = loadView();
-  // 사람이 한 번이라도 전환했으면 그 선택을 되살린다. 아니면 화면 폭이 정한 기본값이다
-  if (typeof state.view.filtersOpen === 'boolean') 필터판보이기(state.view.filtersOpen);
+  /*
+   * 사람이 한 번이라도 전환했으면 그 선택을 되살린다. 아니면 화면 폭이 정한 기본값이다.
+   *
+   * **좁은 화면에서는 늘 닫은 채로 시작한다.** 거기서 패널은 표를 통째로 덮는 덮개라,
+   * 넓은 화면에서 켜 둔 선택을 그대로 되살리면 자료를 보러 들어와 덮개부터 만난다.
+   * 그 선택은 다른 화면 폭에서 한 것이다.
+   */
+  const 넓은화면 = globalThis.matchMedia?.('(min-width: 64rem)').matches ?? false;
+  if (!넓은화면) 필터판보이기(false, { 기억: false });
+  else if (typeof state.view.filtersOpen === 'boolean') 필터판보이기(state.view.filtersOpen);
   try {
     state.db = await openDatabase();
   } catch (error) {

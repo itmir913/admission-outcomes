@@ -44,7 +44,7 @@ export function summarize(rows) {
 /** 타일 하나. 이름과 값을 크게 붙여 놓는다. */
 function tile(label, value, tone = '') {
   return el('div', { class: `card px-4 py-3 ${tone}` }, [
-    el('p', { class: 'text-sm text-ink-soft', text: label }),
+    el('p', { class: 'text-base text-ink-soft', text: label }),
     el('p', { class: 'mt-0.5 text-2xl font-bold tabular-nums', text: value })
   ]);
 }
@@ -69,7 +69,7 @@ function applicationCard(row) {
   const stripe = { pass: 'bg-pass', wait: 'bg-wait', fail: 'bg-fail', unknown: 'bg-wait', none: 'bg-line' }[tone];
 
   const line = (label, value) => (isBlank(value) ? null : el('div', {}, [
-    el('dt', { class: 'text-sm text-ink-soft', text: label }),
+    el('dt', { class: 'text-base text-ink-soft', text: label }),
     el('dd', { class: 'text-base font-medium', text: valueLabel('', value) })
   ]));
 
@@ -148,7 +148,7 @@ export function openStudent(dialog, { sid, rows }) {
           el('h3', { class: 'text-lg font-bold tracking-tight', text: '내신' }),
           el('div', { class: 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5' },
             gpa.map((entry) => el('div', { class: 'card px-3 py-2' }, [
-              el('p', { class: 'truncate text-sm text-ink-soft', text: entry.label, attrs: { title: entry.label } }),
+              el('p', { class: 'truncate text-base text-ink-soft', text: entry.label, attrs: { title: entry.label } }),
               el('p', { class: 'text-xl font-bold tabular-nums', text: formatNumber(entry.value) })
             ])))
         ])
@@ -159,7 +159,7 @@ export function openStudent(dialog, { sid, rows }) {
           el('h3', { class: 'text-lg font-bold tracking-tight', text: '수능' }),
           el('div', { class: 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5' },
             [...byArea].map(([area, parts]) => el('div', { class: 'card px-3 py-2' }, [
-              el('p', { class: 'text-sm font-semibold', text: area }),
+              el('p', { class: 'text-base font-semibold', text: area }),
               ...Object.entries(parts).map(([part, value]) => el('p', {
                 class: 'text-base tabular-nums',
                 text: `${PART_LABEL[part] ?? part} ${formatNumber(value)}`
@@ -171,10 +171,10 @@ export function openStudent(dialog, { sid, rows }) {
     el('section', { class: 'mt-6' }, [
       el('div', { class: 'flex flex-wrap items-center gap-3' }, [
         el('h3', { class: 'text-lg font-bold tracking-tight', text: `지원 이력 ${rows.length}건` }),
-        el('label', { class: 'ml-auto flex items-center gap-2 text-sm text-ink-soft' }, [
+        el('label', { class: 'ml-auto flex items-center gap-2 text-base text-ink-soft' }, [
           '차례',
           el('select', {
-            class: 'field min-h-9 w-auto text-sm',
+            class: 'field min-h-9 w-auto text-base',
             attrs: { 'aria-label': '지원 카드 차례' },
             on: { change: (event) => { order = event.target.value; paintCards(); } }
           }, Object.entries(CARD_ORDERS).map(([key, value]) => el('option', {

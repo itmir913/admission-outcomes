@@ -131,7 +131,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
       const marks = el('span', { class: 'sort-mark shrink-0', text: sort ? (sort.dir === 'asc' ? '▲' : '▼') : '' });
       // 여러 열로 정렬 중일 때만 순번을 붙인다. 하나뿐이면 ①이 군더더기다
       const badge = state.sorts.length > 1 && rank !== -1
-        ? el('span', { class: 'shrink-0 text-xs font-bold', text: ORDER_BADGE[rank] ?? `${rank + 1}` })
+        ? el('span', { class: 'shrink-0 text-base font-bold', text: ORDER_BADGE[rank] ?? `${rank + 1}` })
         : null;
 
       // 머리 칸도 몸 칸도 왼쪽이다. 숫자 열이라고 오른쪽으로 보내지 않는다

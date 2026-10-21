@@ -95,7 +95,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
       .filter((entry) => !needle || entry.label.toLowerCase().includes(needle))
       .sort(entryOrder(field));
 
-    const list = el('div', { class: 'mt-2 max-h-64 space-y-0.5 overflow-y-auto pr-1' },
+    const list = el('div', { class: 'mt-2 max-h-64 scroll-stable space-y-0.5 overflow-y-auto' },
       entries.map((entry) => {
         const id = `f-${field.key}-${String(entry.value)}`;
         return el('label', {
@@ -115,14 +115,14 @@ export function createFilters({ mount, read, onChange, onClose }) {
             }
           }),
           el('span', { class: 'min-w-0 flex-1 truncate text-base', text: entry.label, attrs: { title: entry.label } }),
-          el('span', { class: 'shrink-0 text-sm tabular-nums text-ink-soft', text: entry.count })
+          el('span', { class: 'shrink-0 text-base tabular-nums text-ink-soft', text: entry.count })
         ]);
       })
     );
 
     const search = entries.length > SEARCHABLE_AT || needle
       ? el('input', {
-          class: 'field mt-2 min-h-9 text-sm',
+          class: 'field mt-2 min-h-9 text-base',
           attrs: { type: 'search', placeholder: `${field.label} 안에서 찾기`, value: localSearch.get(field.key) ?? '' },
           on: {
             input: debounce((event) => {
@@ -135,7 +135,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
 
     return el('div', {}, [
       search,
-      entries.length === 0 ? el('p', { class: 'mt-2 px-2 text-sm text-ink-soft', text: '해당하는 값이 없습니다.' }) : list
+      entries.length === 0 ? el('p', { class: 'mt-2 px-2 text-base text-ink-soft', text: '해당하는 값이 없습니다.' }) : list
     ]);
   }
 
@@ -172,7 +172,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const highInput = numberInput('상한');
     const lowSlider = slider('하한 슬라이더', 'dual-range-low');
     const highSlider = slider('상한 슬라이더', 'dual-range-high');
-    const echo = el('p', { class: 'mt-2 text-sm text-ink-soft' });
+    const echo = el('p', { class: 'mt-2 text-base text-ink-soft' });
 
     function numberInput(role) {
       return el('input', {
@@ -245,7 +245,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
        * 손가락 밑에서 밀려난다.
        */
       el('button', {
-        class: `btn btn-sm px-2 text-sm ${active
+        class: `btn btn-sm px-2 text-base ${active
           ? 'border-brand/30 bg-brand-soft text-brand'
           : 'invisible pointer-events-none border-transparent'}`,
         text: '해제',
@@ -260,7 +260,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
         on: { click: () => setFilter(field.key, null) }
       }),
       el('button', {
-        class: 'btn btn-sm border-transparent px-2 text-sm text-ink-soft',
+        class: 'btn btn-sm border-transparent px-2 text-base text-ink-soft',
         text: '✕',
         attrs: { type: 'button', 'aria-label': `${field.label}을(를) 필터 목록에서 빼기`, title: '이 열을 필터 목록에서 뺀다' },
         on: {

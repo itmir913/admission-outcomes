@@ -131,7 +131,7 @@ export function confirmUploads(dialog, prepared, currentYear) {
       const decision = decisions.get(sheet.id);
       const guess = sheet.yearGuess;
 
-      const yearEcho = el('p', { class: 'mt-2 text-sm text-ink-soft' });
+      const yearEcho = el('p', { class: 'mt-2 text-base text-ink-soft' });
       const yearInput = el('input', {
         class: 'field mt-1 min-h-12 w-40 text-center text-lg figure',
         attrs: {
@@ -158,7 +158,7 @@ export function confirmUploads(dialog, prepared, currentYear) {
         if (decision.cohortYear !== null) {
           // 학년도와 고3 년도를 나란히 보여 준다. 이 둘을 섞는 것이 가장 큰 혼란의 원인이다
           yearEcho.textContent = `${decision.cohortYear}년에 고3 → ${toSchoolYear(decision.cohortYear)}학년도 (${toSchoolYear(decision.cohortYear)}학번)`;
-          yearEcho.className = 'mt-2 text-sm text-ink-soft';
+          yearEcho.className = 'mt-2 text-base text-ink-soft';
           return;
         }
         // 행마다 연도가 실린 파일은 비워 두는 것이 정상이다. 빨갛게 재촉하면 안 될 값을 넣게 만든다
@@ -166,8 +166,8 @@ export function confirmUploads(dialog, prepared, currentYear) {
           ? '비워 두었습니다 — 행에 실린 연도를 그대로 씁니다.'
           : '고3이었던 달력 연도를 넣어 주세요.';
         yearEcho.className = perRowYear
-          ? 'mt-2 text-sm text-ink-soft'
-          : 'mt-2 text-sm font-medium text-fail';
+          ? 'mt-2 text-base text-ink-soft'
+          : 'mt-2 text-base font-medium text-fail';
       }
       echoYear();
 
@@ -184,7 +184,7 @@ export function confirmUploads(dialog, prepared, currentYear) {
             el('span', { class: 'min-w-0' }, [
               el('span', { class: 'block truncate text-lg font-semibold', text: sheet.fileName }),
               el('span', {
-                class: 'block text-sm text-ink-soft',
+                class: 'block text-base text-ink-soft',
                 text: [
                   sheet.container ? `${sheet.container} 안` : null,
                   `시트 ${sheet.sheetName}`,
@@ -224,28 +224,28 @@ export function confirmUploads(dialog, prepared, currentYear) {
         reading?.readable && reading.source === 'names'
           ? el('div', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-3 text-base text-wait' }, [
               el('p', { class: 'font-semibold', text: '등록된 양식과 달라 열 이름으로 해석했습니다. 한 번 확인해 주세요.' }),
-              el('p', { class: 'mt-1 text-sm' , text: `열 ${reading.columnCount}개 중 ${Object.keys(reading.columns).length}개를 해석했습니다.` }),
+              el('p', { class: 'mt-1 text-base' , text: `열 ${reading.columnCount}개 중 ${Object.keys(reading.columns).length}개를 해석했습니다.` }),
               reading.unresolved.length > 0
                 ? el('p', {
-                    class: 'mt-1 text-sm',
+                    class: 'mt-1 text-base',
                     text: `해석하지 못한 ${reading.unresolved.length}개는 원본 이름 그대로 보존합니다 — ${reading.unresolved.slice(0, 6).map((item) => item.label).join(', ')}${reading.unresolved.length > 6 ? ' …' : ''}`
                   })
                 : null,
-              ...reading.notes.map((note) => el('p', { class: 'mt-1 text-sm', text: note }))
+              ...reading.notes.map((note) => el('p', { class: 'mt-1 text-base', text: note }))
             ])
           : null,
 
         perRowYear
           ? el('div', { class: 'mt-4 rounded-lg bg-brand-soft px-4 py-3' }, [
               el('p', { class: 'text-base font-medium text-brand', text: '이 파일은 행마다 연도가 실려 있습니다.' }),
-              el('p', { class: 'mt-1 text-sm text-ink-soft', text: '비워 두면 행의 연도를 그대로 씁니다. 값을 넣으면 파일 전체를 그 해로 봅니다.' }),
+              el('p', { class: 'mt-1 text-base text-ink-soft', text: '비워 두면 행의 연도를 그대로 씁니다. 값을 넣으면 파일 전체를 그 해로 봅니다.' }),
               yearInput, yearEcho
             ])
           : el('div', { class: 'mt-4' }, [
               el('label', { class: 'text-base font-semibold', text: '고3 년도' }),
               guess.explanation
-                ? el('p', { class: 'mt-1 text-sm text-ink-soft', text: guess.explanation })
-                : el('p', { class: 'mt-1 text-sm text-ink-soft', text: '파일에서 연도를 찾지 못했습니다. 직접 넣어 주세요.' }),
+                ? el('p', { class: 'mt-1 text-base text-ink-soft', text: guess.explanation })
+                : el('p', { class: 'mt-1 text-base text-ink-soft', text: '파일에서 연도를 찾지 못했습니다. 직접 넣어 주세요.' }),
               yearInput, yearEcho
             ])
       ]);
