@@ -4,7 +4,7 @@
   "matchNote": "exact는 라벨 전체가 같을 때, affix는 라벨이 그 말로 시작하거나 끝날 때, partial은 라벨 안에 그 말이 들어 있을 때다. affix와 partial에는 짧고 흔한 말을 넣지 않는다 — '최종'을 affix에 넣으면 '최종발표일'이 최종단계로 잡힌다.",
 
   "scalars": [
-    { "key": "identity.name",   "exact": ["이름", "성명"], "affix": [], "partial": [] },
+    { "key": "identity.name",   "exact": ["이름", "성명", "학생명", "학생이름", "성함"], "affix": [], "partial": [] },
     { "key": "identity.hakbun", "exact": ["학번", "수험번호"], "affix": ["수험번호"], "partial": [] },
     { "key": "identity.class",  "exact": ["반", "학급"], "affix": [], "partial": [] },
     { "key": "identity.number", "exact": ["번호", "출석번호"], "affix": ["출석번호"], "partial": [] },
@@ -28,7 +28,7 @@
     { "key": "stage1",     "exact": ["1단계", "1단계결과", "일단계"], "affix": ["1단계"], "partial": [] },
     { "key": "final",      "exact": ["최종단계", "최종결과", "최종", "합격여부", "합불", "합불여부"], "affix": ["최종단계", "최종결과"], "partial": [] },
     { "key": "failReason", "exact": ["불합격사유", "탈락사유", "불합사유"], "affix": ["불합격사유"], "partial": [] },
-    { "key": "waitRank",   "exact": ["최초후보순위", "후보순위", "예비순위", "예비", "충원순위", "예비번호"], "affix": ["후보순위", "예비순위"], "partial": [] },
+    { "key": "waitRank",   "exact": ["최초후보순위", "후보순위", "예비순위", "예비", "충원순위", "예비번호", "추합번호", "추가합격순위", "충원번호"], "affix": ["후보순위", "예비순위"], "partial": [] },
     { "key": "register",   "exact": ["등록여부", "등록", "등록구분", "최종등록"], "affix": ["등록여부"], "partial": [] }
   ],
 
