@@ -176,6 +176,10 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
 
       const reading = sheet.reading;
       const perRowYear = !needsFileYear(sheet);
+      // 행에 실린 연도들을 고3 년도로 바꿔 둔다. 원본이 학년도면 한 해 당겨야 한다 (§2)
+      const 행연도 = [...new Set((sheet.yearGuess.rawCandidates ?? [])
+        .map((value) => (sheet.yearGuess.basis === 'admission' ? value - 1 : value)))]
+        .sort((left, right) => left - right);
 
       function echoYear() {
         if (decision.cohortYear !== null) {
@@ -184,9 +188,16 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
           yearEcho.className = 'mt-2 text-base text-ink-soft';
           return;
         }
-        // 행마다 연도가 실린 파일은 비워 두는 것이 정상이다. 빨갛게 재촉하면 안 될 값을 넣게 만든다
+        /*
+         * 행마다 연도가 실린 파일은 비워 두는 것이 정상이다. 빨갛게 재촉하면 안 될 값을 넣게 만든다.
+         *
+         * **비어 있는 까닭을 숫자로 말한다.** 한 해짜리 파일이면 추론이 이미 칸을 채워
+         * 두었으므로, 여기까지 비어 온 것은 **행마다 연도가 다르다는 뜻**이다. 그 연도들을
+         * 적어 주어야 「왜 비었나」가 풀린다 — 하나를 선택해 채워 넣으면 나머지 해의
+         * 학생들이 조용히 그 연도로 옮겨 간다 (§2).
+         */
         yearEcho.textContent = perRowYear
-          ? '비워 두었습니다 — 행에 실린 연도를 그대로 씁니다.'
+          ? `행마다 고3 년도가 다릅니다${행연도.length > 0 ? ` (${행연도.join(' · ')})` : ''} — 비워 두면 행에 실린 연도를 그대로 씁니다.`
           : '고3이었던 달력 연도를 넣어 주세요.';
         yearEcho.className = perRowYear
           ? 'mt-2 text-base text-ink-soft'
@@ -249,7 +260,11 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
 
         !reading?.readable
           ? el('p', { class: 'mt-3 rounded-lg bg-fail-soft px-4 py-2 text-base text-fail' }, [
-              '대학명 열을 찾지 못해 꺼 두었습니다. 나머지만 불러와도 됩니다. 대학 이름이 든 열의 헤더를 「대학명」으로 고치면 읽어 냅니다.'
+              /*
+               * **제보에서도 헤더만 받는다.** 「샘플을 보내 주세요」라고 적으면
+               * 학생 데이터가 든 원본이 메일로 오간다 — 시작 화면과 같은 말로 적는다.
+               */
+              '이 시트에서 「대학명」 열을 찾지 못해 꺼 두었습니다. 다른 시트이거나 아직 읽지 못하는 양식입니다 — 나머지만 불러와도 됩니다. 엑셀의 1~2행(헤더)만 hello@luminousky.com 으로 보내 주시면 반영하겠습니다.'
             ])
           : null,
 
@@ -274,7 +289,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         perRowYear
           ? el('div', { class: 'mt-4 rounded-lg bg-brand-soft px-4 py-3' }, [
               el('p', { class: 'text-base font-medium text-brand', text: '이 파일은 행마다 연도가 실려 있습니다.' }),
-              el('p', { class: 'mt-1 text-base text-ink-soft', text: '비워 두면 행의 연도를 그대로 씁니다. 값을 넣으면 파일 전체를 그 해로 봅니다.' }),
+              el('p', { class: 'mt-1 text-base text-ink-soft', text: '비워 두면 행의 연도를 그대로 씁니다. 값을 넣으면 파일 전체를 그 연도로 봅니다.' }),
               yearInput, yearEcho
             ])
           : el('div', { class: 'mt-4' }, [
