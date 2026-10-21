@@ -279,6 +279,17 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
   return {
     ...dataset,
     files: [...files.values()],
+    /*
+     * **이번에 읽은 시트 목록을 그대로 넘긴다.**
+     *
+     * 보관소는 다시 넣는 시트의 옛 기록만 걷어내는데, 그 목록을 지원 기록에서
+     * 거꾸로 뽑으면 **행이 0건이 된 시트가 빠진다** — 잘못 들어간 시트를 비워
+     * 바로잡으려는 사람의 수정이 반영되지 않는다. 읽은 사실은 여기서만 안다.
+     */
+    readSheets: inputs.map((input) => ({
+      fileHash: input.source?.fileHash,
+      sheetName: input.source?.sourceSheet
+    })).filter((item) => item.fileHash),
     warnings: [...warnings, ...dataset.warnings]
   };
 }

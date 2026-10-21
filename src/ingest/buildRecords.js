@@ -121,10 +121,20 @@ function readExtra(row, columns, labels) {
   const width = Math.max(labels.length, row?.length ?? 0);
   for (let index = 0; index < width; index += 1) {
     if (used.has(index)) continue;
-    // 이름 없는 열도 자리를 잃지 않게 번호로 부른다. 왼쪽 이름을 빌려 쓰면 값이 덮인다
-    const label = labels[index]?.label || `(${index + 1}번째 열)`;
+    const label = labels[index]?.label ?? '';
     const value = row?.[index];
     if (value === null || value === undefined || String(value).trim() === '') continue;
+    /*
+     * **이름표가 없는 열은 보관하지 않는다.**
+     *
+     * 신원 열 차단은 이름표를 보고 판정한다(`이름`·`학번`…). 이름표가 없으면 그 판정
+     * 자체를 할 수 없는데, 머리글 칸이 비었고 그 아래에 학생 이름이 든 파일은 흔하다.
+     * 번호를 붙여 보관하면 그 이름이 보관소와 화면에 그대로 남는다 — §1이 막는 그 길이
+     * 이름 없는 열로 다시 열린다. 보존(§4)과 개인정보(§1)가 부딪히면 §1이 이긴다.
+     *
+     * 대신 **소리 없이 버리지는 않는다.** 몇 번째 열을 버렸는지 사람에게 알린다 (§5).
+     */
+    if (label === '') { dropped.push(`${index + 1}번째 열(머리글 없음)`); continue; }
     if (isIdentityLabel(label)) { dropped.push(label); continue; }
     const text = String(value).trim();
     // 빈칸 표시는 빈칸으로 둔다. `-`를 글자로 담아 두면 그 열은 영영 숫자 열이 못 된다
@@ -202,11 +212,23 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
   }
 
   if (droppedIdentityLabels.size > 0) {
-    warnings.push({
-      type: 'identity-column-dropped',
-      labels: [...droppedIdentityLabels],
-      message: `개인정보로 보이는 열(${[...droppedIdentityLabels].join(', ')})은 보관하지 않고 버렸습니다.`
-    });
+    // 머리글이 없어 신원 여부를 판정할 수 없는 열과, 이름으로 신원 열이라 본 것을 나누어 적는다
+    const 이름없음 = [...droppedIdentityLabels].filter((label) => label.endsWith('(머리글 없음)'));
+    const 신원 = [...droppedIdentityLabels].filter((label) => !label.endsWith('(머리글 없음)'));
+    if (신원.length > 0) {
+      warnings.push({
+        type: 'identity-column-dropped',
+        labels: 신원,
+        message: `개인정보로 보이는 열(${신원.join(', ')})은 보관하지 않고 버렸습니다.`
+      });
+    }
+    if (이름없음.length > 0) {
+      warnings.push({
+        type: 'unnamed-column-dropped',
+        labels: 이름없음,
+        message: `머리글이 없는 열(${이름없음.join(', ')})은 보관하지 않았습니다. 그 열에 무엇이 들었는지 알 수 없어 개인정보일 수 있습니다 — 머리글을 적어 다시 올리면 함께 읽습니다.`
+      });
+    }
   }
 
   const { sids, students: identified, merges, warnings: idWarnings } = await assignStudentIds(
@@ -236,10 +258,17 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
     if (sid === null) return;
     const student = studentBySid.get(sid);
 
-    // 되풀이되는 값은 처음 본 것만 남긴다. 같은 학생의 모든 행에 같은 값이 실려 있다
+    /*
+     * 되풀이되는 값은 **나중에 읽은 것이 이긴다.**
+     *
+     * 같은 학생의 모든 행에 같은 값이 실려 있으므로 대개 무엇을 남기든 같다. 다른
+     * 경우는 낡은 파일과 고친 파일을 **한 번에** 올렸을 때인데, 그때 먼저 본 값을
+     * 지키면 낡은 값이 남는다 — 따로 올리면 고친 값이 이기는데(보관소의 `새값우선`)
+     * 같이 올리면 거꾸로다. 두 자리가 다르게 굴면 사람은 어느 쪽도 믿을 수 없다.
+     */
     if (student) {
       for (const [label, value] of Object.entries(row.parsed.gpa)) {
-        if (student.gpa[label] === undefined) student.gpa[label] = value;
+        if (value !== null && value !== undefined) student.gpa[label] = value;
       }
     }
     if (!suneungBySid.has(sid)) suneungBySid.set(sid, new Map());
@@ -249,7 +278,8 @@ export async function buildDataset(sheets, { existing = [] } = {}) {
       // 어떤 양식은 등급만, 어떤 양식은 표점·백분위까지 준다
       const merged = areas.get(area) ?? { sid, area };
       for (const [key, value] of Object.entries(parts)) {
-        if (merged[key] === undefined) merged[key] = value;
+        // 빠진 항목은 먼저 읽은 값을 지키고, 둘 다 있으면 나중 것이 이긴다
+        if (value !== null && value !== undefined) merged[key] = value;
       }
       areas.set(area, merged);
     }

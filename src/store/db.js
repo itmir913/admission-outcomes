@@ -4,9 +4,14 @@
  * 한 번 올려 두면 다음에 열 때 그대로 떠 있어야 한다. 상담할 때마다 엑셀을
  * 다시 올리는 수고를 없애는 것이 이 계층의 목적이다.
  *
- * **여기 들어오는 것은 익명화가 끝난 자료뿐이다.** 이름과 학번은 이미 버려졌고,
- * 남아 있는 것은 되돌릴 수 없는 키 해시다. 공용 PC의 브라우저 프로필에
- * 개인정보가 남지 않는다.
+ * **여기 들어오는 것은 익명화가 끝난 자료뿐이다.** 이름과 학번 원문은 이미 버려졌고
+ * 남아 있는 것은 키 해시다.
+ *
+ * **다만 그 해시는 「되돌릴 수 없는」 것이 아니다.** 입력이 `고3 년도 + 학번` 한 줄이라
+ * 경우의 수가 수만 개뿐이고, 고정 소금은 코드에 적혀 있어 비밀이 아니다. 마음먹은
+ * 사람은 보관소나 익명 ID 목록만으로 학번을 되돌릴 수 있다 — 익명 ID는 **가명이지
+ * 익명이 아니다.** 그래서 보관소도 ID 목록도 학교 밖으로 나가면 안 된다.
+ * 자세한 수치와 그 판단은 docs/decisions.md 에 적어 두었다.
  *
  * 그래도 보관소는 **캐시이지 원본이 아니다.** 시크릿 모드·캐시 삭제·PC 교체로 사라진다.
  * 원본 엑셀 관리 책임은 학교에 있다.
@@ -193,17 +198,36 @@ export async function saveDataset(db, dataset) {
    * 뺀 시트가 넣었던 기록까지 사라진다. 화면은 「그 파일이 넣었던 기록을 갈아 끼웁니다」
    * 라고만 알리므로 사람은 한 장이 사라진 것을 모른다. 이번에 다시 넣는 시트만 걷는다.
    */
-  const incomingSheets = new Set(
-    (dataset.applications ?? [])
+  const 시트키 = (fileHash, sheetName) => `${fileHash}\u001f${sheetName ?? ''}`;
+  /*
+   * 읽은 시트 목록을 쓴다. 지원 기록에서 거꾸로 뽑으면 **행이 0건이 된 시트가 빠져**,
+   * 그 시트의 옛 기록이 지워지지 않고 남는다. 목록이 없는 옛 호출은 기록에서 뽑는다.
+   */
+  const incomingSheets = new Set([
+    ...(dataset.readSheets ?? []).map((sheet) => 시트키(sheet.fileHash, sheet.sheetName)),
+    ...(dataset.applications ?? [])
       .filter((row) => row.fileHash)
-      .map((row) => `${row.fileHash}\u001f${row.sourceSheet ?? ''}`)
-  );
-  const incomingFiles = new Set(
-    (dataset.applications ?? []).map((row) => row.fileHash).filter(Boolean)
-  );
+      .map((row) => 시트키(row.fileHash, row.sourceSheet))
+  ]);
+  const incomingFiles = new Set([
+    ...(dataset.readSheets ?? []).map((sheet) => sheet.fileHash),
+    ...(dataset.applications ?? []).map((row) => row.fileHash)
+  ].filter(Boolean));
   for (const fileHash of incomingFiles) {
     for (const old of await promisify(applications.index('fileHash').getAll(fileHash))) {
-      if (!incomingSheets.has(`${old.fileHash}\u001f${old.sourceSheet ?? ''}`)) continue;
+      /*
+       * **시트 이름이 없는 옛 기록은 파일 단위로 본다.**
+       *
+       * 시트 단위로 걷어내기 전에 들어간 기록에는 `sourceSheet`가 없다. 새 키로는
+       * 맞지 않아 지워지지 않고, 같은 파일을 다시 올리는 순간 그 위에 또 쌓여
+       * **지원 건수가 한 번 두 배가 된다.** 그 기록이 어느 시트 것인지 알 수 없으니
+       * 파일이 같으면 걷는 것이 맞다 — 어차피 그 파일을 통째로 다시 넣는 중이다.
+       */
+      if (old.sourceSheet === undefined || old.sourceSheet === null) {
+        applications.delete(old.id);
+        continue;
+      }
+      if (!incomingSheets.has(시트키(old.fileHash, old.sourceSheet))) continue;
       applications.delete(old.id);
     }
   }

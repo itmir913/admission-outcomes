@@ -104,6 +104,25 @@ export function identityKeys(cohortYear, identity = {}) {
   return keys.sort((left, right) => right.strength - left.strength);
 }
 
+/**
+ * 키 해시에 섞는 **고정 소금.**
+ *
+ * 소금 없이 해시하면 입력이 `고3 년도 + 학번` 한 줄이라 경우의 수가 수만 개뿐이다.
+ * 널리 쓰이는 무지개표(흔한 문자열의 SHA-256 표)에 그대로 걸리고, 소금이 있으면
+ * 적어도 이 도구 전용 표를 따로 만들어야 한다.
+ *
+ * **이것이 비밀은 아니다.** 코드가 공개돼 있으니 소금 값도 공개다 — 마음먹은 사람이
+ * 이 소금으로 표를 새로 만드는 데 드는 시간은 여전히 짧다. 그 대신 익명 ID가
+ * 기기와 학교를 가리지 않고 같아서, 같은 자료를 각자 올린 교사가 같은 ID로 같은
+ * 학생을 가리킬 수 있다. 되돌릴 수 없게 만드는 장치가 아니라는 점은
+ * docs/decisions.md 에 수치와 함께 적어 두었다.
+ */
+let saltCache = null;
+async function keySalt() {
+  if (saltCache === null) saltCache = toHex(await sha256Text('luminousky.com'));
+  return saltCache;
+}
+
 /** 같은 자리를 가리키는 원소끼리 묶는 자료구조 */
 class DisjointSet {
   #parent = [];
@@ -169,8 +188,9 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
   for (const keys of allowedByEntry) {
     for (const key of keys) if (!hashByText.has(key.text)) hashByText.set(key.text, null);
   }
+  const salt = await keySalt();
   await Promise.all([...hashByText.keys()].map(async (text) => {
-    hashByText.set(text, toHex(await sha256Text(text)));
+    hashByText.set(text, toHex(await sha256Text(salt + UNIT + text)));
   }));
 
   // ── 3. 겹치는 해시를 가진 행끼리 묶는다 ────────────────────────────────────
