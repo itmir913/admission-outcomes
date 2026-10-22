@@ -801,7 +801,7 @@ pick('#파일열기').addEventListener('click', async () => {
 });
 
 async function wipe() {
-  if (!confirm('불러온 데이터를 모두 지웁니다. 되돌릴 수 없습니다.\n\n원본 엑셀은 그대로 있으니 다시 불러올 수 있습니다. 계속할까요?')) return;
+  if (!confirm('진학결과 분석기에 불러온 데이터를 모두 초기화합니다. 되돌릴 수 없습니다. 계속할까요?')) return;
   busy(true);
   await clearAll(state.db);
   forgetView();
