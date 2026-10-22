@@ -10,7 +10,7 @@
 
 import { el, clear, formatNumber, debounce } from './dom.js';
 import { valueLabel, isBlank, GROUP_LABEL, GROUP_ORDER, primaryGpaField, bucketLabel } from '../analysis/registry.js';
-import { facetCounts, facetBuckets } from '../analysis/query.js';
+import { facetCounts, facetBuckets, 뜻있는열, 뜻차례 } from '../analysis/query.js';
 
 /** 처음부터 열어 두는 필터. 상담에서 가장 먼저 거는 것들이다. */
 const OPENING = ['cohortYear', 'outcome', 'univ', 'track', 'admType', 'period', 'region'];
@@ -39,9 +39,16 @@ const RANGE_SETTLE = 220;
  * **「(빈칸)」은 맨 뒤다.** 이름이 아니라 「이름이 없다」는 표시이고, 괄호로 시작해
  * 사전순으로는 맨 앞에 서서 목록의 첫 줄을 차지한다.
  *
+ * 결과·등록처럼 **뜻 순서가 있는 열**은 그 순서다 (2026-10-22, 사용자). 합격·충원합격·
+ * 불합격을 사전순으로 세우면 불합격이 맨 위에 선다. 그 차례는 표가 쓰는 것을 그대로
+ * 가져온다 — 두 군데 적어 두면 표와 목록이 서로 다른 차례로 서는 날이 온다.
+ *
  * @param {object} field
  */
 export function entryOrder(field) {
+  if (뜻있는열(field.key)) {
+    return (left, right) => 뜻차례(field.key, left.value) - 뜻차례(field.key, right.value);
+  }
   if (field.type === 'year') {
     // 최근 해가 위다. 상담에서 먼저 보는 것은 작년이지 10년 전이 아니다
     return (left, right) => Number(right.value) - Number(left.value);

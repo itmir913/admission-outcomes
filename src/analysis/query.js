@@ -155,7 +155,13 @@ const 뜻순서 = {
   registered: ['registered', 'declined', 'unknown', 'none'],
   stage1Passed: [true, false, null]
 };
-const 뜻차례 = (key, value) => {
+/**
+ * **뜻 순서가 정해진 열인가.** 값 목록을 그 순서로 세우는 쪽(`filters.js`)도 이 답을 쓴다 —
+ * 순서를 두 군데 적어 두면 표와 목록이 서로 다른 차례로 서는 날이 온다.
+ */
+export const 뜻있는열 = (key) => Boolean(뜻순서[key]);
+
+export const 뜻차례 = (key, value) => {
   const order = 뜻순서[key];
   const at = order.findIndex((item) => item === value || String(item) === String(value));
   return at === -1 ? order.length : at;
