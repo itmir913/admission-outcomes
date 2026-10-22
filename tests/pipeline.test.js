@@ -28,6 +28,61 @@ async function profilesFor(grid, { year = 2025, yearBasis = 'admission', omitYea
 
 const upload = (name, bytes) => ({ name, bytes });
 
+describe('프로파일로 해석한 시트도 미해결을 알린다', () => {
+  /*
+   * 프로파일을 등록하면 조용해지던 자리다. 열은 그대로 `extra`로 가는데 안내만
+   * 사라져서, 사람은 그 열이 해석된 줄 안다 (§5 조용히 틀리는 값).
+   */
+  async function 한열빼먹은프로파일(grid) {
+    const profile = await buildProfile({
+      program: 'demo', programLabel: '표본 프로그램', year: 2025, headerRows: 1, grid,
+      yearBasis: 'admission',
+      columns: {
+        sourceYear: 0, 'identity.hakbun': 1, 'identity.name': 2,
+        region: 3, univ: 4, dept: 5, admName: 6, track: 7, period: 8,
+        'gpa.전과목': 9, stage1: 10   // 11번(최종)을 일부러 빼 둔다
+      }
+    });
+    return new ProfileSet([profile]);
+  }
+
+  it('프로파일이 가리키지 않는 열을 미해결로 보고한다', async () => {
+    const grid = senjinhakGrid(2026);
+    const { sheets } = await prepareUploads(
+      [upload('진학결과.xlsx', makeWorkbook({ result: grid }))],
+      { profiles: await 한열빼먹은프로파일(grid), currentYear: NOW }
+    );
+
+    expect(sheets[0].reading.source).toBe('profile');
+    expect(sheets[0].reading.unresolved.map((item) => item.label)).toEqual(['최종']);
+  });
+
+  it('그 사실을 경고로 띄운다 — 이름 경로와 똑같이', async () => {
+    const grid = senjinhakGrid(2026);
+    const { sheets } = await prepareUploads(
+      [upload('진학결과.xlsx', makeWorkbook({ result: grid }))],
+      { profiles: await 한열빼먹은프로파일(grid), currentYear: NOW }
+    );
+    const { warnings } = await commitSheets(sheets);
+
+    const 미해결 = warnings.filter((warning) => warning.type === 'columns-unresolved');
+    expect(미해결).toHaveLength(1);
+    expect(미해결[0].message).toContain('최종');
+  });
+
+  it('프로파일이 열을 다 집어 가면 아무 말도 하지 않는다', async () => {
+    const grid = senjinhakGrid(2026);
+    const { sheets } = await prepareUploads(
+      [upload('진학결과.xlsx', makeWorkbook({ result: grid }))],
+      { profiles: await profilesFor(grid), currentYear: NOW }
+    );
+    const { warnings } = await commitSheets(sheets);
+
+    expect(sheets[0].reading.unresolved).toEqual([]);
+    expect(warnings.filter((warning) => warning.type === 'columns-unresolved')).toEqual([]);
+  });
+});
+
 describe('불러오기 준비', () => {
   it('시트마다 무엇을 알아냈는지 보고한다', async () => {
     const grid = senjinhakGrid(2026);

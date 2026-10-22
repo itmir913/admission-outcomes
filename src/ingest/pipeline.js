@@ -14,6 +14,7 @@
 import { loadUploads } from './files.js';
 import { matchProfile } from './profile.js';
 import { resolveSheet } from './resolveColumns.js';
+import { buildHeaderLabels } from './headerBlock.js';
 import { inferCohortYear } from './year.js';
 import { buildDataset, isIdentityLabel } from './buildRecords.js';
 
@@ -86,6 +87,31 @@ function hasIdentity(columns = {}) {
  * @param {object} match
  * @returns {Reading}
  */
+/**
+ * 프로파일이 집어 가지 않은 열을 미해결로 모은다.
+ *
+ * **프로파일로 읽은 시트도 미해결을 알려야 한다.** 예전에는 이 자리가 빈 배열이었다.
+ * 그래서 프로파일을 등록하는 순간 「열 n개를 해석하지 못했습니다」가 사라졌는데,
+ * 그 열들은 그대로 `extra`로 가고 있었다 — 열을 더 이해해서가 아니라 보고하지
+ * 않아서 조용해진 것이다. 실제 자료는 프로파일 경로로 해석되므로 이쪽이 본선이다(§5).
+ *
+ * @param {unknown[][]} grid
+ * @param {{columns: Record<string, number>, headerRows: number}} profile
+ * @returns {{index: number, label: string, reason: string}[]}
+ */
+function unresolvedUnderProfile(grid, profile) {
+  const labels = buildHeaderLabels(grid, profile.headerRows);
+  const taken = new Set(Object.values(profile.columns));
+  const unresolved = [];
+  for (let index = 0; index < labels.length; index += 1) {
+    if (taken.has(index)) continue;
+    const label = labels[index].label;
+    if (!label) continue;
+    unresolved.push({ index, label, reason: '프로파일이 가리키지 않는 열입니다' });
+  }
+  return unresolved;
+}
+
 export function readSheetColumns(grid, match) {
   if (match.profile) {
     const columns = match.profile.columns;
@@ -95,7 +121,7 @@ export function readSheetColumns(grid, match) {
       headerRows: match.profile.headerRows,
       headerStart: 0,
       yearBasis: match.profile.yearBasis ?? null,
-      unresolved: [],
+      unresolved: unresolvedUnderProfile(grid, match.profile),
       notes: [],
       profileId: match.profile.id,
       label: match.profile.programLabel ?? match.profile.id,
@@ -291,7 +317,7 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
       resolvedBy: reading.source,
       loadedAt: new Date().toISOString()
     };
-    if (reading.source === 'names' && reading.unresolved.length > 0) {
+    if (reading.unresolved.length > 0) {
       /*
        * 해석하지 못한 열이라고 다 보존하는 것은 아니다. 식별 열로 보이는 이름은
        * 보관소에 넣지 않으므로(§1), 한 숫자로 묶어 「보존했다」고 알리면 사실과 다르다.
