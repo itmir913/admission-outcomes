@@ -7,6 +7,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 import fields from '../src/dict/fields.json' with { type: 'json' };
 import synonyms from '../src/dict/field-synonyms.json' with { type: 'json' };
 import anchors from '../src/dict/section-anchors.json' with { type: 'json' };
@@ -224,5 +229,53 @@ describe('한 양식 안에서 두 머리글이 한 키로 가지 않는다', ()
       else 차지.set(canon, key);
     }
     expect(충돌).toEqual([]);
+  });
+});
+
+describe('코드가 열 이름을 해석하지 않는다', () => {
+  /*
+   * 「나누는 기준」이라는 것 자체가 코드가 엑셀 열 이름을 해석하고 있다는 뜻이다.
+   * 우리는 이 진학 프로그램들의 양식을 알고 있으므로, 해석하는 것이 아니라 사전에
+   * 미리 적어 둔다. 한 번 해석하기로 하면 해석이 번진다 — 규칙을 두면 그 규칙을
+   * 보는 코드가 생기고, 그 코드가 또 글자를 본다.
+   *
+   * **`src/`만 훑는다.** 이 저장소의 다른 소스 검사는 `docs/`까지 보는데, 아래 패턴은
+   * 설계 문서와 판례가 **인용**하므로 범위를 넓히면 반드시 빨간불이 된다.
+   *
+   * **해석이 아닌 것**: 우리가 만든 점 키의 접두사 구조를 읽는 것(`gpa.`를 보고 내신
+   * 묶음에 넣는 것), 우리가 만든 파생 키와 비교하는 것, 묶음으로 분기하는 것, 값을
+   * 보는 것. 그 구조는 우리가 만들었다. 해석은 **엑셀에서 온 글자**를 보는 것만 말한다.
+   *
+   * **남겨 둔 해석 둘**은 대상이 「모르는 열」이라서다 — `isIdentityLabel`(틀리면
+   * 개인정보가 새는 쪽이라 느슨해야 한다)과 스칼라의 `affix`·`partial`(사전에 없는
+   * 다른 프로그램을 만났을 때의 그물).
+   */
+  const 금지 = [
+    ["includes('(')", '라벨의 괄호로 반영비 변형을 구별하던 자리 — 사전의 primary 를 쓴다'],
+    ['AREA_ORDER = [', '수능 영역 순서를 배열에 박아 두던 자리 — 사전의 areas 순서를 쓴다'],
+    ["['전교과', '전과목'", '전과목 평균의 표기를 목록으로 박아 두던 자리 — 사전이 한 키로 모은다'],
+    ['/^gpa\.(', '대표 내신을 정규식으로 찾던 자리 — 사전의 default 를 쓴다']
+  ];
+
+  const sources = [];
+  (function 모으기(dir) {
+    for (const name of readdirSync(dir)) {
+      if (name.startsWith('.')) continue;
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) 모으기(path);
+      else if (name.endsWith('.js')) sources.push(path);
+    }
+  })(join(ROOT, 'src'));
+
+  it('훑을 소스가 있다', () => {
+    // 0건을 훑고 통과하는 것이 이 검사의 가장 나쁜 실패다
+    expect(sources.length).toBeGreaterThan(10);
+  });
+
+  it.each(금지)('%s 가 src/ 에 없다', (pattern) => {
+    const 걸린곳 = sources
+      .filter((path) => readFileSync(path, 'utf8').includes(pattern))
+      .map((path) => relative(ROOT, path).replaceAll(sep, '/'));
+    expect(걸린곳).toEqual([]);
   });
 });

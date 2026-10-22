@@ -254,18 +254,28 @@ export function defaultColumns(registry) {
   ].filter((key) => key && has.has(key));
 }
 
+/** 사전이 `default`로 정한 내신 열. 양식마다 이름이 달라도 키는 하나다 */
+const DEFAULT_GPA_KEY = `gpa.${GPA_ENTRIES.find((entry) => entry.default)?.key}`;
+
 /**
  * 내신 조합 하나를 대표로 정한다.
  *
  * 조합이 스무 개 넘게 오는 양식이 있어서 전부 표시할 수 없다. 전과목 평균을 먼저 찾는다 —
- * 반영 조합 중 하나를 무작정 고르면 '과학 6.88'처럼 그 학생을 대표하지 않는 값이
- * 첫눈에 들어온다. 양식마다 이름이 `전교과`이기도 `전과목`이기도 하다.
+ * 반영 조합 중 하나를 무작정 선택하면 '과학 6.88'처럼 그 학생을 대표하지 않는 값이
+ * 첫눈에 들어온다.
+ *
+ * **어느 열인지는 사전이 정한다.** 예전에는 `전교과`와 `전과목`을 정규식에 박아
+ * 두었는데, 두 표기가 함께 실린 자료에서는 레지스트리가 라벨 사전순으로 정렬돼 있어
+ * **어느 쪽이 대표가 될지 글자 순서가 정했다.** 이제 표기가 한 키로 모이므로 그런 일이 없다.
+ *
+ * 그 열이 실리지 않은 양식에서는 **값이 가장 많은 열로 되돌아간다.** 이 대비를 빼면
+ * 대표 내신이 없어 기본 열 목록에서 내신이 빠지고 표가 내신 없이 열린다.
  *
  * @param {Field[]} registry
  * @returns {Field|undefined}
  */
 export function primaryGpaField(registry) {
   const candidates = registry.filter((field) => field.group === 'gpa' && field.filled > 0);
-  return candidates.find((field) => /^gpa\.(전교과|전과목)$/.test(field.key))
+  return candidates.find((field) => field.key === DEFAULT_GPA_KEY)
     ?? [...candidates].sort((left, right) => right.filled - left.filled)[0];
 }
