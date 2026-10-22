@@ -361,15 +361,44 @@ function 팝오버열기(key, anchor) {
   dom.열팝오버.style.top = `${top}px`;
 }
 
-// 바깥을 누르면 닫는다. 깔때기 단추 자신은 스스로 토글하므로 여기서 빼낸다
-document.addEventListener('click', (event) => {
+/*
+ * **어디를 눌렀는지는 누를 때 적어 둔다. 손을 뗀 뒤에 되묻지 않는다.**
+ *
+ * 바깥을 누르면 닫는데, 그 판단을 클릭이 올라온 뒤 `event.target`으로 하던 때는
+ * 값 하나를 선택하면 창이 닫혔다. 체크박스가 바뀌면 `refresh()`가 창 안을 다시
+ * 그리므로, 그 클릭이 아래까지 올라올 무렵 눌린 자리는 이미 **다른 요소**다 —
+ * 글상자(label)를 누르면 브라우저가 체크박스로 한 번 더 클릭을 보내는데, 그때
+ * 보내지는 것은 방금 다시 그려진 쪽이라 창 안을 거치지도 않는다. 그래서 「바깥을
+ * 눌렀다」로 읽혔고, 여러 값을 이어 선택하려면 목록을 매번 다시 열어야 했다.
+ *
+ * `pointerdown`은 다시 그리기 전에 온다. 그 순간의 자리는 틀릴 수가 없다.
+ */
+let 팝오버안에서눌렀다 = false;
+document.addEventListener('pointerdown', (event) => {
+  팝오버안에서눌렀다 = dom.열팝오버.contains(/** @type {Node} */ (event.target));
+}, true);
+
+// 깔때기 단추 자신은 스스로 토글하므로 여기서 빼낸다
+document.addEventListener('click', () => {
   if (열린열 === null) return;
-  if (dom.열팝오버.contains(event.target)) return;
+  if (팝오버안에서눌렀다) return;
   팝오버닫기();
 });
 
-// 표를 움직이면 단추가 제자리를 떠난다. 따라다니게 만들기보다 닫는 편이 솔직하다
-dom.표.addEventListener('scroll', 팝오버닫기, { passive: true });
+/*
+ * 표를 **옆으로** 밀면 단추가 제자리를 떠난다. 따라다니게 만들기보다 닫는 편이 솔직하다.
+ *
+ * **세로로 미는 것은 닫을 까닭이 아니다.** 머리줄은 붙어 있어 단추가 그대로 있고,
+ * 무엇보다 값을 하나 선택하면 표가 짧아지면서 브라우저가 스크롤을 끌어올린다 —
+ * 사람이 민 적도 없는데 그 한 번이 목록을 닫아, 여러 값을 이어 선택할 수 없었다.
+ */
+let 마지막가로 = 0;
+dom.표.addEventListener('scroll', () => {
+  const 가로 = dom.표.scrollLeft;
+  if (가로 === 마지막가로) return;
+  마지막가로 = 가로;
+  팝오버닫기();
+}, { passive: true });
 
 /**
  * 툴바의 상태를 맞춘다 (#3).
