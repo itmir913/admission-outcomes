@@ -113,21 +113,25 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
    * 좁은 화면에서는 고정 열 너비의 합이 화면보다 넓어질 수 있다. 그러면 뒤쪽
    * 고정 열이 앞쪽 고정 열 위에 그대로 깔려 그 열이 통째로 가려지고, 고정되지
    * 않은 자료 열은 음수 자리로 밀려 **닿을 길이 없어진다.** 375px에서 기본값
-   * 셋이 바로 그렇게 된다. 사람이 정한 수는 그대로 두고(화면이 넓어지면 돌아온다)
-   * 자리만 화면에 맞춰 줄인다.
+   * 셋이 바로 그렇게 된다.
+   *
+   * 여기서 줄어든 수는 `onPinnedChange`로 밖에 알린다. 받는 쪽이 사람이 정한 수를
+   * 그 수로 낮추므로, 도구줄의 숫자와 실제가 어긋나지 않는다.
+   *
+   * @param {number} [want] 재어 볼 수. 기본값은 사람이 정한 수
    */
-  function 유효고정() {
+  function 유효고정(want = state.pinned) {
     const 쓸수있는폭 = scroller.clientWidth || 0;
     /*
      * **폭을 못 재면 하나만 고정한다.** 상한을 끄면 시작 화면이 떠 있어 표가 아직
      * 자리를 못 받은 순간(폭 0)에 사람이 정한 수가 그대로 그려지고, 그 머리줄이
      * 겹친 채 남는다 — 실제로 375px에서 재현됐다 (§5).
      */
-    if (쓸수있는폭 === 0) return Math.min(1, state.pinned, state.columns.length);
+    if (쓸수있는폭 === 0) return Math.min(1, want, state.columns.length);
     const 한도 = 쓸수있는폭 * 0.6;
     let sum = 0;
     let count = 0;
-    for (let index = 0; index < state.pinned && index < state.columns.length; index += 1) {
+    for (let index = 0; index < want && index < state.columns.length; index += 1) {
       const width = state.widths[state.columns[index]] ?? DEFAULT_WIDTH;
       if (count > 0 && sum + width > 한도) break;
       sum += width;
@@ -632,11 +636,16 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
      * 자리 값만 바뀌어 고정 표시와 실제 고정이 어긋나므로, 바뀐 때만 다시 그린다.
      */
     new globalThis.ResizeObserver(() => {
-      if (유효고정() !== 그린고정수) {
-        renderHead();
-        // 도구줄이 적는 「지금 n개만」도 따라가야 한다
-        onPinnedChange?.(유효고정());
-      }
+      /*
+       * **고정 수가 그대로여도 알린다.** 도구줄의 「+」는 *한 열을 더* 고정할 자리가
+       * 있는지로 켜고 끄는데, 그 답은 지금 몇 개가 고정돼 있는지와 따로 움직인다 —
+       * 좁혔다 넓힌 창에서 고정 수는 둘 그대로인데 셋째 자리는 생긴다. 바뀐 때만
+       * 알리면 그 화면에서 「+」가 꺼진 채 남아, 넓혀 놓고도 더 고정할 수 없다.
+       *
+       * 머리를 다시 그리는 경우에는 `renderHead`가 알리므로 여기서 또 알리지 않는다.
+       */
+      if (유효고정() !== 그린고정수) renderHead();
+      else onPinnedChange?.(그린고정수);
       renderBody(true);
     }).observe(scroller);
   }
@@ -650,6 +659,18 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
      * 하나도 고정 안 됐다고 적는 화면이다. 모르면 모른다고 답한다 (§5).
      */
     drawnPinned: () => (그린고정수 < 0 ? null : 그린고정수),
+
+    /**
+     * 열 하나를 더 고정할 자리가 있나.
+     *
+     * **폭을 못 재는 동안에는 막지 않는다.** 시작 화면이 떠 있어 표가 자리를
+     * 못 받은 순간에 「더 못 늘린다」고 답하면, 자료를 불러오기도 전에 단추가
+     * 꺼진 채로 남는다.
+     */
+    canPinMore: () => {
+      if (!scroller.clientWidth) return true;
+      return 유효고정(state.pinned + 1) > 유효고정(state.pinned);
+    },
 
     /**
      * @param {{rows: object[], registry: object[], state: object}} next

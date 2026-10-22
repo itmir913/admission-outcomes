@@ -43,7 +43,6 @@ const dom = {
   검색: /** @type {HTMLInputElement} */ (pick('#검색')),
   칩줄: pick('#칩줄'),
   고정수: pick('#고정수'),
-  고정메모: pick('#고정메모'),
   열팝오버: pick('#열팝오버'),
   알림줄: pick('#알림줄'),
   표: pick('#표'),
@@ -80,7 +79,7 @@ const table = createTable({
   searchRow: pick('#검색행'),
   body: pick('#본문행'),
   empty: dom.표없음,
-  // 화면이 좁아져 실제 고정 수가 달라지면 도구줄의 메모도 따라가야 한다
+  // 실제로 고정된 수가 달라졌으면 도구줄의 숫자도 따라가야 한다
   onPinnedChange: () => paintToolbar(),
   /** 머리줄 검색칸에 지금 무엇이 적혀 있는지. 다시 그려도 글자가 남아야 한다 */
   columnSearch: (key) => {
@@ -372,9 +371,6 @@ document.addEventListener('click', (event) => {
 // 표를 움직이면 단추가 제자리를 떠난다. 따라다니게 만들기보다 닫는 편이 솔직하다
 dom.표.addEventListener('scroll', 팝오버닫기, { passive: true });
 
-/** 고정할 수 있는 열 수의 상한. 여섯을 넘기면 가로로 볼 것이 남지 않는다. */
-const MAX_PINNED = 6;
-
 /**
  * 툴바의 상태를 맞춘다 (#3).
  *
@@ -382,30 +378,44 @@ const MAX_PINNED = 6;
  * 그 줄의 높이가 바뀌고, 그때마다 표가 위아래로 들썩인다.
  */
 function paintToolbar() {
-  const pinned = Math.min(state.view.pinned, state.view.columns.length, MAX_PINNED);
-  /*
-   * **실제로 몇 개가 고정돼 있는지 적는다.**
-   *
-   * 좁은 화면에서는 고정 열 너비 합이 화면을 넘어 뒤쪽이 고정되지 않는다. 사람이
-   * 정한 수만 적으면 「+」를 눌러도 화면이 그대로여서 고장 났다고 읽거나, 더 나쁘게는
-   * 3개가 고정돼 있다고 믿는다 (§5).
-   */
-  const 실제고정 = table?.drawnPinned?.() ?? null;
-  const 메모 = 실제고정 !== null && 실제고정 < pinned;
-  dom.고정수.textContent = String(pinned);
-  dom.고정메모.textContent = 메모 ? `지금 ${실제고정}개만` : '';
-  dom.고정메모.classList.toggle('hidden', !메모);
+  const 보이는고정 = 고정보이는수();
+  dom.고정수.textContent = String(보이는고정);
 
   const disable = (selector, off) => {
     const node = pick(selector);
     node.disabled = off;
     node.setAttribute('aria-disabled', String(off));
   };
-  disable('#고정줄이기', pinned <= 0);
-  disable('#고정늘리기', pinned >= Math.min(MAX_PINNED, state.view.columns.length));
+  disable('#고정줄이기', 보이는고정 <= 0);
+  /*
+   * **들어갈 자리가 없으면 「+」를 막는다.**
+   *
+   * 상한을 숫자로 박아 두지 않는다. 몇 개가 들어가는지는 화면 너비와 열 너비가
+   * 정하고 그것은 사람마다 매 순간 다르다 — 숫자로 박으면 넓은 화면에서 필요 없이
+   * 막기만 한다. 누를 수 없으니 「눌러도 아무 일 없음」도 생기지 않는다.
+   */
+  disable('#고정늘리기', 보이는고정 >= state.view.columns.length || !table.canPinMore());
   disable('#정렬초기화', state.view.sorts.length === 0);
   disable('#필터초기화', state.view.filters.length === 0);
   disable('#열초기화', false);
+}
+
+/**
+ * **도구줄에 적는 고정 수. 실제로 그려진 수다.**
+ *
+ * 사람이 정한 수(`state.view.pinned`)는 천장으로 남기고, 화면에는 그 천장과
+ * 화면 너비가 함께 허락한 **실제 수**를 적는다. 좁은 화면에서 넷 중 하나만
+ * 고정됐는데 「4」라고 적으면, 눈으로는 멀쩡해서 틀린 줄 모른다 (§5).
+ *
+ * 천장을 깎지 않는 까닭은 **창을 다시 넓히면 돌아와야** 하기 때문이다. 깎아
+ * 버리면 열을 잠시 빼거나 창을 잠시 좁힌 것만으로 사람이 정해 둔 설정이 사라진다.
+ *
+ * 아직 폭을 재지 못해 표가 모른다고 답하면(`null`) 천장을 적는다 — 그 순간의
+ * 숫자는 「안 들어간다」가 아니라 「아직 모른다」다.
+ */
+function 고정보이는수() {
+  const 천장 = Math.min(state.view.pinned, state.view.columns.length);
+  return table.drawnPinned() ?? 천장;
 }
 
 /** 보존할 것만 남기고 화면 상태를 바꾼다. */
@@ -583,8 +593,14 @@ globalThis.addEventListener('keydown', (event) => {
 
 // ── 툴바 (#3) ────────────────────────────────────────────────────────────────
 
+/*
+ * **「+」와 「−」는 지금 보이는 수에서 움직인다.**
+ *
+ * 천장이 5인데 셋만 들어가는 화면에서 「−」가 천장을 4로 내리면 화면은 그대로
+ * 셋이고 숫자도 그대로 셋이다 — 눌렀는데 아무 일도 안 일어난다.
+ */
 const 고정조정 = (step) => updateView({
-  pinned: Math.max(0, Math.min(MAX_PINNED, state.view.columns.length, state.view.pinned + step))
+  pinned: Math.max(0, Math.min(state.view.columns.length, 고정보이는수() + step))
 });
 pick('#고정줄이기').addEventListener('click', () => 고정조정(-1));
 pick('#고정늘리기').addEventListener('click', () => 고정조정(1));
