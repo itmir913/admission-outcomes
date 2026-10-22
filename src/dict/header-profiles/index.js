@@ -9,8 +9,9 @@
 
 import kcue2025 from './kcue-2025.json' with { type: 'json' };
 import kcue2026 from './kcue-2026.json' with { type: 'json' };
+import kcue2027 from './kcue-2027.json' with { type: 'json' };
 import senjinhak2026 from './senjinhak-2026.json' with { type: 'json' };
 // 예시 양식도 프로파일로 읽는다. 체험 첫 화면이 「이름으로 알아냈다」 경고로 시작하지 않게 한다
 import sample2026 from './sample-2026.json' with { type: 'json' };
 
-export const bundledProfiles = [kcue2025, kcue2026, senjinhak2026, sample2026];
+export const bundledProfiles = [kcue2025, kcue2026, kcue2027, senjinhak2026, sample2026];
