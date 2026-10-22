@@ -151,6 +151,35 @@ export function createFilters({ mount, read, onChange, onClose }) {
     commit(next ? [...rest, next] : rest);
   }
 
+  /*
+   * **카드가 제 필터를 해제하는 단추.** 값 목록이든 범위든 **같은 자리에 선다** —
+   * 칸 안의 첫 줄, 왼쪽 (2026-10-22, 사용자). 하나는 제목 줄에 있고 하나는 칸
+   * 안에 있으면, 같은 일을 하는 단추를 카드마다 다른 데서 찾아야 한다.
+   *
+   * **쓸 수 없을 때 숨기지 않고 흐리게 둔다.** 안 보이게 두었더니 전부 선택한
+   * 화면에서 「전체 선택」이 사라진 자리만 남아, 옆 단추가 가운데로 밀려난 것처럼
+   * 보였다 — 단추가 없어졌다고 인식된다. 자리를 지키는 것만으로는 모자라고(D15),
+   * **왜 못 누르는지도 보여야 한다.** 흐린 글자는 「여기 있는데 지금은 할 일이
+   * 없다」를 말한다.
+   */
+  const 글자단추 = (field, text, label, off, onClick) => el('button', {
+    class: `text-base underline-offset-4 ${off
+      ? 'cursor-default text-ink-soft'
+      : 'text-brand hover:underline'}`,
+    text,
+    attrs: {
+      type: 'button',
+      disabled: off,
+      'aria-label': `${field.label} ${label}`,
+      title: off ? '지금은 할 일이 없습니다' : null
+    },
+    on: { click: onClick }
+  });
+
+  const 조작줄 = (children) => el('div', {
+    class: 'mt-2 flex min-h-9 items-center gap-3 px-2'
+  }, children);
+
   // ── 값 선택 (글자·enum 열) ─────────────────────────────────────────────
   function valueBlock(field, filter, counts, redraw) {
     const chosen = new Set((filter?.values ?? []).map((value) => (isBlank(value) ? null : value)));
@@ -222,37 +251,14 @@ export function createFilters({ mount, read, onChange, onClose }) {
      * 단추가 먼저 눈에 띈다.
      */
     const 선택한수 = entries.filter((entry) => chosen.has(entry.value)).length;
-    /*
-     * **쓸 수 없을 때 숨기지 않고 흐리게 둔다.**
-     *
-     * 안 보이게 두었더니 전부 선택한 화면에서 「전체 선택」이 사라진 자리만 남아,
-     * 「전체 해제」가 가운데로 밀려난 것처럼 보였다 — 단추가 없어졌다고 인식된다.
-     * 자리를 지키는 것만으로는 모자라고(D15), **왜 못 누르는지도 보여야 한다.**
-     * 흐린 글자는 「여기 있는데 지금은 할 일이 없다」를 말한다.
-     */
-    const 글자단추 = (text, label, off, onClick) => el('button', {
-      class: `text-base underline-offset-4 ${off
-        ? 'cursor-default text-ink-soft'
-        : 'text-brand hover:underline'}`,
-      text,
-      attrs: {
-        type: 'button',
-        disabled: off,
-        'aria-label': `${field.label} ${label}`,
-        title: off ? '지금은 할 일이 없습니다' : null
-      },
-      on: { click: onClick }
-    });
 
-    const 선택줄 = entries.length === 0 ? null : el('div', {
-      class: 'mt-2 flex min-h-9 items-center gap-3 px-2'
-    }, [
-      글자단추('전체 선택', needle ? '찾은 값 전체 선택' : '값 전체 선택', 선택한수 === entries.length, () => {
+    const 선택줄 = entries.length === 0 ? null : 조작줄([
+      글자단추(field, '전체 선택', needle ? '찾은 값 전체 선택' : '값 전체 선택', 선택한수 === entries.length, () => {
         const next = new Set(chosen);
         for (const entry of entries) next.add(entry.value);
         setFilter(field.key, { key: field.key, op: 'in', values: [...next] });
       }),
-      글자단추('전체 해제', needle ? '찾은 값 전체 해제' : '값 전체 해제', 선택한수 === 0, () => {
+      글자단추(field, '전체 해제', needle ? '찾은 값 전체 해제' : '값 전체 해제', 선택한수 === 0, () => {
         const next = new Set(chosen);
         for (const entry of entries) next.delete(entry.value);
         setFilter(field.key, next.size === 0
@@ -362,8 +368,12 @@ export function createFilters({ mount, read, onChange, onClose }) {
     track(highSlider, 'max');
     syncControls(null);
 
-    return el('div', { class: 'mt-3' }, [
-      el('div', { class: 'flex items-center justify-between gap-2' }, [
+    return el('div', {}, [
+      // 값 목록의 「전체 해제」와 같은 자리에 선다. 하는 일이 범위를 해제하는 것이라 이름만 다르다
+      조작줄([
+        글자단추(field, '범위 해제', '에 걸어 둔 범위 해제', !filter, () => setFilter(field.key, null))
+      ]),
+      el('div', { class: 'mt-3 flex items-center justify-between gap-2' }, [
         lowInput,
         el('span', { class: 'text-ink-soft', attrs: { 'aria-hidden': 'true' }, text: '~' }),
         highInput
@@ -412,31 +422,11 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const head = el('div', { class: 'flex min-h-9 items-center gap-2' }, [
       el('h3', { class: 'min-w-0 flex-1 truncate text-base font-semibold', text: field.label, attrs: { title: field.label } }),
       /*
-       * **「해제」는 범위 칸에만 둔다** (2026-10-22, 사용자).
-       *
-       * 값 목록에는 목록 자신의 「전체 해제」가 있어서, 제목 줄의 「해제」와 하는 일이
-       * 글자까지 같았다. 같은 일을 하는 단추가 둘이면 어느 쪽이 더 많이 지우는지
-       * 재어 보게 된다. 범위 칸에는 짝이 없으므로 거기서는 이 단추가 유일한 길이다.
-       *
-       * **쓸 수 없을 때도 자리를 지킨다**(D15). 범위를 잡는 순간 단추가 생기면
-       * 머리줄이 그만큼 높아져 카드가 들썩이고, 잡고 있던 손잡이가 손가락 밑에서 밀려난다.
+       * **제목 줄에는 ✕ 하나만 둔다.** 필터를 해제하는 단추는 어느 카드든 칸 안 첫 줄,
+       * 같은 자리에 선다 — 하나는 제목 줄에 있고 하나는 칸 안에 있으면 같은 일을
+       * 하는 단추를 카드마다 다른 데서 찾아야 한다. ✕가 하는 일은 그것과 달라서
+       * (열을 목록에서 뺀다) 제목 줄에 남는다.
        */
-      범위칸 ? el('button', {
-        // 테두리를 두르지 않는다. 글자만으로도 누를 수 있다는 것이 드러나고, 제목 줄이 조용해진다
-        class: `text-base underline-offset-4 ${active
-          ? 'text-brand hover:underline'
-          : 'invisible pointer-events-none'}`,
-        text: '해제',
-        attrs: {
-          type: 'button',
-          disabled: !active,
-          'aria-hidden': active ? null : 'true',
-          tabindex: active ? null : '-1',
-          'aria-label': `${field.label}에 걸어 둔 범위 해제`,
-          title: '걸어 둔 범위만 해제한다 — 열은 그대로 둔다'
-        },
-        on: { click: () => setFilter(field.key, null) }
-      }) : null,
       el('button', {
         class: 'btn btn-sm border-transparent px-2 text-base text-ink-soft',
         text: '✕',
