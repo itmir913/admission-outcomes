@@ -2,59 +2,381 @@
   "version": "0.0.0",
   "note": "공통 논리 필드 사전. 어떤 프로그램의 양식이든 이 키로 번역된다. 새 개념이 필요할 때만 여기에 한 줄 추가한다.",
   "termNote": "연도는 언제나 고3 년도(cohortYear)로 통일한다. 학년도 = 고3 년도 + 1. 2025년 고3 → 2026학년도.",
-
   "scalars": [
-    { "key": "identity.name",   "label": "이름",     "type": "text", "group": "identity", "discard": true },
-    { "key": "identity.hakbun", "label": "학번",     "type": "text", "group": "identity", "discard": true },
-    { "key": "identity.class",  "label": "반",       "type": "text", "group": "identity", "discard": true },
-    { "key": "identity.number", "label": "번호",     "type": "text", "group": "identity", "discard": true },
-
-    { "key": "cohortYear",      "label": "고3 년도", "type": "year",   "group": "student", "note": "고등학교 3학년이었던 달력 연도. 학년도(=고3 년도+1)와 절대 섞지 않는다." },
-    { "key": "sourceYear",      "label": "원본 연도 열", "type": "year", "group": "student", "note": "원본 파일의 연도 열. yearBasis에 따라 cohortYear로 변환된다." },
-    { "key": "schoolYear",      "label": "학년",     "type": "text",   "group": "student", "note": "1·2·3 같은 학년 값. 연도가 아니다." },
-    { "key": "enrollStatus",    "label": "재학·졸업", "type": "text",  "group": "student" },
-
-    { "key": "univ",            "label": "대학명",   "type": "text",   "group": "application", "required": true },
-    { "key": "region",          "label": "지역",     "type": "text",   "group": "application" },
-    { "key": "dept",            "label": "모집단위", "type": "text",   "group": "application" },
-    { "key": "track",           "label": "계열",     "type": "text",   "group": "application" },
-    { "key": "period",          "label": "모집시기", "type": "text",   "group": "application" },
-    { "key": "admType",         "label": "전형유형", "type": "text",   "group": "application" },
-    { "key": "admName",         "label": "전형명",   "type": "text",   "group": "application" },
-    { "key": "admDetail",       "label": "세부유형", "type": "text",   "group": "application" },
-    { "key": "selectType",      "label": "선발유형", "type": "text",   "group": "application" },
-    { "key": "quota",           "label": "모집인원", "type": "number", "group": "application" },
-    { "key": "stage1",          "label": "1단계",    "type": "text",   "group": "application" },
-    { "key": "final",           "label": "최종",     "type": "text",   "group": "application" },
-    { "key": "failReason",      "label": "불합격사유", "type": "text", "group": "application" },
-    { "key": "waitRank",        "label": "예비순위", "type": "text",   "group": "application" },
-    { "key": "register",        "label": "등록여부", "type": "text",   "group": "application" }
+    {
+      "key": "identity.name",
+      "label": "이름",
+      "type": "text",
+      "group": "identity",
+      "discard": true
+    },
+    {
+      "key": "identity.hakbun",
+      "label": "학번",
+      "type": "text",
+      "group": "identity",
+      "discard": true
+    },
+    {
+      "key": "identity.class",
+      "label": "반",
+      "type": "text",
+      "group": "identity",
+      "discard": true
+    },
+    {
+      "key": "identity.number",
+      "label": "번호",
+      "type": "text",
+      "group": "identity",
+      "discard": true
+    },
+    {
+      "key": "cohortYear",
+      "label": "고3 년도",
+      "type": "year",
+      "group": "student",
+      "note": "고등학교 3학년이었던 달력 연도. 학년도(=고3 년도+1)와 절대 섞지 않는다.",
+      "derived": true
+    },
+    {
+      "key": "sourceYear",
+      "label": "원본 연도 열",
+      "type": "year",
+      "group": "student",
+      "note": "원본 파일의 연도 열. yearBasis에 따라 cohortYear로 변환된다."
+    },
+    {
+      "key": "schoolYear",
+      "label": "학년",
+      "type": "text",
+      "group": "student",
+      "note": "1·2·3 같은 학년 값. 연도가 아니다."
+    },
+    {
+      "key": "enrollStatus",
+      "label": "재학·졸업",
+      "type": "text",
+      "group": "student"
+    },
+    {
+      "key": "univ",
+      "label": "대학명",
+      "type": "text",
+      "group": "application",
+      "required": true
+    },
+    {
+      "key": "region",
+      "label": "지역",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "dept",
+      "label": "모집단위",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "track",
+      "label": "계열",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "period",
+      "label": "모집시기",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "admType",
+      "label": "전형유형",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "admName",
+      "label": "전형명",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "admDetail",
+      "label": "세부유형",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "selectType",
+      "label": "선발유형",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "quota",
+      "label": "모집인원",
+      "type": "number",
+      "group": "application"
+    },
+    {
+      "key": "stage1",
+      "label": "1단계",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "final",
+      "label": "최종",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "failReason",
+      "label": "불합격사유",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "waitRank",
+      "label": "예비순위",
+      "type": "text",
+      "group": "application"
+    },
+    {
+      "key": "register",
+      "label": "등록여부",
+      "type": "text",
+      "group": "application"
+    }
   ],
-
   "repeating": {
     "gpa": {
       "label": "내신",
-      "note": "반영 조합마다 열이 하나씩 있다. 조합 이름은 학교·프로그램마다 다르므로 자유 문자열로 둔다.",
+      "note": "조합 이름은 양식마다 다르게 적히므로 field-synonyms.json 이 표기를 고유키로 모은다. 여기 적는 것은 그 고유키의 존재와 대표 표기다.",
       "keyPattern": "gpa.<조합>",
       "parts": null,
       "type": "number",
-      "examples": ["gpa.전교과", "gpa.국수영사과", "gpa.국수영과"]
+      "subjectsNote": "내신 구역에서 조합이 아니라 과목 하나를 가리키는 열. 카드에서는 combos 뒤에 온다.",
+      "subjects": [
+        {
+          "key": "국어",
+          "label": "국어",
+          "primary": true
+        },
+        {
+          "key": "영어",
+          "label": "영어",
+          "primary": true
+        },
+        {
+          "key": "수학",
+          "label": "수학",
+          "primary": true
+        },
+        {
+          "key": "사회",
+          "label": "사회",
+          "primary": true
+        },
+        {
+          "key": "과학",
+          "label": "과학",
+          "primary": true
+        }
+      ],
+      "combosNote": "순서가 화면의 내신 카드 순서다. **카드는 combos 를 먼저, subjects 를 나중에 늘어놓는다** — 뒤집으면 큰 글씨 첫 칸이  같은 한 과목이 되어 그 학생을 대표하지 않는 값이 첫눈에 들어온다. **큰 글씨 첫 칸은 default 키이고**, 그 열이 없는 양식에서는 첫 칸이 커진다. primary 는 학생 지원 모달에서 기본으로 보일 키이고 나머지는 접힌다 — 괄호 유무로 구분하지 않는다. default 는 필터·축의 기본 내신 열 하나이기도 하다.",
+      "combos": [
+        {
+          "key": "전교과",
+          "label": "전교과",
+          "primary": true,
+          "default": true,
+          "note": "센진학은 `전과목`이라 적는다. 표기는 동의어로 받고 화면에는 `전교과`로 적는다."
+        },
+        {
+          "key": "전교과(2/3/5)",
+          "label": "전교과 2/3/5"
+        },
+        {
+          "key": "전교과(2/4/4)",
+          "label": "전교과 2/4/4"
+        },
+        {
+          "key": "전교과(4/3/3)",
+          "label": "전교과 4/3/3"
+        },
+        {
+          "key": "국수영",
+          "label": "국·수·영",
+          "primary": true
+        },
+        {
+          "key": "국수영사",
+          "label": "국·수·영·사",
+          "primary": true
+        },
+        {
+          "key": "국수영사(2/4/4)",
+          "label": "국·수·영·사 2/4/4"
+        },
+        {
+          "key": "국수영사(3/3/4)",
+          "label": "국·수·영·사 3/3/4"
+        },
+        {
+          "key": "국수영사(3/7/0)",
+          "label": "국·수·영·사 3/7/0"
+        },
+        {
+          "key": "국수영사(4/3/3)",
+          "label": "국·수·영·사 4/3/3"
+        },
+        {
+          "key": "국수영과",
+          "label": "국·수·영·과",
+          "primary": true
+        },
+        {
+          "key": "국수영과(2/4/4)",
+          "label": "국·수·영·과 2/4/4"
+        },
+        {
+          "key": "국수영과(3/3/4)",
+          "label": "국·수·영·과 3/3/4"
+        },
+        {
+          "key": "국수영과(3/7/0)",
+          "label": "국·수·영·과 3/7/0"
+        },
+        {
+          "key": "국수영과(4/3/3)",
+          "label": "국·수·영·과 4/3/3"
+        },
+        {
+          "key": "국영사",
+          "label": "국·영·사",
+          "primary": true
+        },
+        {
+          "key": "국영사(2/4/4)",
+          "label": "국·영·사 2/4/4"
+        },
+        {
+          "key": "수영과",
+          "label": "수·영·과",
+          "primary": true
+        },
+        {
+          "key": "수영과(2/4/4)",
+          "label": "수·영·과 2/4/4"
+        },
+        {
+          "key": "국수영사과택일",
+          "label": "국·수·영·사/과",
+          "primary": true,
+          "note": "4과목 반영. 사회와 과학 중 하나만 반영한다. 머리글의 `/`가 그 표시다. 대교협 양식에 있다."
+        },
+        {
+          "key": "국수영사과택일(2/4/4)",
+          "label": "국·수·영·사/과 2/4/4"
+        },
+        {
+          "key": "국수영사과택일(3/3/4)",
+          "label": "국·수·영·사/과 3/3/4"
+        },
+        {
+          "key": "국수영사과택일(4/3/3)",
+          "label": "국·수·영·사/과 4/3/3"
+        },
+        {
+          "key": "국수영사과",
+          "label": "국·수·영·사·과",
+          "primary": true,
+          "note": "5과목 전부 반영. 센진학 양식에 있다. 택일 조합(`국수영사과택일`)과 합치지 않는다 — 반영 과목 수가 다르다."
+        }
+      ]
     },
     "suneung": {
       "label": "수능",
       "note": "영역마다 과목·표점·백분위·등급이 따로 있다. 있는 것만 적으면 된다.",
       "keyPattern": "suneung.<영역>.<항목>",
-      "parts": ["subject", "stdScore", "percentile", "grade"],
+      "parts": [
+        "subject",
+        "stdScore",
+        "percentile",
+        "grade"
+      ],
       "type": "mixed",
-      "examples": ["suneung.국어.grade", "suneung.탐구1.percentile"]
+      "examples": [
+        "suneung.국어.grade",
+        "suneung.탐구1.percentile"
+      ],
+      "areasNote": "이 순서가 화면의 성적표 순서다 (student.js 의 AREA_ORDER 를 대신한다). 중간에 끼워 넣으면 성적표 순서가 바뀐다.",
+      "areas": [
+        {
+          "key": "국어",
+          "label": "국어"
+        },
+        {
+          "key": "수학",
+          "label": "수학"
+        },
+        {
+          "key": "영어",
+          "label": "영어"
+        },
+        {
+          "key": "한국사",
+          "label": "한국사"
+        },
+        {
+          "key": "탐구1",
+          "label": "탐구1"
+        },
+        {
+          "key": "탐구2",
+          "label": "탐구2"
+        },
+        {
+          "key": "제2외국어",
+          "label": "제2외국어"
+        }
+      ],
+      "partLabels": {
+        "subject": "과목",
+        "stdScore": "표점",
+        "percentile": "백분위",
+        "grade": "등급"
+      }
     }
   },
-
   "identityLabels": {
     "note": "해석하지 못한 열이 extra로 보존될 때, 이 낱말이 든 헤더는 버린다. 개인정보가 보관소에 새는 유일한 통로였다.",
-    "tokens": ["이름", "성명", "학생명", "성함", "담임", "학번", "수험번호", "번호", "생년월일", "생년", "생일", "주민", "연락처", "전화", "휴대", "주소", "보호자", "이메일", "email", "name"]
+    "tokens": [
+      "이름",
+      "성명",
+      "학생명",
+      "성함",
+      "담임",
+      "학번",
+      "수험번호",
+      "번호",
+      "생년월일",
+      "생년",
+      "생일",
+      "주민",
+      "연락처",
+      "전화",
+      "휴대",
+      "주소",
+      "보호자",
+      "이메일",
+      "email",
+      "name"
+    ]
   },
-
   "partTypes": {
     "subject": "text",
     "stdScore": "number",
