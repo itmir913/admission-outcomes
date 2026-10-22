@@ -4,7 +4,7 @@
   "programLabel": "예시",
   "year": 2026,
   "headerRows": 2,
-  "fingerprint": "a854ca8d20f3539c4b4e4ec126435e99e24f0441075c46c82f361be5e2b39991",
+  "fingerprint": "33a2374e101ee8a0f4bc05356089064d056f05d604531f268638cd7421f83295",
   "columns": {
     "schoolYear": 0,
     "identity.class": 1,
@@ -18,7 +18,7 @@
     "dept": 9,
     "track": 10,
     "gpa.전교과": 11,
-    "gpa.국영수사과": 12,
+    "gpa.국수영사": 12,
     "stage1": 13,
     "final": 14,
     "failReason": 15,
