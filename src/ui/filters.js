@@ -29,8 +29,15 @@ const RANGE_SETTLE = 220;
 /**
  * 값 목록을 늘어놓는 순서.
  *
- * 순서가 있는 값(연도·등급)은 **값순**이어야 한다. 건수순으로 두면 2025·2023·2024처럼
+ * 순서가 있는 값(연도·등급)은 **값순**이어야 한다. 사전순으로 두면 2025·2023·2024처럼
  * 늘어서서, 어느 해가 빠졌는지 눈으로 셀 수 없다.
+ *
+ * 그 밖의 값은 **사전순**이다 (2026-10-22, 사용자). 건수순으로 두었더니 대학이
+ * 수십 가지인 목록에서 찾는 이름이 어디쯤에 있는지 확인할 수가 없었다 — 건수는 사람이
+ * 외우고 있는 것이 아니다. 많이 간 곳이 어디인지는 옆에 적힌 건수가 말한다.
+ *
+ * **「(빈칸)」은 맨 뒤다.** 이름이 아니라 「이름이 없다」는 표시이고, 괄호로 시작해
+ * 사전순으로는 맨 앞에 서서 목록의 첫 줄을 차지한다.
  *
  * @param {object} field
  */
@@ -43,7 +50,9 @@ export function entryOrder(field) {
     // 등급·순위는 작은 값이 앞선다
     return (left, right) => Number(left.value) - Number(right.value);
   }
-  return (left, right) => right.count - left.count || left.label.localeCompare(right.label, 'ko');
+  const 빈칸 = (entry) => Number(isBlank(entry.value));
+  return (left, right) => 빈칸(left) - 빈칸(right)
+    || left.label.localeCompare(right.label, 'ko');
 }
 
 /**
