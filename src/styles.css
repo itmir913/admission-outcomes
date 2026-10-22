@@ -305,6 +305,7 @@
     box-shadow: inset -1px -1px 0 var(--color-line);
   }
 
+
   /*
    * 머리줄 둘째 칸 — 열별 검색 (참고 UI).
    *
@@ -538,7 +539,7 @@
   html { font-size: 12px; }
   /* 화면에서는 표만 스크롤하지만, 종이에는 전부 펼쳐 나와야 한다 */
   body { display: block; height: auto; overflow: visible; }
-  .print-open { display: block !important; height: auto !important; overflow: visible !important; }
+  .print-open { display: block !important; height: auto !important; overflow: visible !important; padding-bottom: 0 !important; }
   .grid-table thead th {
     position: static;
     @apply bg-surface text-ink;

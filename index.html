@@ -257,7 +257,14 @@
         좁은 화면에서 필터판을 열면 고정 열 머리가 덮개 위로 솟아, 거기만
         덮이지 않은 채 남았다.
       -->
-      <div id="표" tabindex="-1" class="isolate print-open min-h-0 min-w-0 flex-1 scroll-stable overflow-auto">
+      <!--
+        마지막 행 뒤에 **여백 두 행을 둔다.** 끝까지 내리면 마지막 행이 창 밑변에
+        딱 붙어, 읽기도 누르기도 불편했다. 한두 행뿐일 때는 이 여백이 스크롤을
+        조금 만들어 주어 내리는 동작도 먹는다. 한 화면씩 비우지는 않는다 —
+        아래가 크게 비면 행이 더 있는데 안 그려진 것처럼 보인다.
+        종이에는 이 여백이 필요 없다(print).
+      -->
+      <div id="표" tabindex="-1" class="isolate print-open min-h-0 min-w-0 flex-1 scroll-stable overflow-auto pb-[calc(var(--spacing-row)*2)]">
         <!--
           표 위에 얹히는 것들을 **한 더미로 묶는다.** 여백을 줄마다 따로 주면
           줄 하나를 고칠 때마다 다른 줄과 어긋나고, 그 어긋남은 눈에 먼저 띈다.
