@@ -222,17 +222,24 @@ export function createFilters({ mount, read, onChange, onClose }) {
      * 단추가 먼저 눈에 띈다.
      */
     const 선택한수 = entries.filter((entry) => chosen.has(entry.value)).length;
+    /*
+     * **쓸 수 없을 때 숨기지 않고 흐리게 둔다.**
+     *
+     * 안 보이게 두었더니 전부 선택한 화면에서 「전체 선택」이 사라진 자리만 남아,
+     * 「전체 해제」가 가운데로 밀려난 것처럼 보였다 — 단추가 없어졌다고 인식된다.
+     * 자리를 지키는 것만으로는 모자라고(D15), **왜 못 누르는지도 보여야 한다.**
+     * 흐린 글자는 「여기 있는데 지금은 할 일이 없다」를 말한다.
+     */
     const 글자단추 = (text, label, off, onClick) => el('button', {
       class: `text-base underline-offset-4 ${off
-        ? 'invisible pointer-events-none'
+        ? 'cursor-default text-ink-soft'
         : 'text-brand hover:underline'}`,
       text,
       attrs: {
         type: 'button',
         disabled: off,
-        'aria-hidden': off ? 'true' : null,
-        tabindex: off ? '-1' : null,
-        'aria-label': `${field.label} ${label}`
+        'aria-label': `${field.label} ${label}`,
+        title: off ? '지금은 할 일이 없습니다' : null
       },
       on: { click: onClick }
     });
