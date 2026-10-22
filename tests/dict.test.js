@@ -304,3 +304,29 @@ describe('코드가 열 이름을 해석하지 않는다', () => {
     expect(걸린곳).toEqual([]);
   });
 });
+
+describe('순서만 다른 표기를 한쪽만 받지 않는다', () => {
+  /*
+   * 반영비가 붙은 키도 **반영비 없는 키와 같은 표기 집합**을 받아야 한다.
+   * 한때 `국수영사과택일`은 양쪽 순서를 받는데 `국수영사과택일(2/4/4)`은 한쪽만
+   * 받았다 — 대교협이 택일 조합도 수-영 순으로 적는 날 그 반영비 열 셋이
+   * 내신 묶음에서 빠져 `extra` 글자 열이 된다(보고는 되지만 회귀다).
+   *
+   * 「순서만 다르다」는 **글자 다중집합이 같다**는 뜻이다(§4.1). 동의어는 아니다 —
+   * `전교과`와 `전과목`은 글자가 달라 여기 걸리지 않고, 그래서 본 적 없는
+   * `전과목(2/4/4)` 같은 교차곱이 사전에 들어오지 않는다.
+   */
+  const 글자수 = (word) => [...word].sort().join('');
+  const 뿌리 = (word) => word.replace(/\(.+\)$/, '');
+
+  it.each(synonyms.gpaCombos.filter((entry) => /\(/.test(entry.key)).map((entry) => [entry.key, entry]))(
+    '%s 가 순서만 다른 표기를 빠뜨리지 않는다', (key, entry) => {
+      const base = synonyms.gpaCombos.find((item) => item.key === key.replace(/\(.+\)$/, ''));
+      const ratio = key.match(/\((.+)\)$/)[1];
+      const 받아야할것 = [...new Set(base.exact.map(뿌리))]
+        .filter((root) => entry.exact.some((word) => 글자수(뿌리(word)) === 글자수(root)))
+        .map((root) => `${root}(${ratio})`);
+      expect(받아야할것.filter((word) => !entry.exact.includes(word))).toEqual([]);
+    }
+  );
+});
