@@ -115,11 +115,11 @@ describe('그려 놓은 표에서 머리와 칸이 같은 쪽을 본다', () => 
     { key: 'sid', label: '익명 ID', group: 'student', type: 'text', numeric: false, filled: 2, cardinality: 2 },
     { key: 'cohortYear', label: '고3 년도', group: 'student', type: 'year', numeric: true, filled: 2, cardinality: 2 },
     { key: 'univ', label: '대학명', group: 'application', type: 'text', numeric: false, filled: 2, cardinality: 2 },
-    { key: 'gpa.전과목', label: '전과목', group: 'gpa', type: 'number', numeric: true, filled: 2, cardinality: 2 }
+    { key: 'gpa.전교과', label: '전교과', group: 'gpa', type: 'number', numeric: true, filled: 2, cardinality: 2 }
   ];
   const rows = [
-    { sid: '2025-A3F2-7K9M', cohortYear: 2025, univ: '서울대학교', 'gpa.전과목': 1.82 },
-    { sid: '2025-B7QT-2M4X', cohortYear: 2024, univ: '연세대학교', 'gpa.전과목': 3.4 }
+    { sid: '2025-A3F2-7K9M', cohortYear: 2025, univ: '서울대학교', 'gpa.전교과': 1.82 },
+    { sid: '2025-B7QT-2M4X', cohortYear: 2024, univ: '연세대학교', 'gpa.전교과': 3.4 }
   ];
 
   let head;

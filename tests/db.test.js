@@ -93,13 +93,13 @@ describe('이어서 올리기', () => {
   it('나중 파일의 내신을 더하고, 같은 항목은 새 값으로 바꾼다', async () => {
     await saveDataset(db, dataset());
     await saveDataset(db, {
-      students: [{ sid: '2025-AAAA-1111', cohortYear: 2025, keyHashes: [], gpa: { 전교과: 3.3, 국영수: 1.9 } }],
+      students: [{ sid: '2025-AAAA-1111', cohortYear: 2025, keyHashes: [], gpa: { 전교과: 3.3, 국수영: 1.9 } }],
       applications: [], suneung: [], files: []
     });
     const merged = (await loadDataset(db)).students
       .find((student) => student.sid === '2025-AAAA-1111');
     expect(merged.gpa.전교과).toBe(3.3);
-    expect(merged.gpa.국영수).toBe(1.9);
+    expect(merged.gpa.국수영).toBe(1.9);
   });
 
   it('지원 기록은 덮지 않고 덧붙인다', async () => {

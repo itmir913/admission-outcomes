@@ -107,14 +107,39 @@ describe('구역 판정', () => {
 });
 
 describe('구역 안에서 키 만들기', () => {
-  it('반영비가 전체면 조합 이름만 쓴다', () => {
+  it('전체 반영은 빈칸이든 100이든 같은 키로 간다', () => {
+    // 사전이 두 모양을 함께 받으므로 전체 반영을 구별하는 판정이 필요하지 않다
     expect(gpaKeyOf({ top: '전교과', sub: '100' })).toBe('gpa.전교과');
-    expect(gpaKeyOf({ top: '전과목', sub: '' })).toBe('gpa.전과목');
+    expect(gpaKeyOf({ top: '전교과', sub: '' })).toBe('gpa.전교과');
+  });
+
+  it('표기가 달라도 같은 조합이면 한 키로 모인다', () => {
+    // 양식마다 글자 순서가 다르다. kcue-2027 한 파일 안에서도 섞여 있다
+    expect(gpaKeyOf({ top: '전과목', sub: '' })).toBe('gpa.전교과');
+    expect(gpaKeyOf({ top: '국영수사', sub: '' })).toBe('gpa.국수영사');
+    expect(gpaKeyOf({ top: '국수영사', sub: '' })).toBe('gpa.국수영사');
   });
 
   it('반영비가 따로 있으면 괄호로 붙여 다른 열로 남긴다', () => {
     // 붙이지 않으면 전교과 네 열이 한 열로 겹쳐 셋이 사라진다
     expect(gpaKeyOf({ top: '전교과', sub: '2/4/4' })).toBe('gpa.전교과(2/4/4)');
+    expect(gpaKeyOf({ top: '국영수사', sub: '2/4/4' })).toBe('gpa.국수영사(2/4/4)');
+  });
+
+  it('한 줄 머리글과 두 줄 머리글이 같은 키를 낸다', () => {
+    // 한 줄에서는 반영비가 머리글 한 칸에 괄호로 들어 있다
+    expect(gpaKeyOf({ top: '전교과(2/4/4)', sub: '' })).toBe('gpa.전교과(2/4/4)');
+  });
+
+  it('사전에 없는 이름은 키가 되지 않는다', () => {
+    /*
+     * 규칙으로 읽지 않고 열거하므로 지어낼 길이 없다. 예전에는 숫자를 뽑아
+     * `전교과(5등급)`에서 `gpa.전교과(5)`라는 없는 반영비를 만들었다.
+     */
+    expect(gpaKeyOf({ top: '전교과', sub: '5등급' })).toBeNull();
+    expect(gpaKeyOf({ top: '전교과', sub: '2:4:4' })).toBeNull();
+    expect(gpaKeyOf({ top: '국수영', sub: '탐1탐2' })).toBeNull();
+    expect(suneungKeyOf({ top: '총점평균', sub: '등급' })).toBeNull();
   });
 
   it('수능 항목 이름이 없으면 등급으로 본다 - 등급만 싣는 양식이 있다', () => {
@@ -219,7 +244,7 @@ describe('이름 매칭과 손으로 적은 프로파일이 같은 답을 낸다
     const resolved = resolveSheet(senjinhakGrid(2026));
     expect(resolved.headerRows).toBe(1);
     expect(resolved.columns.univ).toBe(4);
-    expect(resolved.columns['gpa.전과목']).toBe(9);
+    expect(resolved.columns['gpa.전교과']).toBe(9);
     expect(resolved.columns.stage1).toBe(10);
     expect(resolved.columns.final).toBe(11);
   });

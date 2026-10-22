@@ -30,13 +30,35 @@ import { headerFingerprint } from './headerHash.js';
 
 const SCALAR_KEYS = new Set(fields.scalars.map((field) => field.key));
 const SUNEUNG_PARTS = new Set(fields.repeating.suneung.parts);
+const GPA_KEYS = new Set(
+  [...fields.repeating.gpa.combos, ...fields.repeating.gpa.subjects].map((entry) => entry.key)
+);
+const SUNEUNG_AREAS = new Set(fields.repeating.suneung.areas.map((entry) => entry.key));
 
-/** @param {string} key */
+/**
+ * 쓸 수 있는 논리 키인가.
+ *
+ * **내신 조합과 수능 영역은 사전에 열거한 것만 받는다.** 글자 모양을 정규식으로 보지
+ * 않는다 — 예전에는 `gpa.` 뒤에 아무 이름이나 통과했다.
+ *
+ * **프로파일 경로는 사전을 거치지 않으므로 이 함수가 그 경로의 유일한 문지기다.**
+ * 프로파일에 날것 머리글이 키로 적혀 있으면 사전을 통째로 우회해 같은 조합이 다시
+ * 두 열로 나뉜다. 그래서 여기서 사전과 **정확히 같은 집합**을 본다.
+ *
+ * `split('.')`을 쓰지 않는다. 반영비에 소수점이 들어가면 쪼개기가 어긋난다.
+ *
+ * @param {string} key
+ */
 export function isKnownFieldKey(key) {
-  if (SCALAR_KEYS.has(key)) return true;
-  const parts = String(key).split('.');
-  if (parts[0] === 'gpa') return parts.length === 2 && parts[1].length > 0;
-  if (parts[0] === 'suneung') return parts.length === 3 && parts[1].length > 0 && SUNEUNG_PARTS.has(parts[2]);
+  const text = String(key);
+  if (SCALAR_KEYS.has(text)) return true;
+  if (text.startsWith('gpa.')) return GPA_KEYS.has(text.slice(4));
+  if (text.startsWith('suneung.')) {
+    const rest = text.slice(8);
+    const cut = rest.lastIndexOf('.');
+    if (cut <= 0) return false;
+    return SUNEUNG_AREAS.has(rest.slice(0, cut)) && SUNEUNG_PARTS.has(rest.slice(cut + 1));
+  }
   return false;
 }
 

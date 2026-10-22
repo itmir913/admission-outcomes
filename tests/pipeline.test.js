@@ -20,7 +20,7 @@ async function profilesFor(grid, { year = 2025, yearBasis = 'admission', omitYea
     columns: {
       ...yearColumn, 'identity.hakbun': 1, 'identity.name': 2,
       region: 3, univ: 4, dept: 5, admName: 6, track: 7, period: 8,
-      'gpa.전과목': 9, stage1: 10, final: 11
+      'gpa.전교과': 9, stage1: 10, final: 11
     }
   });
   return new ProfileSet([profile]);
@@ -40,7 +40,7 @@ describe('프로파일로 해석한 시트도 미해결을 알린다', () => {
       columns: {
         sourceYear: 0, 'identity.hakbun': 1, 'identity.name': 2,
         region: 3, univ: 4, dept: 5, admName: 6, track: 7, period: 8,
-        'gpa.전과목': 9, stage1: 10   // 11번(최종)을 일부러 빼 둔다
+        'gpa.전교과': 9, stage1: 10   // 11번(최종)을 일부러 빼 둔다
       }
     });
     return new ProfileSet([profile]);

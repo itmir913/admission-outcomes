@@ -15,7 +15,7 @@ function simpleSheet(cohortYear = 2025) {
     headerRows: 1,
     columns: {
       'identity.hakbun': 0, 'identity.name': 1,
-      univ: 2, dept: 3, 'gpa.전과목': 4, stage1: 5, final: 6
+      univ: 2, dept: 3, 'gpa.전교과': 4, stage1: 5, final: 6
     },
     cohortYear
   };
@@ -84,11 +84,11 @@ describe('행 읽기', () => {
     const row = ['30101', '김가온', '서울대학교', 1.82, '2', '언어와매체'];
     const parsed = readRow(row, {
       'identity.hakbun': 0, 'identity.name': 1, univ: 2,
-      'gpa.전과목': 3, 'suneung.국어.grade': 4, 'suneung.국어.subject': 5
+      'gpa.전교과': 3, 'suneung.국어.grade': 4, 'suneung.국어.subject': 5
     });
     expect(parsed.identity).toEqual({ hakbun: '30101', name: '김가온' });
     expect(parsed.scalars.univ).toBe('서울대학교');
-    expect(parsed.gpa).toEqual({ 전과목: 1.82 });
+    expect(parsed.gpa).toEqual({ 전교과: 1.82 });
     expect(parsed.suneung).toEqual({ 국어: { grade: 2, subject: '언어와매체' } });
   });
 
@@ -114,7 +114,7 @@ describe('자료 묶음 만들기', () => {
     // 내신·수능이 지원 건수만큼 되풀이되어 들어 있다
     const result = await buildDataset([simpleSheet()]);
     expect(result.students).toHaveLength(2);
-    expect(result.students.map((student) => student.gpa.전과목).sort()).toEqual([1.82, 2.41]);
+    expect(result.students.map((student) => student.gpa.전교과).sort()).toEqual([1.82, 2.41]);
   });
 
   it('같은 학생의 지원 건이 한 ID로 묶인다', async () => {

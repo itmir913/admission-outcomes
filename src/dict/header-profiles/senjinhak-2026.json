@@ -15,7 +15,7 @@
     "admName": 6,
     "track": 7,
     "period": 8,
-    "gpa.전과목": 9,
+    "gpa.전교과": 9,
     "gpa.국수영사과": 10,
     "gpa.국수영과": 11,
     "gpa.국수영사": 12,
@@ -24,7 +24,6 @@
     "waitRank": 15,
     "register": 16,
     "sourceYear": 0,
-
     "suneung.국어.subject": 17,
     "suneung.국어.grade": 18,
     "suneung.수학.subject": 19,

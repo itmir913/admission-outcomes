@@ -25,6 +25,21 @@ import { isKnownFieldKey } from './profile.js';
 
 const SCORES = synonyms.scores;
 
+/**
+ * 표기 → 고유키 조회표. 내신 조합·과목과 수능 영역은 **열거한 사전으로만** 모인다.
+ * 규칙으로 이름을 해석하지 않는다 (§4·§5).
+ */
+function 표기표(entries) {
+  const table = new Map();
+  for (const entry of entries) {
+    for (const word of entry.exact) table.set(normalizeLabel(word).tight, entry.key);
+  }
+  return table;
+}
+const GPA_COMBO_KEYS = 표기표(synonyms.gpaCombos);
+const GPA_SUBJECT_KEYS = 표기표(synonyms.gpaSubjects);
+const SUNEUNG_AREA_KEYS = 표기표(synonyms.suneungAreas);
+
 /** 헤더 블록이 차지할 수 있는 줄 수. 셋을 넘는 양식은 아직 본 적이 없다. */
 export const MAX_HEADER_ROWS = 3;
 
@@ -89,7 +104,6 @@ export function scoreLabel(label, rule) {
 const GPA_ANCHORS = anchors.gpa.anchors.map((word) => normalizeLabel(word).tight);
 const GPA_SUBJECTS = anchors.gpa.subjects.map((word) => normalizeLabel(word).tight);
 const SUNEUNG_ANCHORS = anchors.suneung.anchors.map((word) => normalizeLabel(word).tight);
-const WHOLE_RATIOS = new Set(anchors.gpa.wholeRatios.map((word) => normalizeLabel(word).tight));
 const PART_BY_LABEL = new Map(
   Object.entries(anchors.suneung.parts).map(([word, part]) => [normalizeLabel(word).tight, part])
 );
@@ -175,23 +189,51 @@ export function findSections(labels) {
 }
 
 /**
- * 내신 구역의 열 하나에서 논리 키를 만든다.
+ * 머리글 두 칸을 한 이름으로 읽는다 — `sub`가 있으면 `top(sub)`, 없으면 `top`.
  *
- * 반영비가 전체(100)면 조합 이름만 쓰고, 아니면 비를 괄호로 붙인다.
- * 그래야 `전교과`와 `전교과(2/4/4)`가 서로 다른 열로 남는다.
+ * **정규화가 아니다.** 글자를 바꾸지 않고 두 줄짜리 머리글을 한 이름으로 읽을 뿐이고,
+ * 사전이 그 이름을 그대로 받는다. 그래서 두 머리글 모양이 같은 키를 낸다.
+ *
+ *   두 줄: top=전교과         sub=2/4/4  →  전교과(2/4/4)
+ *   한 줄: top=전교과(2/4/4)  sub=''     →  전교과(2/4/4)
  */
-export function gpaKeyOf(label) {
-  const combo = String(label.top ?? '').trim();
-  if (combo === '') return null;
-  const ratio = String(label.sub ?? '').trim();
-  const whole = WHOLE_RATIOS.has(normalizeLabel(ratio).tight);
-  return whole ? `gpa.${combo}` : `gpa.${combo}(${ratio})`;
+function headerName(label) {
+  const top = String(label.top ?? '').trim();
+  if (top === '') return '';
+  const sub = String(label.sub ?? '').trim();
+  return sub === '' ? top : `${top}(${sub})`;
 }
 
-/** 수능 구역의 열 하나에서 논리 키를 만든다. */
+/** 표기 하나를 사전에서 찾는다. 사전을 거치지 않는 길은 두지 않는다 */
+function lookup(table, name) {
+  return table.get(normalizeLabel(name).tight) ?? null;
+}
+
+/**
+ * 내신 구역의 열 하나에서 논리 키를 만든다.
+ *
+ * **반영비를 읽는 규칙을 두지 않는다. 사전이 열거한다.**
+ * 우리는 이 양식들의 열이 무엇인지 알고 있으므로 해석할 이유가 없고, 규칙을 두면
+ * 그 규칙의 예외를 찾는 일이 시작된다 — 숫자를 뽑다 `(5등급)`에서 없는 반영비를
+ * 지어내고, 전체 반영을 가리다 빈칸 열을 떨어뜨리는 식이다. 사전에 없는 이름은
+ * 키가 되지 않고 미해결로 남아 사람에게 묻는다(§5).
+ *
+ * **조합 맞추기에 `base`(괄호를 걷어낸 것)를 쓰지 않는다.** `전교과(2/4/4)`의 `base`는
+ * `전교과`라서, 걷어내면 네 열이 한 열이 되고 가중평균 열이 전과목 평균으로 이름
+ * 붙는다. 괄호 안은 뜻을 나르는 값이다. 다만 **구역 판정의 앵커 비교는 `base`를
+ * 계속 쓴다** — 그쪽에서는 `전교과(2/4/4)`가 내신 구역을 열어 주어야 한다.
+ */
+export function gpaKeyOf(label) {
+  const name = headerName(label);
+  if (name === '') return null;
+  const key = lookup(GPA_SUBJECT_KEYS, name) ?? lookup(GPA_COMBO_KEYS, name);
+  return key === null ? null : `gpa.${key}`;
+}
+
+/** 수능 구역의 열 하나에서 논리 키를 만든다. 영역 이름도 사전을 거친다 */
 export function suneungKeyOf(label) {
-  const area = String(label.top ?? '').trim();
-  if (area === '') return null;
+  const area = lookup(SUNEUNG_AREA_KEYS, String(label.top ?? '').trim());
+  if (area === null) return null;
   // 항목 이름이 없으면 등급만 있는 양식이다 (센진학)
   const part = PART_BY_LABEL.get(normalizeLabel(label.sub).tight) ?? 'grade';
   return `suneung.${area}.${part}`;

@@ -141,13 +141,10 @@ describe('구역 표지와 사전이 어긋나지 않는다', () => {
    * `findSections`가 내신 구역 자체를 찾지 못해 **그 양식의 내신 열이 통째로
    * `extra`로 간다.** 내신 묶음이 화면에서 사라진 까닭은 아무 데도 적히지 않는다.
    */
-  const 전체반영 = new Set(anchors.gpa.wholeRatios.filter(Boolean));
+  // 전체 반영 변형(`전교과(100)`)은 같은 키로 가는 덧붙임이라 표지와 견줄 대상이 아니다
   const 비없는표기 = (key) => synonyms.gpaCombos
     .find((entry) => entry.key === key).exact
-    .filter((word) => {
-      const match = word.match(/^(.+?)\((.+)\)$/);
-      return !match || !전체반영.has(match[2]);
-    });
+    .filter((word) => !/\(/.test(word));
 
   it('내신 구역 표지가 전교과 조합의 표기와 같다', () => {
     // 전체 반영 변형(`전교과(100)`)은 같은 키로 가는 덧붙임이라 뺀다

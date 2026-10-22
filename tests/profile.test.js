@@ -84,11 +84,18 @@ describe('필드 키 검사', () => {
     }
   });
 
-  it('내신 반영조합은 이름을 자유롭게 붙일 수 있다', () => {
-    // 조합 이름은 학교·프로그램마다 다르다
+  it('내신 조합은 사전에 열거한 것만 받는다', () => {
+    /*
+     * 예전에는 `gpa.` 뒤에 아무 이름이나 통과했다. 그런데 **프로파일 경로는 사전을
+     * 거치지 않으므로** 이 함수가 그 경로의 유일한 문지기다 — 느슨하면 프로파일에
+     * 적힌 날것 머리글이 사전을 우회해 같은 조합이 다시 두 열로 나뉜다.
+     */
     expect(isKnownFieldKey('gpa.전교과')).toBe(true);
     expect(isKnownFieldKey('gpa.국수영사과')).toBe(true);
-    expect(isKnownFieldKey('gpa.우리학교만쓰는조합')).toBe(true);
+    expect(isKnownFieldKey('gpa.전교과(2/4/4)')).toBe(true);
+    expect(isKnownFieldKey('gpa.우리학교만쓰는조합')).toBe(false);
+    expect(isKnownFieldKey('gpa.전과목')).toBe(false);      // 표기는 사전이 받고, 키는 전교과다
+    expect(isKnownFieldKey('gpa.전교과(100)')).toBe(false);  // 전체 반영은 괄호를 붙이지 않는다
   });
 
   it('수능은 영역과 항목까지 갖춰야 한다', () => {
@@ -286,7 +293,7 @@ describe('프로파일 만들기', () => {
     const grid = senjinhakGrid(2026);
     const profile = await buildProfile({
       program: 'newprogram', programLabel: '새 프로그램', year: 2026,
-      headerRows: 1, grid, columns: { univ: 4, dept: 5, 'gpa.전과목': 9 }
+      headerRows: 1, grid, columns: { univ: 4, dept: 5, 'gpa.전교과': 9 }
     });
     expect(validateProfile(profile).valid).toBe(true);
     expect(profile.id).toBe('newprogram-2026');
