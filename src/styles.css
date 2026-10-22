@@ -169,6 +169,27 @@
    * 같은 긴 값이 화면 오른쪽을 뚫고 나갔다. 조건이 길다고 화면 밖으로 나가는 것보다
    * 두 줄이 되는 편이 낫다. 지우는 ✕ 는 끝에 붙어 함께 접힌다.
    */
+  /* 쪽 넘김. 단추와 입력칸의 키를 맞춰야 한 줄로 선다 */
+  .pager-btn {
+    @apply inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-line
+      bg-surface px-2.5 text-base text-ink-soft transition-colors
+      disabled:pointer-events-none disabled:opacity-35;
+    @media (hover: hover) {
+      &:hover { @apply bg-canvas text-ink; }
+    }
+  }
+
+  .pager-input {
+    @apply min-h-9 w-18 rounded-lg border border-line bg-surface px-2 text-right text-base
+      tabular-nums text-ink;
+  }
+
+  /* 정렬 칩의 순위 숫자. 몇째 기준인지가 칩의 첫 글자다 */
+  .chip-rank {
+    @apply inline-flex min-w-6 items-center justify-center rounded bg-pass px-1 text-base
+      font-bold tabular-nums text-white;
+  }
+
   .chip {
     @apply inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md
       border border-brand/25 bg-brand-soft px-3 py-1 text-base font-medium text-brand;

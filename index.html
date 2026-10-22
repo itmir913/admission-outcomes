@@ -292,36 +292,60 @@
           </div>
 
           <!--
-            단추 줄이 **칩보다 위에 있다.** 칩은 걸고 떼는 것이라 수가 들쭉날쭉한데,
-            둘을 한 줄에 두면 칩이 늘어날 때마다 단추가 옆으로 밀리거나 줄이 접힌다.
-            위아래로 나누면 단추는 제자리를 지키고, 칩은 아래로만 자란다.
-          -->
-          <div class="no-print flex flex-wrap items-center justify-end gap-1.5">
-              <!--
-                열 고정 (#3). 대화상자 안에만 있어서 표를 볼 때는 조정할 길이 없었다.
-                0까지 내리면 고정이 해제된다.
-              -->
-              <div class="flex min-h-9 items-center gap-1 rounded-md border border-line bg-surface px-2">
-                <span class="text-base text-ink-soft">열 고정</span>
-                <button type="button" id="고정줄이기" class="btn btn-sm min-h-7 border-transparent px-1.5"
-                        aria-label="고정할 열 하나 줄이기">−</button>
-                <span id="고정수" class="min-w-4 text-center text-base font-semibold tabular-nums"
-                      aria-live="polite"></span>
-                <button type="button" id="고정늘리기" class="btn btn-sm min-h-7 border-transparent px-1.5"
-                        aria-label="고정할 열 하나 늘리기">+</button>
-              </div>
-              <button type="button" id="열선택" class="btn btn-sm">열 선택</button>
-              <button type="button" id="열초기화" class="btn btn-sm">열 초기화</button>
-              <button type="button" id="정렬초기화" class="btn btn-sm">정렬 초기화</button>
-              <button type="button" id="필터초기화" class="btn btn-sm">필터 초기화</button>
-              <button type="button" id="인쇄" class="btn btn-sm">인쇄</button>
-          </div>
+            표 위 조작부는 **두 줄로 못 박는다.** 위는 쪽 넘김(왼쪽)과 설정(오른쪽),
+            아래는 걸린 조건(정렬·필터 칩)과 행 수다. 한 줄에 몰면 칩이 늘어날수록
+            오른쪽 단추를 밀어낸다. 조건이 없을 때는 아래 줄이 표 다루는 법을 적어,
+            칩을 걸고 떼도 줄 높이가 그대로라 표가 위아래로 들썩이지 않는다.
 
-          <!--
-            걸린 조건들. **비어 있으면 자리를 차지하지 않고**, 생기면 아래로 밀려
-            표를 내린다. 줄바꿈을 허용해 칩이 많아도 전부 드러난다.
+            쓸 수 없는 단추도 자리를 지킨다(D15). 폭이 모자라면 설정 묶음만 다음 줄로 넘어간다.
           -->
-          <div id="칩줄" class="no-print flex flex-wrap items-center gap-2 empty:hidden"></div>
+          <div class="no-print flex flex-col gap-2">
+            <div class="flex min-h-9 flex-wrap items-center gap-2">
+              <!--
+                쪽 넘김. 행이 수천이면 한 번에 다 그려도 눈으로 다 훑지 못하고,
+                「지금 어디쯤인가」를 스크롤 막대 하나로만 알게 된다. 쪽 번호가 그 자리를 말한다.
+              -->
+              <div class="flex shrink-0 items-center gap-2 whitespace-nowrap">
+                <button type="button" id="첫쪽" class="pager-btn" aria-label="첫 쪽" title="첫 쪽">⏮</button>
+                <button type="button" id="앞쪽" class="pager-btn" aria-label="이전 쪽" title="이전 쪽">◀</button>
+                <input id="쪽번호" class="pager-input" inputmode="numeric" aria-label="쪽 번호" value="1" />
+                <span id="쪽수" class="text-ink-soft">/ 1쪽</span>
+                <button type="button" id="뒤쪽" class="pager-btn" aria-label="다음 쪽" title="다음 쪽">▶</button>
+                <button type="button" id="끝쪽" class="pager-btn" aria-label="마지막 쪽" title="마지막 쪽">⏭</button>
+              </div>
+
+              <div class="ml-auto flex flex-wrap items-center justify-end gap-2">
+                <!--
+                  열 고정 (#3). 대화상자 안에만 있어서 표를 볼 때는 조정할 길이 없었다.
+                  0까지 내리면 고정이 해제된다.
+                -->
+                <div class="flex min-h-9 items-center gap-1 rounded-md border border-line bg-surface px-2">
+                  <span class="whitespace-nowrap text-base text-ink-soft">열 고정</span>
+                  <button type="button" id="고정줄이기" class="btn btn-sm min-h-7 border-transparent px-1.5"
+                          aria-label="고정할 열 하나 줄이기">−</button>
+                  <span id="고정수" class="min-w-4 text-center text-base font-semibold tabular-nums"
+                        aria-live="polite"></span>
+                  <button type="button" id="고정늘리기" class="btn btn-sm min-h-7 border-transparent px-1.5"
+                          aria-label="고정할 열 하나 늘리기">+</button>
+                </div>
+                <button type="button" id="인쇄" class="btn btn-sm" title="지금 화면의 정렬·필터를 그대로 인쇄합니다">인쇄</button>
+                <button type="button" id="열선택" class="btn btn-sm">열 선택</button>
+                <button type="button" id="열초기화" class="btn btn-sm" title="열 구성·순서·너비를 기본값으로">열 초기화</button>
+                <button type="button" id="정렬초기화" class="btn btn-sm">정렬 초기화</button>
+                <button type="button" id="필터초기화" class="btn btn-sm">필터 초기화</button>
+              </div>
+            </div>
+
+            <!--
+              걸린 조건들. 칩이 많아지면 **이 줄만 가로로 민다** — 아래로 자라면 그만큼
+              표가 내려가고, 칩 하나를 뗄 때마다 표가 다시 올라와 누르려던 자리가 움직인다.
+            -->
+            <div class="flex min-h-9 items-center gap-2">
+              <span id="조건딱지" class="shrink-0 font-medium text-ink-soft">설명</span>
+              <div id="칩줄" class="scroll-stable flex min-w-0 flex-1 items-center gap-2 overflow-x-auto"></div>
+              <span id="행수" class="shrink-0 whitespace-nowrap text-right tabular-nums text-ink-soft" aria-live="polite"></span>
+            </div>
+          </div>
         </div>
 
         <table class="grid-table">

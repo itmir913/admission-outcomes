@@ -42,6 +42,10 @@ const dom = {
   필터막: pick('#필터막'),
   검색: /** @type {HTMLInputElement} */ (pick('#검색')),
   칩줄: pick('#칩줄'),
+  조건딱지: pick('#조건딱지'),
+  행수: pick('#행수'),
+  쪽번호: /** @type {HTMLInputElement} */ (pick('#쪽번호')),
+  쪽수: pick('#쪽수'),
   고정수: pick('#고정수'),
   열팝오버: pick('#열팝오버'),
   알림줄: pick('#알림줄'),
@@ -63,6 +67,8 @@ const state = {
   registry: [],
   view: emptyView(),
   search: '',
+  /** 지금 보는 쪽(0부터). 조건이 바뀌면 첫 쪽으로 돌아간다 */
+  page: 0,
   warnings: []
 };
 
@@ -215,29 +221,36 @@ function paintSummary(visible, total) {
 function paintChips() {
   clear(dom.칩줄);
 
-  state.view.sorts.forEach((sort, rank) => {
+  /*
+   * 걸린 것이 없으면 **표 다루는 법을 적는다.** 딱지도 「설명」으로 바뀐다 —
+   * 「조건」과 두 글자로 길이가 같아, 바뀌어도 뒤따르는 글이 좌우로 움직이지 않는다.
+   */
+  const 걸린것 = state.view.sorts.length + state.view.filters.length;
+  dom.조건딱지.textContent = 걸린것 ? '조건' : '설명';
+  if (걸린것 === 0) {
     dom.칩줄.append(el('span', {
-      class: 'chip border-pass/30 bg-pass-soft text-pass'
+      class: 'truncate text-ink-soft',
+      text: '열 제목을 눌러 정렬 / 열을 드래그해 순서 변경 / 열 사이 선을 드래그해 너비 조절'
+    }));
+    return;
+  }
+
+  // 칩 전체가 단추다. ✕ 하나만 누를 수 있게 두면 손가락으로는 맞히기 어렵다
+  state.view.sorts.forEach((sort, rank) => {
+    dom.칩줄.append(el('button', {
+      class: 'chip border-pass/30 bg-pass-soft text-pass',
+      attrs: { type: 'button', 'aria-label': `${fieldLabel(sort.key)} 정렬 해제`, title: `${fieldLabel(sort.key)} 정렬 해제` },
+      on: {
+        click: () => updateView({
+          sorts: state.view.sorts.filter((item) => item.key !== sort.key)
+        })
+      }
     }, [
-      el('span', {
-        class: 'rounded bg-pass px-1.5 text-base font-bold text-white',
-        text: String(rank + 1)
-      }),
+      el('span', { class: 'chip-rank', text: String(rank + 1) }),
       el('span', { text: `${fieldLabel(sort.key)} ${sort.dir === 'asc' ? '▲' : '▼'}` }),
-      el('button', {
-        class: 'text-pass/70',
-        text: '✕',
-        attrs: { type: 'button', 'aria-label': `${fieldLabel(sort.key)} 정렬 해제` },
-        on: {
-          click: () => updateView({
-            sorts: state.view.sorts.filter((item) => item.key !== sort.key)
-          })
-        }
-      })
+      el('span', { class: 'text-pass/70', attrs: { 'aria-hidden': 'true' }, text: '✕' })
     ]));
   });
-
-  if (state.view.filters.length === 0) return;
 
   for (const filter of state.view.filters) {
     /*
@@ -494,11 +507,25 @@ function refresh({ keepScroll = false } = {}) {
 
   if (!hasData) { clear(dom.칩줄); clear(dom.알림줄); clear(dom.요약띠); return; }
 
+  const 시작 = globalThis.performance?.now() ?? Date.now();
   const visible = applyQuery(state.rows, {
     filters: state.view.filters,
     search: state.search,
     sorts: state.view.sorts
   });
+  const 걸린시간 = (globalThis.performance?.now() ?? Date.now()) - 시작;
+
+  /*
+   * **조건이 바뀌면 첫 쪽으로 돌아간다.** 셋째 쪽을 보다가 필터를 걸었는데 그대로
+   * 셋째 쪽이면, 앞 두 쪽에 걸린 행을 못 보고 지나간다. 너비·고정만 바꾼 것은
+   * 조건이 아니므로 보던 쪽을 지킨다.
+   */
+  const 조건 = JSON.stringify([state.view.filters, state.search, state.view.sorts]);
+  if (조건 !== 마지막조건) { 마지막조건 = 조건; state.page = 0; }
+  state.page = Math.max(0, Math.min(state.page, 쪽수(visible.length) - 1));
+  보는행 = visible;
+  const 이쪽 = visible.slice(state.page * PAGE, (state.page + 1) * PAGE);
+  paintPager(visible.length, 걸린시간);
 
   // 무엇 때문에 0건인지 말해 준다. 「없습니다」만으로는 어디를 되돌려야 하는지 모른다
   dom.표없음.textContent = state.search.trim()
@@ -514,12 +541,72 @@ function refresh({ keepScroll = false } = {}) {
 
   if (keepScroll) {
     const top = dom.표.scrollTop;
-    table.render({ rows: visible, registry: state.registry, state: viewForTable() });
+    table.render({ rows: 이쪽, registry: state.registry, state: viewForTable() });
     dom.표.scrollTop = top;
   } else {
-    table.render({ rows: visible, registry: state.registry, state: viewForTable() });
+    table.render({ rows: 이쪽, registry: state.registry, state: viewForTable() });
   }
 }
+
+// ── 쪽 넘김 ──────────────────────────────────────────────────────────────────
+
+/** 한 쪽에 담는 행 수 */
+const PAGE = 500;
+const 수 = new Intl.NumberFormat('ko-KR');
+/** 지난번 조회의 조건. 바뀌었는지 보고 첫 쪽으로 되돌아간다 */
+let 마지막조건 = '';
+/** 조건에 맞는 전체 행. 인쇄는 보이는 쪽이 아니라 이것을 낸다 */
+let 보는행 = [];
+
+const 쪽수 = (count) => Math.max(1, Math.ceil(count / PAGE));
+
+function paintPager(count, ms) {
+  const 끝 = 쪽수(count) - 1;
+  dom.쪽번호.value = String(state.page + 1);
+  dom.쪽수.textContent = `/ ${수.format(끝 + 1)}쪽`;
+  const disable = (selector, off) => { pick(selector).disabled = off; };
+  disable('#첫쪽', state.page <= 0);
+  disable('#앞쪽', state.page <= 0);
+  disable('#뒤쪽', state.page >= 끝);
+  disable('#끝쪽', state.page >= 끝);
+  const 첫행 = count === 0 ? 0 : state.page * PAGE + 1;
+  const 끝행 = Math.min(count, (state.page + 1) * PAGE);
+  dom.행수.textContent = `${수.format(첫행)}–${수.format(끝행)} / ${수.format(count)}행 · ${ms.toFixed(1)}ms`;
+}
+
+function 쪽가기(page) {
+  const next = Math.max(0, Math.min(page, 쪽수(보는행.length) - 1));
+  if (next === state.page) { dom.쪽번호.value = String(state.page + 1); return; }
+  state.page = next;
+  // 쪽을 넘기면 표 맨 위부터 본다
+  refresh();
+}
+
+pick('#첫쪽').addEventListener('click', () => 쪽가기(0));
+pick('#앞쪽').addEventListener('click', () => 쪽가기(state.page - 1));
+pick('#뒤쪽').addEventListener('click', () => 쪽가기(state.page + 1));
+pick('#끝쪽').addEventListener('click', () => 쪽가기(Infinity));
+
+/** 쪽 번호 칸은 1부터 센다. 숫자가 아니면 보던 쪽으로 되돌린다 */
+function 쪽번호적용() {
+  const n = Number(dom.쪽번호.value);
+  if (Number.isFinite(n) && n >= 1) 쪽가기(Math.floor(n) - 1);
+  else dom.쪽번호.value = String(state.page + 1);
+}
+dom.쪽번호.addEventListener('keydown', (event) => { if (event.key === 'Enter') 쪽번호적용(); });
+dom.쪽번호.addEventListener('blur', 쪽번호적용);
+
+/*
+ * **종이에는 조건에 맞는 전체를 낸다.** 화면은 한 쪽만 그리지만, 인쇄를 누른 사람이
+ * 원하는 것은 지금 걸어 둔 조건의 결과이지 500행에서 잘린 조각이 아니다.
+ * 표가 먼저 인쇄 모드로 들어간 뒤(같은 이벤트, 먼저 등록됨) 전체 행으로 다시 그린다.
+ */
+globalThis.addEventListener?.('beforeprint', () => {
+  if (보는행.length > PAGE) table.render({ rows: 보는행, registry: state.registry, state: viewForTable() });
+});
+globalThis.addEventListener?.('afterprint', () => {
+  if (보는행.length > PAGE) refresh({ keepScroll: true });
+});
 
 /** 표가 직접 만지는 상태 조각. 같은 객체를 넘겨야 리사이즈가 반영된다. */
 function viewForTable() {
