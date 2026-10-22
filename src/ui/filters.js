@@ -176,8 +176,12 @@ export function createFilters({ mount, read, onChange, onClose }) {
     on: { click: onClick }
   });
 
+  /*
+   * **제 여백을 두지 않는다.** 칸이 이미 사방에 같은 여백을 주고 있어서, 여기서 또
+   * 주면 그만큼 겹쳐 단추 둘레만 유난히 넓어 보인다 (2026-10-22, 사용자).
+   */
   const 조작줄 = (children) => el('div', {
-    class: 'mt-2 flex min-h-9 items-center gap-3 px-2'
+    class: 'flex min-h-9 items-center gap-3'
   }, children);
 
   // ── 값 선택 (글자·enum 열) ─────────────────────────────────────────────
@@ -199,11 +203,12 @@ export function createFilters({ mount, read, onChange, onClose }) {
       .filter((entry) => !needle || entry.terms.some((term) => term.toLowerCase().includes(needle)))
       .sort(entryOrder(field));
 
-    const list = el('div', { class: 'mt-2 max-h-64 scroll-stable space-y-0.5 overflow-y-auto' },
+    const list = el('div', { class: 'max-h-64 scroll-stable space-y-0.5 overflow-y-auto' },
       entries.map((entry) => {
         const id = `f-${field.key}-${String(entry.value)}`;
         return el('label', {
-          class: 'flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2 hover:bg-brand-soft',
+          // 좌우 여백은 칸이 준다. 여기서 또 주면 값 글자만 제목보다 안쪽으로 들어간다
+          class: 'flex min-h-9 cursor-pointer items-center gap-2 rounded-md hover:bg-brand-soft',
           attrs: { for: id }
         }, [
           el('input', {
@@ -226,7 +231,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
 
     const search = entries.length > SEARCHABLE_AT || needle
       ? el('input', {
-          class: 'field mt-2 min-h-9 text-base',
+          class: 'field min-h-9 text-base',
           attrs: { type: 'search', placeholder: `${field.label} 안에서 찾기`, value: localSearch.get(field.key) ?? '' },
           on: {
             input: debounce((event) => {
@@ -267,7 +272,8 @@ export function createFilters({ mount, read, onChange, onClose }) {
       })
     ]);
 
-    return el('div', {}, [
+    // 조각 사이 간격을 **한 군데서** 준다. 조각 하나가 빠질 때 간격이 어긋나지 않게
+    return el('div', { class: 'space-y-2' }, [
       search,
       선택줄,
       entries.length === 0 ? el('p', { class: 'mt-2 px-2 text-base text-ink-soft', text: '해당하는 값이 없습니다.' }) : list
@@ -419,7 +425,12 @@ export function createFilters({ mount, read, onChange, onClose }) {
      * 않았다. 카드 여백을 늘리는 대신 단추 사이만 벌린다 — 여백을 늘리면 좁은
      * 사이드바에서 값 목록이 그만큼 줄어든다.
      */
-    const head = el('div', { class: 'flex min-h-9 items-center gap-2' }, [
+    /*
+     * **제목 줄 아래에 구분선을 긋는다** (2026-10-22, 사용자). 머리줄의 값 목록
+     * 창과 같은 모양이다 — 같은 것을 두 군데서 보는데 한쪽만 선이 없으면 다른
+     * 물건처럼 보인다. 선이 카드 너비를 다 쓰도록 여백은 머리와 몸이 따로 준다.
+     */
+    const head = el('div', { class: 'flex min-h-9 items-center gap-2 border-b border-line px-2.5' }, [
       el('h3', { class: 'min-w-0 flex-1 truncate text-base font-semibold', text: field.label, attrs: { title: field.label } }),
       /*
        * **제목 줄에는 ✕ 하나만 둔다.** 필터를 해제하는 단추는 어느 카드든 칸 안 첫 줄,
@@ -455,8 +466,8 @@ export function createFilters({ mount, read, onChange, onClose }) {
      * 가운데 서므로, 좌우와 같은 여백을 주면 제목 위만 8px 더 벌어져 보인다.
      */
     return el('section', {
-      class: `card px-3 pb-3 pt-1 ${active ? 'border-brand/40 ring-1 ring-brand/20' : ''}`
-    }, [head, body]);
+      class: `card overflow-hidden ${active ? 'border-brand/40 ring-1 ring-brand/20' : ''}`
+    }, [head, el('div', { class: 'p-2.5' }, [body])]);
   }
 
   /** 아직 열지 않은 열을 묶음별로 선택해 넣는 칸. */

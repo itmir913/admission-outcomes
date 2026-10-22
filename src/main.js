@@ -311,7 +311,7 @@ function 팝오버그리기() {
   const field = state.registry.find((item) => item.key === 열린열);
   const body = filters.blockFor(열린열, 팝오버그리기);
   clear(dom.열팝오버).append(
-    el('div', { class: 'flex items-center gap-2 border-b border-line px-3 py-2' }, [
+    el('div', { class: 'flex min-h-9 items-center gap-2 border-b border-line px-2.5' }, [
       el('h3', {
         class: 'min-w-0 flex-1 truncate text-base font-semibold',
         text: field?.label ?? 열린열,
@@ -331,7 +331,8 @@ function 팝오버그리기() {
      * 낮을 때만 미끄러지게 두고, 보통은 안쪽 목록만 미끄러진다. 3rem은 머리줄
      * 몫이다 — 이걸 빼 두어야 창 전체가 80vh 안에 들어와 화면 밖으로 흐르지 않는다.
      */
-    el('div', { class: 'max-h-[calc(80vh-3rem)] overflow-y-auto px-3 py-2' }, [body].filter(Boolean))
+    // 여백은 사방이 같다. 칸 안쪽 조각들은 제 여백을 두지 않는다
+    el('div', { class: 'max-h-[calc(80vh-3rem)] overflow-y-auto p-2.5' }, [body].filter(Boolean))
   );
 }
 
