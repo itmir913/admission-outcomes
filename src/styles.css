@@ -432,9 +432,12 @@
    *
    * 번지는 그림자를 쓰다가 **실선 하나로 바꿨다.** 그림자는 아래 깔린 글자를
    * 흐리게 만들어, 가려진 것인지 연한 글자인지 분간이 되지 않았다.
+   *
+   * **머리 칸의 너비 손잡이와 같은 선이다.** 머리 칸에서는 손잡이의 2px 선이 이 자리에
+   * 덮여 보이는데, 아래만 1px 진한 선이면 한 줄이 중간에서 굵기와 색을 바꿔 끊겨 보였다.
    */
   .grid-table .pin-edge {
-    box-shadow: inset -1px 0 0 var(--color-line-strong);
+    box-shadow: inset -2px 0 0 var(--color-line);
   }
   /*
    * **머리 칸의 칸선을 그림자와 함께 적는다.**
@@ -444,7 +447,7 @@
    * 선은 거기가 가장 필요한 자리다.
    */
   .grid-table thead .pin-edge {
-    box-shadow: inset -1px 0 0 var(--color-line-strong), inset 0 -1px 0 var(--color-line);
+    box-shadow: inset -2px 0 0 var(--color-line), inset 0 -1px 0 var(--color-line);
   }
 
 
