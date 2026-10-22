@@ -75,11 +75,63 @@ function collect(row, prefix) {
 }
 
 /**
+ * 카드의 대학명.
+ *
+ * 누르면 그 대학을 필터에 더한다 — 「이 학생이 간 곳에 다른 애들은 어떻게 갔나」가
+ * 상담에서 바로 이어지는 물음인데, 지금은 왼쪽 패널까지 갔다 와야 한다.
+ *
+ * **학과명에는 달지 않는다.** 학과 이름 표기는 학교마다 다르다(국제통상학과·
+ * 글로벌통상학부·무역학과). 학과 이름만으로 거른 표는 「이 학과 지원 현황」처럼
+ * 보이지만 실제로는 표기가 같은 학교만 모인 것이고, 그 사실은 화면 어디에도
+ * 드러나지 않는다 (§5).
+ *
+ * 머리글(`h4`)은 그대로 두고 그 안에 단추를 둔다. 글의 뼈대를 단추로 바꾸면
+ * 화면을 머리글로 훑는 사람이 카드의 제목을 잃는다.
+ */
+function univHeading(row, onUnivFilter) {
+  const name = String(row.univ ?? '(대학 미상)');
+  if (!onUnivFilter || isBlank(row.univ)) return el('h4', { class: 'font-bold', text: name });
+
+  return el('h4', { class: 'font-bold' }, [
+    el('button', {
+      /*
+       * **밑줄은 손을 올리기 전에도 그어 둔다.** 겉모습이 글자 그대로면 누를 수
+       * 있다는 사실이 손을 올려 본 사람에게만 드러나고, 손가락으로 보는 화면에는
+       * 아예 드러나지 않는다. 옅은 밑줄로 두어 카드 열 장이 늘어서도 시끄럽지 않게 한다.
+       *
+       * 가운데 정렬은 단추의 기본값이라 왼쪽으로 세운다. 긴 이름이 두 줄로 접힐 때
+       * 옆의 학과명과 어긋나 보인다.
+       */
+      /*
+       * 글줄 안에 선 조작이라 `.btn`의 44px를 주지 않는다 — 줬다면 카드의 제목
+       * 줄이 무너진다. `text-lg` 줄 높이가 28px로 24px 기준은 넘는다.
+       *
+       * `hover:`를 `@media (hover: hover)`로 감싸지 않은 것은 (`.btn`은 감싼다)
+       * 누른 직후 모달이 닫혀, 손가락으로 누른 자리에 hover가 남아 보일 틈이 없어서다.
+       */
+      class: 'rounded text-left underline decoration-ink-soft/40 underline-offset-4'
+        + ' hover:text-brand hover:decoration-brand',
+      text: name,
+      /*
+       * **접근 이름은 대학명 그대로 둔다.** 여기에 `aria-label`로 하는 일을 적었더니
+       * 그 글이 단추의 이름을 대체하면서 `h4`의 이름까지 「대학 … 필터에 추가」가
+       * 됐다 — 머리글로 훑는 사람이 카드 제목을 잃는다. 지키려던 것을 그 한 줄이
+       * 깼다. 하는 일은 이름이 아니라 설명 자리(`title`)에 적는다.
+       *
+       * 그 글에 조사를 쓰지 않는다. 받침에 따라 「로/으로」가 갈려 대학명마다 틀린 말이 된다.
+       */
+      attrs: { type: 'button', title: '이 대학을 필터에 추가' },
+      on: { click: () => onUnivFilter(String(row.univ)) }
+    })
+  ]);
+}
+
+/**
  * 지원 한 건을 카드로.
  *
  * 좌측 색 띠 + 결과 태그의 모양(●△✕)이 함께 뜻을 나른다. 색만으로 구분하지 않는다.
  */
-function applicationCard(row) {
+function applicationCard(row, onUnivFilter) {
   const outcome = row['#outcome'] ?? { code: 'none', label: '기록 없음', mark: '?' };
   const tone = outcome.code === 'pass' ? 'pass' : outcome.code === 'waitPass' ? 'wait'
     : outcome.code === 'fail' ? 'fail' : outcome.code === 'unknown' ? 'unknown' : 'none';
@@ -128,7 +180,7 @@ function applicationCard(row) {
        * 대학이고 어디부터가 학과인지는 가운뎃줄이 나눈다.
        */
       el('div', { class: 'mt-1 flex flex-wrap items-baseline gap-x-2 text-lg' }, [
-        el('h4', { class: 'font-bold', text: String(row.univ ?? '(대학 미상)') }),
+        univHeading(row, onUnivFilter),
         isBlank(row.dept) ? null : el('span', { class: 'text-line', attrs: { 'aria-hidden': 'true' }, text: '|' }),
         /*
          * 말줄임하지 않는다. 학과 이름의 끝자락이 어느 전공인지를 말해 주는 일이 잦다.
@@ -158,16 +210,17 @@ function applicationCard(row) {
  * @param {object} options
  * @param {string} options.sid
  * @param {object[]} options.rows 이 학생의 모든 지원 행 (필터를 걸지 않은 전체)
+ * @param {(univ: string) => void} [options.onUnivFilter] 카드의 대학명을 눌렀을 때
  * @param {number} [options.filteredCount] 지금 조건에 걸린 이 학생의 건수
  */
-export function openStudent(dialog, { sid, rows }) {
+export function openStudent(dialog, { sid, rows, onUnivFilter }) {
   let order = '기본';
 
   // 넓은 화면에서는 두 줄로 세운다. 지원이 열 건을 넘는 학생이 흔해서, 한 줄이면 내려 보기만 길어진다
   const cards = el('div', { class: 'mt-3 grid gap-3 xl:grid-cols-2' });
   function paintCards() {
     const sorted = [...rows].sort(CARD_ORDERS[order].compare);
-    clear(cards).append(...sorted.map(applicationCard));
+    clear(cards).append(...sorted.map((row) => applicationCard(row, onUnivFilter)));
   }
   paintCards();
 

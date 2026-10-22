@@ -47,6 +47,57 @@ export function entryOrder(field) {
 }
 
 /**
+ * 값 하나를 그 열의 `in` 필터에 더한다. **바뀔 것이 없으면 `null`.**
+ *
+ * 패널 밖에서도 값을 더할 자리가 있어 따로 떼어 둔다 — 학생 상세의 대학명이 그렇다.
+ *
+ * **돌려주는 배열·필터·`values`를 모두 새로 만든다.** `query.js`의 라벨 캐시가
+ * `values` **배열 객체**를 키로 삼기 때문이다. 제자리에서 고치면 캐시가 옛 라벨
+ * 집합을 그대로 돌려주어, 더한 값이 칩에는 적혀 있는데 표에서는 걸리지 않는다 —
+ * 예외도 테스트 실패도 없이 거르는 결과만 틀린다(§5).
+ *
+ * **같은 열의 `in`이 여럿이면 하나로 합친다.** 보관된 화면 상태는 모양만 검사해
+ * 들어오므로(`prefs.js`) 둘이 섞여 있을 수 있고, 둘이 남으면 교집합이 되어
+ * 표가 비는 까닭을 칩줄에서도 읽을 수 없다. 합치면서 **라벨이 같은 값은 하나로
+ * 줄인다.** 겹친 채로 두면 거르는 결과는 맞는데 칩이 「가온대학교, 가온대학교」로
+ * 적히고, 「… 외 N」의 N까지 틀린다(`describeFilter`는 `values.length`로 센다).
+ *
+ * **이 함수는 `in`만 다룬다.** 같은 열의 다른 op를 함께 손대면 무엇을 지우는
+ * 함수인지 흐려진다. 머리줄 검색(`contains`)은 다른 자리에 있는 다른 조작이다.
+ *
+ * 받는 값은 **비어 있지 않은 것**이다. 빈칸을 고르는 길은 값 목록에 따로 있다.
+ *
+ * @param {object[]} filters
+ * @param {string} key
+ * @param {unknown} value 비어 있지 않은 값
+ * @returns {object[]|null}
+ */
+export function addValueFilter(filters, key, value) {
+  const mine = filters.filter((filter) => filter.key === key && filter.op === 'in');
+
+  /*
+   * 같은 값인지는 **라벨로 본다.** 세는 쪽(`facetCounts`)도 거르는 쪽(`query.js`)도
+   * 라벨로 견주므로, 여기만 원값으로 보면 목록에서 한 줄인 것이 필터에는 둘로 들어간다.
+   */
+  const seen = new Map();
+  for (const filter of mine) {
+    for (const item of filter.values ?? []) {
+      const label = isBlank(item) ? null : valueLabel(key, item);
+      if (!seen.has(label)) seen.set(label, item);
+    }
+  }
+
+  const already = seen.has(valueLabel(key, value));
+  const 합칠것이있다 = mine.length > 1
+    || mine.some((filter) => (filter.values ?? []).length !== seen.size);
+  if (already && !합칠것이있다) return null;
+
+  const values = [...seen.values()];
+  const rest = filters.filter((filter) => !(filter.key === key && filter.op === 'in'));
+  return [...rest, { key, op: 'in', values: already ? values : [...values, value] }];
+}
+
+/**
  * @param {object} options
  * @param {HTMLElement} options.mount
  * @param {() => {rows: object[], registry: object[], filters: object[], search: string}} options.read

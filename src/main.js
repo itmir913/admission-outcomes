@@ -24,7 +24,7 @@ import { unknownOutcomeTerms } from './core/outcome.js';
 
 import { pick, el, clear, debounce } from './ui/dom.js';
 import { createTable } from './ui/table.js';
-import { createFilters } from './ui/filters.js';
+import { createFilters, addValueFilter } from './ui/filters.js';
 import { readFiles, confirmUploads, bindDropzone } from './ui/upload.js';
 import { openStudent } from './ui/student.js';
 import { outcomeBar, passRate, rateNote, tallyOutcomes } from './ui/outcome.js';
@@ -104,7 +104,38 @@ const table = createTable({
     // 상담에서 알고 싶은 것은 "이 학생이 어디에 어떻게 지원했나" 전부다
     openStudent(dom.학생상자, {
       sid: row.sid,
-      rows: state.rows.filter((item) => item.sid === row.sid)
+      rows: state.rows.filter((item) => item.sid === row.sid),
+      /*
+       * 카드의 대학명을 누르면 그 대학을 필터에 더하고 **모달을 닫는다.**
+       *
+       * 결과가 나타나는 곳(표·칩줄·요약띠)이 전부 모달 뒤에 가려져 있어서, 열어
+       * 둔 채로는 눌렀는지조차 알 수 없다. 좁은 화면에서는 모달이 화면을 다 덮는다.
+       * 되돌아오는 비용은 작다 — 그 대학으로 걸러도 이 학생의 해당 행은 표에 남는다.
+       */
+      onUnivFilter: (univ) => {
+        const next = addValueFilter(state.view.filters, 'univ', univ);
+        dom.학생상자.close();
+        // 이미 걸려 있던 대학이다. 표도 칩줄도 지금 모습 그대로가 맞다
+        if (!next) return;
+
+        state.view = { ...state.view, filters: next };
+        saveView(state.view);
+        // 거르는 조건이 달라졌으니 표는 맨 위부터 본다. 왼쪽 패널에서 값을 고를 때와 같다
+        refresh();
+        /*
+         * **포커스를 방금 생긴 칩으로 보낸다.**
+         *
+         * 모달이 닫히면 브라우저는 포커스를 모달을 열기 전 자리, 곧 방금 누른 표의
+         * 행으로 되돌린다. 그런데 `refresh()`가 표를 다시 그려 그 행이 사라지므로
+         * 포커스가 `body`로 떨어지고, 키보드로 보는 사람은 Tab이 문서 맨 앞에서
+         * 다시 시작한다. 칩은 방금 한 일이 적힌 자리이자 그것을 되돌릴 자리다.
+         *
+         * **칩 자체에 세운다. ✕ 단추가 아니다.** 방금 Enter로 단추를 누르고 온
+         * 사람의 손가락 밑에 지우는 단추를 놓지 않는다 — ✕는 다음 Tab 한 번 거리에 있다.
+         */
+        /** @type {HTMLElement|null} */
+        (dom.칩줄.querySelector('[data-filter-key="univ"][data-filter-op="in"]'))?.focus();
+      }
     });
   },
   onStateChange: (next) => {
@@ -210,7 +241,16 @@ function paintChips() {
   if (state.view.filters.length === 0) return;
 
   for (const filter of state.view.filters) {
-    dom.칩줄.append(el('span', { class: 'chip' }, [
+    /*
+     * 열과 op를 함께 적는다. 필터를 더한 쪽에서 이 칩을 찾아 포커스를 보내는데
+     * (`onUnivFilter`), 열만으로 집으면 같은 열의 머리줄 검색 칩이 먼저 걸린다.
+     * 그러면 포커스가 엉뚱한 칩의 ✕에 가 앉고, 거기서 Enter를 누른 사람은 방금
+     * 더한 필터 대신 적어 둔 검색어를 지운다 (§5).
+     */
+    dom.칩줄.append(el('span', {
+      class: 'chip',
+      attrs: { 'data-filter-key': filter.key, 'data-filter-op': filter.op, tabindex: '-1' }
+    }, [
       el('span', { text: describeFilter(filter, fieldLabel(filter.key)) }),
       el('button', {
         class: 'text-brand/70 hover:text-brand',
