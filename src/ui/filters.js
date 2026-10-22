@@ -180,7 +180,21 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const highInput = numberInput('상한');
     const lowSlider = slider('하한 슬라이더', 'dual-range-low');
     const highSlider = slider('상한 슬라이더', 'dual-range-high');
-    const echo = el('p', { class: 'mt-2 text-base text-ink-soft' });
+    /*
+     * **자료에 있는 범위만 적는다. 지금 선택한 값은 적지 않는다.**
+     *
+     * 둘을 한 줄에 함께 적었더니, 손잡이를 끄는 동안 앞쪽 숫자가 바뀌며 줄 길이가
+     * 변해 줄바꿈이 한 줄과 두 줄 사이를 오갔다. 그때마다 아래 글귀와 카드 높이가
+     * 들썩여서, 끌고 있는 손잡이가 손가락 밑에서 움직인다.
+     *
+     * 지운 쪽이 선택한 값인 까닭은 **그것이 바로 위 입력칸에 이미 적혀 있기** 때문이다.
+     * 그쪽은 사람이 고쳐 쓸 수 있는 진짜 값이고, 여기 것은 같은 사실의 사본이었다.
+     * 남은 글은 자료가 바뀌기 전에는 변하지 않으므로 줄 길이도 변하지 않는다.
+     */
+    const dataRange = el('p', {
+      class: 'mt-2 text-base text-ink-soft figure',
+      text: `데이터 범위 ${formatNumber(low)} ~ ${formatNumber(high)}`
+    });
 
     function numberInput(role) {
       return el('input', {
@@ -197,14 +211,13 @@ export function createFilters({ mount, read, onChange, onClose }) {
     }
 
     /** 네 요소를 지금 값에 맞춘다. 다시 그리지 않고 제자리에서 고쳐 쓴다 */
-    function echoShown(skip) {
+    function syncControls(skip) {
       const lowered = Math.min(shown.min, shown.max);
       const raised = Math.max(shown.min, shown.max);
       for (const [node, value] of [[lowInput, lowered], [highInput, raised],
         [lowSlider, shown.min], [highSlider, shown.max]]) {
         if (node !== skip) node.value = String(value);
       }
-      echo.textContent = `${formatNumber(lowered)} ~ ${formatNumber(raised)} · 데이터 범위 ${formatNumber(low)} ~ ${formatNumber(high)}`;
     }
 
     /** @param {HTMLInputElement} node @param {'min'|'max'} side */
@@ -212,7 +225,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
       node.addEventListener('pointerdown', () => { gripped = field.key; });
       node.addEventListener('input', (event) => {
         shown = { ...shown, [side]: Number(event.currentTarget.value) };
-        echoShown(event.currentTarget);
+        syncControls(event.currentTarget);
         settle();
       });
       node.addEventListener('change', (event) => {
@@ -226,7 +239,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
     track(highInput, 'max');
     track(lowSlider, 'min');
     track(highSlider, 'max');
-    echoShown(null);
+    syncControls(null);
 
     return el('div', { class: 'mt-3' }, [
       el('div', { class: 'flex items-center justify-between gap-2' }, [
@@ -235,7 +248,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
         highInput
       ]),
       el('div', { class: 'dual-range-wrap mt-4' }, [lowSlider, highSlider]),
-      echo,
+      dataRange,
       /*
        * **빠지는 건수를 적는다.**
        *
