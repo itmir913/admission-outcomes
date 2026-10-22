@@ -15,6 +15,7 @@ import { buildRegistry, fieldLabel, primaryGpaField } from '../src/analysis/regi
 import { resolveSheet } from '../src/ingest/resolveColumns.js';
 import { isKnownFieldKey } from '../src/ingest/profile.js';
 import { bundledProfiles } from '../src/dict/header-profiles/index.js';
+import fields from '../src/dict/fields.json' with { type: 'json' };
 
 /** 머리글 두 줄과 자료 몇 줄로 시트 하나를 만든다 */
 function sheet(top, sub, rows, cohortYear) {
@@ -176,6 +177,33 @@ describe('동봉 프로파일이 사전과 어긋나지 않는다', () => {
   it.each(bundledProfiles.map((profile) => [profile.id, profile]))('%s 의 모든 키가 사전에 있다', (id, profile) => {
     const 낯선키 = Object.keys(profile.columns).filter((key) => !isKnownFieldKey(key));
     expect(낯선키).toEqual([]);
+  });
+
+  it('프로파일로 읽어 만든 학생 레코드의 내신 키가 전부 사전에 있다', async () => {
+    /*
+     * 내신 묶음은 **사전의 키와 정확히 같은 집합**이어야 한다. 상류 문지기가 둘
+     * 있지만(이름 경로의 사전 경유, 프로파일 경로의 `isKnownFieldKey`), 새 경로가
+     * `student.gpa`에 쓰는 날 이 검사가 그것을 잡는다.
+     */
+    const 사전키 = new Set([...fields.repeating.gpa.combos, ...fields.repeating.gpa.subjects]
+      .map((entry) => entry.key));
+    const kcue = bundledProfiles.find((profile) => profile.id === 'kcue-2027');
+    const 내신열 = Object.entries(kcue.columns).filter(([key]) => key.startsWith('gpa.'));
+    const row = [];
+    for (const [, index] of 내신열) row[index] = 2.5;
+    row[kcue.columns.univ] = '서울대학교';
+    row[kcue.columns.dept] = '컴퓨터공학부';
+    row[kcue.columns.final] = '합격';
+    row[kcue.columns['identity.class']] = '5';
+    row[kcue.columns['identity.number']] = '7';
+    row[kcue.columns['identity.name']] = '김가온';
+
+    const dataset = await buildDataset([{
+      grid: [[], [], row], headerRows: 2, cohortYear: 2025, columns: kcue.columns
+    }]);
+    const 쓰인키 = dataset.students.flatMap((student) => Object.keys(student.gpa));
+    expect(쓰인키.length).toBeGreaterThan(20);
+    expect(쓰인키.filter((key) => !사전키.has(key))).toEqual([]);
   });
 
   it('수능 요약 열은 영역으로 받지 않는다', () => {
