@@ -392,6 +392,10 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const filter = filters.find((item) => item.key === field.key && item.op !== 'contains');
     const active = Boolean(filter);
 
+    // 숫자여도 값이 몇 가지뿐이면 목록에서 선택하는 편이 낫다.
+    // 고3 년도·수능 등급은 다중 선택이, 내신·백분위는 범위가 자연스럽다
+    const 범위칸 = field.numeric && field.cardinality > SEARCHABLE_AT;
+
     /*
      * 제목과 두 단추 사이를 띄운다. gap-1(4px)로 붙여 두었더니 「해제」와 「✕」가
      * 한 덩어리로 보여, 어느 쪽이 값만 지우고 어느 쪽이 열을 빼는지 눈으로 구분되지
@@ -401,13 +405,16 @@ export function createFilters({ mount, read, onChange, onClose }) {
     const head = el('div', { class: 'flex min-h-9 items-center gap-2' }, [
       el('h3', { class: 'min-w-0 flex-1 truncate text-base font-semibold', text: field.label, attrs: { title: field.label } }),
       /*
-       * 두 단추가 하는 일이 다르다. 하나는 선택한 값을 해제하고, 하나는 이 열을 목록에서 뺀다.
+       * **「해제」는 범위 칸에만 둔다** (2026-10-22, 사용자).
        *
-       * **「해제」는 쓸 수 없을 때도 자리를 지킨다.** 값을 선택하는 순간 단추가 생기면
-       * 머리줄이 그만큼 높아져서 카드가 들썩이고, 그러면 방금 누른 체크박스가
-       * 손가락 밑에서 밀려난다.
+       * 값 목록에는 목록 자신의 「전체 해제」가 있어서, 제목 줄의 「해제」와 하는 일이
+       * 글자까지 같았다. 같은 일을 하는 단추가 둘이면 어느 쪽이 더 많이 지우는지
+       * 재어 보게 된다. 범위 칸에는 짝이 없으므로 거기서는 이 단추가 유일한 길이다.
+       *
+       * **쓸 수 없을 때도 자리를 지킨다**(D15). 범위를 잡는 순간 단추가 생기면
+       * 머리줄이 그만큼 높아져 카드가 들썩이고, 잡고 있던 손잡이가 손가락 밑에서 밀려난다.
        */
-      el('button', {
+      범위칸 ? el('button', {
         // 테두리를 두르지 않는다. 글자만으로도 누를 수 있다는 것이 드러나고, 제목 줄이 조용해진다
         class: `text-base underline-offset-4 ${active
           ? 'text-brand hover:underline'
@@ -418,11 +425,11 @@ export function createFilters({ mount, read, onChange, onClose }) {
           disabled: !active,
           'aria-hidden': active ? null : 'true',
           tabindex: active ? null : '-1',
-          'aria-label': `${field.label}에서 선택한 값 해제`,
-          title: '선택한 값만 해제한다 — 열은 그대로 둔다'
+          'aria-label': `${field.label}에 걸어 둔 범위 해제`,
+          title: '걸어 둔 범위만 해제한다 — 열은 그대로 둔다'
         },
         on: { click: () => setFilter(field.key, null) }
-      }),
+      }) : null,
       el('button', {
         class: 'btn btn-sm border-transparent px-2 text-base text-ink-soft',
         text: '✕',
@@ -437,9 +444,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
       })
     ]);
 
-    // 숫자여도 값이 몇 가지뿐이면 목록에서 선택하는 편이 낫다.
-    // 고3 년도·수능 등급은 다중 선택이, 내신·백분위는 범위가 자연스럽다
-    const body = field.numeric && field.cardinality > SEARCHABLE_AT
+    const body = 범위칸
       // 같은 패널의 두 숫자가 다른 바탕 위에 서지 않도록, 빈칸 건수도 값 목록과 같은 셈을 쓴다
       ? rangeBlock(field, filter, facetCounts(rows, filters, field.key, { search }).get(null) ?? 0)
       // 건수와 「무엇을 품었는지」를 같은 셈에서 받는다. 둘이 다른 바탕에 서면 이름이 거짓이 된다
