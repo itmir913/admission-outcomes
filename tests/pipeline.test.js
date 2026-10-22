@@ -70,6 +70,57 @@ describe('프로파일로 해석한 시트도 미해결을 알린다', () => {
     expect(미해결[0].message).toContain('최종');
   });
 
+  it('사람이 확인해 둔 열은 묻지 않는다 — extraColumns', async () => {
+    /*
+     * 프로파일은 사람이 확인해 둔 답이고, `extraColumns`는 그중 「담을 논리 필드가
+     * 없더라」는 답이다. 그것까지 매번 알리면 올릴 때마다 같은 열이 줄줄이 뜨고,
+     * 사람은 그 안내를 읽지 않게 된다 — 그러면 진짜 새 열이 왔을 때도 지나친다.
+     */
+    const grid = senjinhakGrid(2026);
+    const profile = await buildProfile({
+      program: 'demo', programLabel: '표본 프로그램', year: 2025, headerRows: 1, grid,
+      yearBasis: 'admission',
+      columns: {
+        sourceYear: 0, 'identity.hakbun': 1, 'identity.name': 2,
+        region: 3, univ: 4, dept: 5, admName: 6, track: 7, period: 8,
+        'gpa.전교과': 9, stage1: 10
+      }
+    });
+    profile.extraColumns = [11];   // 11번(최종)은 담을 자리가 없다고 사람이 확정했다
+
+    const { sheets } = await prepareUploads(
+      [upload('진학결과.xlsx', makeWorkbook({ result: grid }))],
+      { profiles: new ProfileSet([profile]), currentYear: NOW }
+    );
+    const { warnings } = await commitSheets(sheets);
+
+    expect(sheets[0].reading.unresolved).toEqual([]);
+    expect(warnings.filter((warning) => warning.type === 'columns-unresolved')).toEqual([]);
+  });
+
+  it('확정해 두지 않은 열은 여전히 보고한다 — 양식이 열을 새로 얻은 경우', async () => {
+    const grid = senjinhakGrid(2026).map((row) => [...row]);
+    grid[0].push('새로생긴열');
+    for (let index = 1; index < grid.length; index += 1) grid[index].push('값');
+
+    const profile = await buildProfile({
+      program: 'demo', programLabel: '표본 프로그램', year: 2025, headerRows: 1, grid,
+      yearBasis: 'admission',
+      columns: {
+        sourceYear: 0, 'identity.hakbun': 1, 'identity.name': 2,
+        region: 3, univ: 4, dept: 5, admName: 6, track: 7, period: 8,
+        'gpa.전교과': 9, stage1: 10, final: 11
+      }
+    });
+    profile.extraColumns = [];
+
+    const { sheets } = await prepareUploads(
+      [upload('진학결과.xlsx', makeWorkbook({ result: grid }))],
+      { profiles: new ProfileSet([profile]), currentYear: NOW }
+    );
+    expect(sheets[0].reading.unresolved.map((item) => item.label)).toEqual(['새로생긴열']);
+  });
+
   it('프로파일이 열을 다 집어 가면 아무 말도 하지 않는다', async () => {
     const grid = senjinhakGrid(2026);
     const { sheets } = await prepareUploads(

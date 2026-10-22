@@ -20,6 +20,12 @@
  * 같은 프로그램이라도 내보내기 양식이 바뀌면 줄 수가 달라지고, 그것은 해와 무관하다.
  * 실제로 같은 프로그램의 두 양식이 1줄과 2줄로 나뉘었다(decisions.md D23).
  *
+ * `extraColumns`는 **사람이 보고 「담을 논리 필드가 없다」고 확정한 열**들이다.
+ * 원본 이름 그대로 `extra`에 보존하되 **묻지 않는다** — 이미 확인된 답이기 때문이다.
+ * 여기에도 `columns`에도 없는 열은 **프로파일을 만든 뒤 양식이 새로 얻은 열**이라는
+ * 뜻이므로 미해결로 알린다. 그 구분이 없으면 매번 같은 열을 묻게 되고,
+ * 사람은 그 안내를 읽지 않게 된다 — 그러면 진짜 새 열이 왔을 때도 지나친다.
+ *
  * `columns`는 **논리 키 → 열 인덱스**의 평평한 맵이다.
  * 되풀이되는 묶음(내신 반영조합, 수능 영역)은 점으로 이어 붙인 키로 표현한다.
  * 구조를 하나로 유지해야 새 양식이 들어와도 스키마가 흔들리지 않는다.
@@ -98,6 +104,24 @@ export function validateProfile(profile) {
     else usedIndexes.set(index, key);
   }
   if (!('univ' in columns)) problems.push('대학명(univ) 열이 없으면 분석할 수 없습니다.');
+
+  if ('extraColumns' in profile) {
+    const extra = profile.extraColumns;
+    if (!Array.isArray(extra)) problems.push('extraColumns가 배열이 아닙니다.');
+    else {
+      const seen = new Set();
+      for (const index of extra) {
+        if (!Number.isInteger(index) || index < 0) {
+          problems.push(`extraColumns에 0 이상 정수가 아닌 값이 있습니다: ${index}`);
+          continue;
+        }
+        // 한 열이 논리 필드이면서 동시에 「담을 자리가 없다」일 수는 없다
+        if (usedIndexes.has(index)) problems.push(`${index}번 열은 ${usedIndexes.get(index)}가 쓰는데 extraColumns에도 있습니다.`);
+        if (seen.has(index)) problems.push(`extraColumns에 ${index}번이 두 번 있습니다.`);
+        seen.add(index);
+      }
+    }
+  }
 
   // 연도 열이 있으면 그 값이 고3 년도인지 학년도인지 반드시 밝혀야 한다.
   // 밝히지 않으면 자료 전체가 한 해씩 밀리고, 밀렸다는 사실이 눈에 띄지 않는다.

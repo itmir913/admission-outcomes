@@ -39,5 +39,7 @@
     "suneung.탐구2.stdScore": 30,
     "suneung.탐구2.grade": 31
   },
-  "note": "예시 양식 전용. 생성기(src/sample/sampleWorkbook.js)가 만드는 격자의 지문이라, 생성기를 고치면 지문이 달라져 더 이상 맞지 않는다 — 그때는 이름 해석으로 내려가므로 조용히 틀리지는 않는다. tests/sample.test.js 가 둘이 어긋나는지 지킨다."
+  "note": "예시 양식 전용. 생성기(src/sample/sampleWorkbook.js)가 만드는 격자의 지문이라, 생성기를 고치면 지문이 달라져 더 이상 맞지 않는다 — 그때는 이름 해석으로 내려가므로 조용히 틀리지는 않는다. tests/sample.test.js 가 둘이 어긋나는지 지킨다.",
+  "extraColumns": [],
+  "unmappedNote": "모든 열에 담을 논리 필드가 있다. 이 도구가 만드는 양식이라 남는 열이 없다."
 }

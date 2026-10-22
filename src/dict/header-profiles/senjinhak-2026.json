@@ -34,6 +34,9 @@
     "suneung.탐구2.subject": 25,
     "suneung.탐구2.grade": 26
   },
-  "unmappedNote": "22(탐구영역)는 과학탐구·사회탐구 구분이라 담을 논리 필드가 없고, 27(등급.5)은 한국사로 보이지만 확인된 바가 없다. 둘 다 원본 이름 그대로 extra에 남긴다 (CLAUDE.md 5).",
-  "source": "센진학_수시지원결과_샘플.xlsx#result"
+  "unmappedNote": "22(탐구영역)는 과학탐구·사회탐구 구분이라 담을 논리 필드가 없다. 사람이 확인했으므로 묻지 않는다. 원본 이름 그대로 extra 에 남는다. 식별 열은 여기에 없다(§1).",
+  "source": "센진학_수시지원결과_샘플.xlsx#result",
+  "extraColumns": [
+    22
+  ]
 }

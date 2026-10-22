@@ -183,6 +183,29 @@ describe('프로파일 검사', () => {
   });
 });
 
+describe('확정해 둔 extra 열 검사', () => {
+  const base = { id: 'p', program: 'p', year: 2025, headerRows: 1, fingerprint: 'a'.repeat(64) };
+
+  it('한 열이 논리 필드이면서 동시에 확정된 extra 일 수는 없다', () => {
+    const { problems } = validateProfile({ ...base, columns: { univ: 0, dept: 1 }, extraColumns: [1] });
+    expect(problems.join(' ')).toContain('1번 열은');
+  });
+
+  it('정수가 아닌 값을 거절한다', () => {
+    const { problems } = validateProfile({ ...base, columns: { univ: 0 }, extraColumns: [1.5] });
+    expect(problems.join(' ')).toContain('0 이상 정수가 아닌');
+  });
+
+  it('같은 번호가 두 번 있으면 알린다', () => {
+    const { problems } = validateProfile({ ...base, columns: { univ: 0 }, extraColumns: [2, 2] });
+    expect(problems.join(' ')).toContain('두 번');
+  });
+
+  it('없어도 된다 — 모든 열에 담을 자리가 있는 양식이 있다', () => {
+    expect(validateProfile({ ...base, columns: { univ: 0 } }).valid).toBe(true);
+  });
+});
+
 describe('프로파일 묶음', () => {
   it('잘못된 프로파일은 이유와 함께 따로 담는다', () => {
     // 조용히 사라지면 왜 안 먹었는지 알 수 없다

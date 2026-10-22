@@ -213,3 +213,30 @@ describe('동봉 프로파일이 사전과 어긋나지 않는다', () => {
     expect(Object.keys(kcue2027.columns).some((key) => key.includes('탐1탐2'))).toBe(false);
   });
 });
+
+describe('동봉 프로파일은 올릴 때마다 묻지 않는다', () => {
+  /*
+   * 프로파일은 **사람이 확인해 둔 답**이다. 그 답에 「담을 논리 필드가 없다」까지
+   * 적혀 있으면(`extraColumns`) 올릴 때마다 다시 묻지 않는다.
+   *
+   * 묻게 두면 올릴 때마다 같은 열 열다섯 개가 뜨고, 사람은 그 안내를 읽지 않게 된다 —
+   * **그러면 양식이 열을 새로 얻었을 때도 지나친다.** 알림이 뜻을 가지려면 드물어야 한다.
+   */
+  it.each(bundledProfiles.map((profile) => [profile.id, profile]))(
+    '%s 는 자기 양식의 모든 열에 답을 갖고 있다', (id, profile) => {
+      const 답한열 = new Set([...Object.values(profile.columns), ...(profile.extraColumns ?? [])]);
+      const 끝 = Math.max(...답한열);
+      const 답없는열 = [];
+      for (let index = 0; index <= 끝; index += 1) if (!답한열.has(index)) 답없는열.push(index);
+      expect(답없는열).toEqual([]);
+    }
+  );
+
+  it('논리 필드와 확정된 extra 가 같은 열을 가리키지 않는다', () => {
+    for (const profile of bundledProfiles) {
+      const 쓰는열 = new Set(Object.values(profile.columns));
+      const 겹침 = (profile.extraColumns ?? []).filter((index) => 쓰는열.has(index));
+      expect(겹침, profile.id).toEqual([]);
+    }
+  });
+});

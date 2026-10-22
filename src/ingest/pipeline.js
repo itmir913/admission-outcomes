@@ -102,9 +102,16 @@ function hasIdentity(columns = {}) {
 function unresolvedUnderProfile(grid, profile) {
   const labels = buildHeaderLabels(grid, profile.headerRows);
   const taken = new Set(Object.values(profile.columns));
+  /*
+   * **사람이 이미 확인한 열은 묻지 않는다.** 프로파일은 사람이 확인해 둔 답이고,
+   * `extraColumns`는 그중 「담을 논리 필드가 없더라」는 답이다. 그것까지 매번 알리면
+   * 올릴 때마다 같은 열 열다섯 개가 뜨고, 사람은 그 안내를 읽지 않게 된다 —
+   * **그러면 양식이 열을 새로 얻었을 때도 지나친다.** 알림이 뜻을 가지려면 드물어야 한다.
+   */
+  const 확정 = new Set(profile.extraColumns ?? []);
   const unresolved = [];
   for (let index = 0; index < labels.length; index += 1) {
-    if (taken.has(index)) continue;
+    if (taken.has(index) || 확정.has(index)) continue;
     const label = labels[index].label;
     if (!label) continue;
     unresolved.push({ index, label, reason: '프로파일이 가리키지 않는 열입니다' });
