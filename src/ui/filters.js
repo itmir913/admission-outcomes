@@ -192,8 +192,55 @@ export function createFilters({ mount, read, onChange, onClose }) {
         })
       : null;
 
+    /*
+     * **「전체 선택」을 둔다.**
+     *
+     * 수십 가지 가운데 하나만 빼고 보려면, 없을 때는 나머지를 전부 손으로 눌러야 한다.
+     * 전부 선택한 뒤 하나를 해제하는 길이 있으면 두 번이면 끝난다.
+     *
+     * 선택하는 것은 **지금 목록에 보이는 값**이다. 안에서 찾기로 줄여 둔 목록이라면
+     * 거기 보이는 것만 선택한다 — 보이지 않는 것까지 선택하면, 눌러 놓고 무엇을
+     * 선택했는지 화면에서 셀 수 없다 (§5). 그 사실을 단추의 설명에 적어 둔다.
+     *
+     * 테두리를 두르지 않는다. 값 목록 위에 선 작은 조작이라, 상자를 치면 목록보다
+     * 단추가 먼저 눈에 띈다.
+     */
+    const 선택한수 = entries.filter((entry) => chosen.has(entry.value)).length;
+    const 글자단추 = (text, label, off, onClick) => el('button', {
+      class: `text-base underline-offset-4 ${off
+        ? 'invisible pointer-events-none'
+        : 'text-brand hover:underline'}`,
+      text,
+      attrs: {
+        type: 'button',
+        disabled: off,
+        'aria-hidden': off ? 'true' : null,
+        tabindex: off ? '-1' : null,
+        'aria-label': `${field.label} ${label}`
+      },
+      on: { click: onClick }
+    });
+
+    const 선택줄 = entries.length === 0 ? null : el('div', {
+      class: 'mt-2 flex min-h-9 items-center gap-3 px-2'
+    }, [
+      글자단추('전체 선택', needle ? '찾은 값 전체 선택' : '값 전체 선택', 선택한수 === entries.length, () => {
+        const next = new Set(chosen);
+        for (const entry of entries) next.add(entry.value);
+        setFilter(field.key, { key: field.key, op: 'in', values: [...next] });
+      }),
+      글자단추('전체 해제', needle ? '찾은 값 전체 해제' : '값 전체 해제', 선택한수 === 0, () => {
+        const next = new Set(chosen);
+        for (const entry of entries) next.delete(entry.value);
+        setFilter(field.key, next.size === 0
+          ? null
+          : { key: field.key, op: 'in', values: [...next] });
+      })
+    ]);
+
     return el('div', {}, [
       search,
+      선택줄,
       entries.length === 0 ? el('p', { class: 'mt-2 px-2 text-base text-ink-soft', text: '해당하는 값이 없습니다.' }) : list
     ]);
   }
@@ -345,9 +392,10 @@ export function createFilters({ mount, read, onChange, onClose }) {
        * 손가락 밑에서 밀려난다.
        */
       el('button', {
-        class: `btn btn-sm px-2.5 text-base ${active
-          ? 'border-brand/30 bg-brand-soft text-brand'
-          : 'invisible pointer-events-none border-transparent'}`,
+        // 테두리를 두르지 않는다. 글자만으로도 누를 수 있다는 것이 드러나고, 제목 줄이 조용해진다
+        class: `text-base underline-offset-4 ${active
+          ? 'text-brand hover:underline'
+          : 'invisible pointer-events-none'}`,
         text: '해제',
         attrs: {
           type: 'button',
