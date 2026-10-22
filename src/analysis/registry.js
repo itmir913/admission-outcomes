@@ -14,6 +14,19 @@ import { outcomeLabel } from '../core/outcome.js';
 const SCALAR_LABEL = new Map(fields.scalars.map((field) => [field.key, field.label]));
 const SCALAR_GROUP = new Map(fields.scalars.map((field) => [field.key, field.group]));
 
+/*
+ * 되풀이되는 묶음의 이름도 **사전이 정한다.** 예전에는 키를 쪼개 그 글자를 그대로
+ * 화면에 올렸고, 수능 항목 이름은 여기와 학생 화면에 따로 적혀 둘이 어긋났다(D13).
+ */
+/**
+ * 내신 사전 항목을 **사전에 적힌 순서대로** 이어 붙인 것. 조합이 먼저, 과목이 나중이다.
+ * 이 순서가 학생 화면의 카드 순서이므로 한 곳에서만 만든다.
+ */
+export const GPA_ENTRIES = [...fields.repeating.gpa.combos, ...fields.repeating.gpa.subjects];
+const GPA_LABEL = new Map(GPA_ENTRIES.map((entry) => [entry.key, entry.label]));
+const AREA_LABEL = new Map(fields.repeating.suneung.areas.map((entry) => [entry.key, entry.label]));
+const PART_LABEL = fields.repeating.suneung.partLabels;
+
 /**
  * 원본 엑셀에 없는 열들 — 우리가 만든 것과 출처 표시.
  * 사전(fields.json)은 엑셀에서 읽어 오는 열만 다루므로 여기서 이름을 준다.
@@ -55,18 +68,25 @@ function groupOf(key) {
  * 사전에 있으면 사전 이름을, 없으면 **원본 헤더 이름 그대로** 쓴다.
  * 모르는 열에 그럴듯한 이름을 지어 붙이면 그 열이 무엇인지 영영 알 수 없게 된다.
  *
+ * **내신 키는 반영비 접미사까지가 키다.** 접미사를 떼어 조합 이름을 찾은 뒤 다시
+ * 붙이면 화면 이름이 사전의 라벨이 아니라 합성한 글자가 되고, 사전에 적어 둔
+ * 반영비 라벨은 아무도 읽지 않는다. 키를 그대로 찾는다.
+ *
  * @param {string} key
  */
 export function fieldLabel(key) {
   if (DERIVED[key]) return DERIVED[key].label;
   if (SCALAR_LABEL.has(key)) return SCALAR_LABEL.get(key);
 
-  const parts = key.split('.');
-  if (parts[0] === 'gpa') return parts.slice(1).join('.');
-  if (parts[0] === 'extra') return parts.slice(1).join('.');
-  if (parts[0] === 'suneung') {
-    const partLabel = { subject: '과목', stdScore: '표점', percentile: '백분위', grade: '등급' };
-    return `${parts[1]} ${partLabel[parts[2]] ?? parts[2]}`;
+  if (key.startsWith('gpa.')) return GPA_LABEL.get(key.slice(4)) ?? key.slice(4);
+  if (key.startsWith('extra.')) return key.slice(6);
+  if (key.startsWith('suneung.')) {
+    const rest = key.slice(8);
+    const cut = rest.lastIndexOf('.');
+    if (cut <= 0) return rest;
+    const area = rest.slice(0, cut);
+    const part = rest.slice(cut + 1);
+    return `${AREA_LABEL.get(area) ?? area} ${PART_LABEL[part] ?? part}`;
   }
   return key;
 }

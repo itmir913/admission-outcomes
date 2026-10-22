@@ -9,7 +9,8 @@
 
 import { el, clear, openDialog, dialogFrame, formatNumber } from './dom.js';
 import { outcomeBar, passRate, rateNote, tallyOutcomes } from './outcome.js';
-import { fieldLabel, valueLabel, isBlank } from '../analysis/registry.js';
+import { fieldLabel, valueLabel, isBlank, GPA_ENTRIES } from '../analysis/registry.js';
+import fields from '../dict/fields.json' with { type: 'json' };
 
 /** 지원 카드를 늘어놓는 순서. */
 export const CARD_ORDERS = {
@@ -246,14 +247,10 @@ export function openStudent(dialog, { sid, rows, onUnivFilter }) {
    * 열은 **자료에 있는 항목만** 세운다. 원점수는 우리 사전에 없는 항목이라 칸도 두지 않는다 —
    * 빈 칸이 늘어서면 "있는데 못 읽었다"로 보인다(§5).
    */
-  const SUNEUNG_COLUMNS = [
-    ['subject', '선택과목'],
-    ['stdScore', '표준점수'],
-    ['percentile', '백분위'],
-    ['grade', '등급']
-  ];
-  // 성적표에 적히는 순서. 여기 없는 영역은 뒤에 붙인다
-  const AREA_ORDER = ['국어', '수학', '영어', '한국사', '탐구1', '탐구2', '제2외국어'];
+  const SUNEUNG_COLUMNS = fields.repeating.suneung.parts
+    .map((part) => [part, fields.repeating.suneung.partLabels[part]]);
+  // 성적표에 적히는 순서도 사전이 정한다. 여기 없는 영역은 뒤에 붙인다
+  const AREA_ORDER = fields.repeating.suneung.areas.map((entry) => entry.key);
 
   const areaRows = [...byArea].sort(([left], [right]) => {
     const l = AREA_ORDER.indexOf(left);
@@ -301,29 +298,42 @@ export function openStudent(dialog, { sid, rows, onUnivFilter }) {
   }
 
   /*
-   * 내신은 **조합까지 늘어놓고, 반영비만 접는다.**
+   * 내신은 **기본으로 보일 조합을 늘어놓고, 나머지를 접는다.**
    *
    * 상담에서 나란히 보는 것은 전교과와 국수영사·국수영 같은 조합이다. 지원할
    * 전형에 따라 보는 줄이 달라서, 하나만 두면 매번 접힌 것을 열어야 한다.
    * 반면 `전교과(2/4/4)`처럼 반영비가 붙은 줄은 같은 조합을 비율만 바꿔 다시 센
-   * 값이라 수가 금세 불어난다 — 그쪽만 접는다.
+   * 값이라 수가 금세 불어난다 — 그쪽을 접는다.
    *
-   * 나누는 기준은 **괄호**다. 조합 이름은 학교마다 다르므로 이름을 목록으로 박아
-   * 두면 다른 학교에서 통째로 빗나간다. 반영비가 붙었다는 사실은 양식과 무관하다.
+   * **무엇을 보일지는 사전이 정한다**(`fields.json`의 `primary`). 예전에는 라벨의
+   * 괄호를 보고 구별했는데, 그것은 코드가 열 이름을 해석하는 일이었다 — 우리는
+   * 이 양식들의 열을 알고 있으므로 미리 사전에 적어 두는 쪽이 맞다.
+   * 순서도 사전의 순서다. **조합이 과목보다 앞에 온다** — 뒤집으면 큰 글씨 첫 칸이
+   * `국어` 같은 한 과목이 되어 그 학생을 대표하지 않는 값이 첫눈에 들어온다.
    */
-  const 전교과 = ['전교과', '전과목', '전교과목'];
-  const 반영비붙음 = (entry) => entry.label.includes('(');
-  const 조합순 = (left, right) => {
-    const l = 전교과.some((word) => left.label.startsWith(word));
-    const r = 전교과.some((word) => right.label.startsWith(word));
-    return Number(r) - Number(l) || left.label.localeCompare(right.label, 'ko');
-  };
+  const 사전순서 = new Map(GPA_ENTRIES.map((entry, index) => [entry.key, index]));
+  const 기본표시 = new Set(GPA_ENTRIES.filter((entry) => entry.primary).map((entry) => entry.key));
+  const 조합키 = (entry) => entry.key.slice('gpa.'.length);
+  const 조합순 = (left, right) =>
+    (사전순서.get(조합키(left)) ?? 사전순서.size) - (사전순서.get(조합키(right)) ?? 사전순서.size);
 
-  const mainGpa = gpa.filter((entry) => !반영비붙음(entry)).sort(조합순);
-  const restGpa = gpa.filter(반영비붙음).sort(조합순);
-  // 전부 반영비가 붙은 양식이라면 접을 것이 아니라 그게 전부다
-  const 보일내신 = mainGpa.length > 0 ? mainGpa : restGpa;
+  const mainGpa = gpa.filter((entry) => 기본표시.has(조합키(entry))).sort(조합순);
+  const restGpa = gpa.filter((entry) => !기본표시.has(조합키(entry))).sort(조합순);
+  // 기본으로 보일 열이 하나도 안 실린 양식이라면 접을 것이 아니라 그게 전부다
+  const 보일것 = mainGpa.length > 0 ? mainGpa : restGpa;
   const 접을내신 = mainGpa.length > 0 ? restGpa : [];
+
+  /*
+   * **큰 글씨 첫 칸은 사전이 `default`로 정한 열이다.** 아래에서 첫 칸만 키우므로,
+   * 순서에 맡기면 양식에 따라 한 과목 성적이 가장 큰 숫자로 올라간다 —
+   * `과학 6.88`처럼 그 학생을 대표하지 않는 값이 첫눈에 들어온다.
+   * 그 열이 실리지 않은 양식에서는 첫 칸을 그대로 키운다(헤드라인이 사라지지 않게).
+   */
+  const 대표 = GPA_ENTRIES.find((entry) => entry.default)?.key;
+  const 대표칸 = 보일것.findIndex((entry) => 조합키(entry) === 대표);
+  const 보일내신 = 대표칸 > 0
+    ? [보일것[대표칸], ...보일것.filter((_, index) => index !== 대표칸)]
+    : 보일것;
 
   const gpaCard = (entry, big = false) => el('div', { class: 'card px-3 py-2' }, [
     el('p', { class: 'truncate text-base text-ink-soft', text: entry.label, attrs: { title: entry.label } }),
@@ -345,7 +355,7 @@ export function openStudent(dialog, { sid, rows, onUnivFilter }) {
                   // 화살표는 브라우저 기본 표식을 그대로 쓴다. 접힌 것인지 펴진 것인지를
                   // 글귀만으로 알리면, 누를 수 있다는 사실 자체가 드러나지 않는다
                   class: 'cursor-pointer rounded-lg border border-line bg-surface py-2 pl-2 pr-4 text-base font-medium marker:text-ink-soft hover:bg-brand-soft',
-                  text: `반영비를 다르게 계산한 ${접을내신.length}개 더보기`
+                  text: `기본으로 보이지 않는 내신 ${접을내신.length}개 더보기`
                 }),
                 el('div', { class: 'mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5' },
                   접을내신.map((entry) => gpaCard(entry)))
