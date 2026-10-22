@@ -482,8 +482,12 @@ function 필터판보이기(on, { 기억 = true } = {}) {
   const 토글 = pick('#필터토글');
   토글.setAttribute('aria-expanded', String(on));
   토글.setAttribute('aria-label', on ? '필터 패널 숨기기' : '필터 패널 표시');
-  // 접혀 있다는 것을 단추 자신이 보여 준다. 글자가 ☰ 하나뿐이라 색으로 구분한다
-  토글.classList.toggle('btn-primary', !on);
+  /*
+   * **열려 있을 때 눌린 모양을 한다** — 토글 단추의 관례이고, `aria-expanded`와 같은 말을 한다.
+   * 닫혔을 때 강조했더니 늘 닫혀 있는 좁은 화면에서 단추가 늘 파래, 강조가 아무것도
+   * 알리지 못하고 「먼저 누를 단추」처럼만 보였다.
+   */
+  토글.classList.toggle('btn-primary', on);
   // 좁은 화면이라 닫아 둔 것은 사람의 선택이 아니다. 적어 두면 넓은 화면의 선택을 덮는다
   if (기억 && state.view.filtersOpen !== on) updateView({ filtersOpen: on });
 }
