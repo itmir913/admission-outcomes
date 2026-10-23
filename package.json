@@ -1,6 +1,6 @@
 {
   "name": "admission-outcomes",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "고교 진학결과 분석·시각화 (브라우저 전용, 화면 익명화)",
   "scripts": {
     "dev": "vite",
