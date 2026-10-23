@@ -185,23 +185,58 @@ export function createFilters({ mount, read, onChange, onClose }) {
   }, children);
 
   // ── 값 선택 (글자·enum 열) ─────────────────────────────────────────────
-  function valueBlock(field, filter, counts, redraw) {
+  function valueBlock(field, filter, counts) {
     const chosen = new Set((filter?.values ?? []).map((value) => (isBlank(value) ? null : value)));
-    const needle = (localSearch.get(field.key) ?? '').trim().toLowerCase();
 
     // 선택한 값이 다른 필터 때문에 한 건도 안 남으면 목록에서 사라져, 체크를 풀 자리가 없어진다
     const 건수 = new Map(counts);
     for (const value of chosen) if (!건수.has(value)) 건수.set(value, { count: 0, texts: [] });
 
-    const entries = [...건수.entries()]
+    const 모든값 = [...건수.entries()]
       .map(([value, bucket]) => ({
         value,
         count: bucket.count,
         ...bucketLabel(field.key, value, bucket.texts)
       }))
       .filter((entry) => entry.count > 0 || chosen.has(entry.value))
-      .filter((entry) => !needle || entry.terms.some((term) => term.toLowerCase().includes(needle)))
       .sort(entryOrder(field));
+
+    const 검색어 = () => (localSearch.get(field.key) ?? '').trim().toLowerCase();
+
+    /*
+     * **검색칸은 한 번만 만든다. 글자를 칠 때 바꾸는 것은 그 아래뿐이다.**
+     *
+     * 칠 때마다 블록을 통째로 다시 그렸더니, 치던 검색칸이 새 요소로 갈려 한 글자마다
+     * 포커스를 잃었다. 한글은 조합 중에 요소가 바뀌면 조합까지 끊긴다.
+     *
+     * 검색칸을 둘지도 **처음 그릴 때 정한다.** 줄어든 목록 크기로 정하면, 찾다가
+     * 항목이 기준 아래로 줄어드는 순간 치던 칸이 사라진다.
+     */
+    const 아래 = el('div', { class: 'space-y-2' });
+    const 아래그리기 = () => clear(아래).append(...valueRest(field, chosen, 모든값, 검색어()).filter(Boolean));
+    아래그리기();
+
+    const search = 모든값.length > SEARCHABLE_AT || 검색어()
+      ? el('input', {
+          class: 'field min-h-9 text-base',
+          attrs: { type: 'search', placeholder: `${field.label} 안에서 찾기`, value: localSearch.get(field.key) ?? '' },
+          on: {
+            input: debounce((event) => {
+              localSearch.set(field.key, event.target.value);
+              아래그리기();
+            }, 150)
+          }
+        })
+      : null;
+
+    // 조각 사이 간격을 **한 군데서** 준다. 조각 하나가 빠질 때 간격이 어긋나지 않게
+    return el('div', { class: 'space-y-2' }, [search, 아래]);
+  }
+
+  /** 검색칸 아래 — 선택줄과 값 목록. 검색어가 바뀔 때마다 이것만 새로 만든다 */
+  function valueRest(field, chosen, 모든값, needle) {
+    const entries = 모든값
+      .filter((entry) => !needle || entry.terms.some((term) => term.toLowerCase().includes(needle)));
 
     const list = el('div', { class: 'max-h-64 scroll-stable space-y-0.5 overflow-y-auto' },
       entries.map((entry) => {
@@ -228,19 +263,6 @@ export function createFilters({ mount, read, onChange, onClose }) {
         ]);
       })
     );
-
-    const search = entries.length > SEARCHABLE_AT || needle
-      ? el('input', {
-          class: 'field min-h-9 text-base',
-          attrs: { type: 'search', placeholder: `${field.label} 안에서 찾기`, value: localSearch.get(field.key) ?? '' },
-          on: {
-            input: debounce((event) => {
-              localSearch.set(field.key, event.target.value);
-              redraw();
-            }, 150)
-          }
-        })
-      : null;
 
     /*
      * **「전체 선택」을 둔다.**
@@ -272,12 +294,10 @@ export function createFilters({ mount, read, onChange, onClose }) {
       })
     ]);
 
-    // 조각 사이 간격을 **한 군데서** 준다. 조각 하나가 빠질 때 간격이 어긋나지 않게
-    return el('div', { class: 'space-y-2' }, [
-      search,
+    return [
       선택줄,
       entries.length === 0 ? el('p', { class: 'mt-2 px-2 text-base text-ink-soft', text: '해당하는 값이 없습니다.' }) : list
-    ]);
+    ];
   }
 
   // ── 범위 선택 (숫자 열) ────────────────────────────────────────────────
@@ -402,7 +422,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
     ]);
   }
 
-  function block(field, filters, rows, search, { redraw = render, withHead = true } = {}) {
+  function block(field, filters, rows, search, { withHead = true } = {}) {
     /*
      * **머리줄 검색(`contains`)은 이 칸의 필터가 아니다.**
      *
@@ -456,7 +476,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
       // 같은 패널의 두 숫자가 다른 바탕 위에 서지 않도록, 빈칸 건수도 값 목록과 같은 셈을 쓴다
       ? rangeBlock(field, filter, facetCounts(rows, filters, field.key, { search }).get(null) ?? 0)
       // 건수와 「무엇을 품었는지」를 같은 셈에서 받는다. 둘이 다른 바탕에 서면 이름이 거짓이 된다
-      : valueBlock(field, filter, facetBuckets(rows, filters, field.key, { search }), redraw);
+      : valueBlock(field, filter, facetBuckets(rows, filters, field.key, { search }));
 
     // 팝오버에는 제목줄이 따로 있다. 여기서 또 그리면 같은 제목이 두 번 나온다
     if (!withHead) return el('div', {}, [body]);
@@ -554,13 +574,12 @@ export function createFilters({ mount, read, onChange, onClose }) {
      * 조작이 어긋난다 — 같은 열인데 자리에 따라 다르게 거르는 표가 된다.
      *
      * @param {string} key
-     * @param {() => void} redraw 블록 안에서 상태가 바뀌었을 때 다시 그릴 함수
      */
-    blockFor(key, redraw) {
+    blockFor(key) {
       const { rows, registry, filters, search } = read();
       const field = registry.find((item) => item.key === key);
       if (!field) return null;
-      return block(field, filters, rows, search, { redraw, withHead: false });
+      return block(field, filters, rows, search, { withHead: false });
     },
     reset() { open = []; localSearch.clear(); gripped = null; }
   };

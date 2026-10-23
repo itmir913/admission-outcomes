@@ -322,7 +322,7 @@ function 팝오버닫기() {
 function 팝오버그리기() {
   if (열린열 === null) return;
   const field = state.registry.find((item) => item.key === 열린열);
-  const body = filters.blockFor(열린열, 팝오버그리기);
+  const body = filters.blockFor(열린열);
   clear(dom.열팝오버).append(
     el('div', { class: 'flex min-h-9 items-center gap-2 border-b border-line px-2.5' }, [
       el('h3', {
