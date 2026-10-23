@@ -25,7 +25,7 @@ const OUT_DIR = join(HERE, '..', 'src', 'dict', 'header-profiles');
 /** 합성된 헤더 라벨 → 논리 필드 키. 초안을 만들기 위한 힌트일 뿐이다. */
 const HINTS = [
   ['identity.name', ['이름', '성명']],
-  ['identity.hakbun', ['학번', '수험번호']],
+  ['identity.hakbun', ['학번']],
   ['identity.class', ['반']],
   ['identity.number', ['번호']],
   ['sourceYear', ['학년도', '입학년도', '졸업년도']],

@@ -18,12 +18,9 @@
     {
       "key": "identity.hakbun",
       "exact": [
-        "학번",
-        "수험번호"
+        "학번"
       ],
-      "affix": [
-        "수험번호"
-      ],
+      "affix": [],
       "partial": []
     },
     {
