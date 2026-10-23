@@ -65,7 +65,7 @@ export function matchesFilter(row, filter) {
   }
 
   /*
-   * `contains`. 머리줄의 열별 검색칸이 쓴다.
+   * `contains`. 열 이름 줄의 열별 검색칸이 쓴다.
    *
    * 화면에 보이는 글자로 찾는다 — `outcome`처럼 저장값(`pass`)과 화면 글자(`합격`)가
    * 다른 열이 있어서, 저장값으로 찾으면 사람이 본 적 없는 말을 적어야 한다.
@@ -311,7 +311,7 @@ export function facetCounts(rows, filters, key, options = {}) {
  */
 export function facetBuckets(rows, filters, key, { search = '', searchKeys } = {}) {
   /*
-   * 이 열의 **값 선택만** 뺀다. 같은 열의 머리줄 검색(`contains`)은 남겨 둬야
+   * 이 열의 **값 선택만** 뺀다. 같은 열의 열 이름 줄 검색(`contains`)은 남겨 둬야
    * 옆에 적는 건수가 눌렀을 때 남는 행 수와 맞는다 — 「3건」이라 적힌 것을 눌렀더니
    * 표가 비는 일이 여기서 났다. 값 선택을 거는 쪽도 같은 열의 검색은 지우지 않는다.
    */

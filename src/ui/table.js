@@ -124,7 +124,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     const 쓸수있는폭 = scroller.clientWidth || 0;
     /*
      * **폭을 못 재면 하나만 고정한다.** 상한을 끄면 시작 화면이 떠 있어 표가 아직
-     * 자리를 못 받은 순간(폭 0)에 사람이 정한 수가 그대로 그려지고, 그 머리줄이
+     * 자리를 못 받은 순간(폭 0)에 사람이 정한 수가 그대로 그려지고, 그 열 이름 줄이
      * 겹친 채 남는다 — 실제로 375px에서 재현됐다 (§5).
      */
     if (쓸수있는폭 === 0) return Math.min(1, want, state.columns.length);
@@ -166,7 +166,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     /*
      * **고정에서 빠진 칸은 그 자리에서 떼 준다.**
      *
-     * 너비를 끌어 한도를 넘기는 동안에는 머리줄을 다시 그릴 수 없다 — 손잡이 노드에
+     * 너비를 끌어 한도를 넘기는 동안에는 열 이름 줄을 다시 그릴 수 없다 — 손잡이 노드에
      * 포인터를 붙들어 두었으므로 노드가 바뀌면 끌기가 끊긴다. 앞쪽 자리만 고쳐 쓰면
      * 빠져야 할 뒤쪽 칸이 옛 자리를 달고 남아 고정 열끼리 포개진다. 끄는 그 순간이
      * 바로 사람이 그 자리를 보고 있는 때다.
@@ -231,7 +231,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     /*
      * **치던 자리를 기억했다 돌려준다.**
      *
-     * 머리줄 검색은 220ms 뒤에 표를 다시 그리는데, 그때 이 줄을 통째로 새로 만든다.
+     * 열 이름 줄 검색은 220ms 뒤에 표를 다시 그리는데, 그때 이 줄을 통째로 새로 만든다.
      * 글자는 새 칸에 그대로 남지만 커서가 사라져서, 잠깐 멈췄다 이어 치면 그 뒤
      * 글자가 어디에도 들어가지 않는다 — 사람은 다 쳤다고 믿고 덜 걸러진 표를 본다.
      */
@@ -264,7 +264,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
 
       const label = el('span', { class: 'truncate', text: field?.label ?? key });
       /*
-       * 머리줄에는 **화살표만** 둔다.
+       * 열 이름 줄에는 **화살표만** 둔다.
        *
        * 몇째로 정렬됐는지는 표 위 정렬 칩줄이 숫자로 적고 있다. 여기에 ①②③을
        * 겹쳐 적었더니 같은 말이 두 번일 뿐 아니라, 동그라미 숫자가 열다섯까지밖에
@@ -329,7 +329,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
             attrs: {
               type: 'button',
               /*
-               * **걸린 열은 단추가 말한다.** 값 목록으로 거르면 머리줄에는 아무 흔적이
+               * **걸린 열은 단추가 말한다.** 값 목록으로 거르면 열 이름 줄에는 아무 흔적이
                * 남지 않아, 왜 행이 줄었는지 알려면 위쪽 칩줄까지 올라가야 했다.
                * 색만으로 알리지 않도록 읽어 주는 이름에도 적는다 (§9).
                */
@@ -391,7 +391,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
     if (event.button !== 0 || event.target.getAttribute('role') === 'separator') return;
 
     // 앞선 드래그의 삼킴 표시를 여기서 턴다. 끌고 나서 click이 안 올 수도 있는데
-    // (포인터 취소·머리줄이 새로 그려짐) 그때 표시가 남으면 **다음 클릭 하나가 먹힌다**
+    // (포인터 취소·열 이름 줄이 새로 그려짐) 그때 표시가 남으면 **다음 클릭 하나가 먹힌다**
     swallowClick = false;
     const startX = event.clientX;
     let dragging = false;
@@ -474,7 +474,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
   let measuredRowHeight = ROW_HEIGHT;
   /** 다시 재다가 또 다시 재는 일을 막는다 */
   let 재측정중 = false;
-  /** 머리줄을 마지막으로 그릴 때 쓴 고정 열 수. 바뀌면 다시 그려야 한다 */
+  /** 열 이름 줄을 마지막으로 그릴 때 쓴 고정 열 수. 바뀌면 다시 그려야 한다 */
   let 그린고정수 = -1;
 
   /**
@@ -590,7 +590,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
      * 사라졌다. 검색어를 잘못 쳐서 0건이 된 사람은 고쳐 칠 칸마저 잃고, 화면에는
      * "없습니다" 한 줄만 남는다. 빠져나올 길을 지우면 안 된다.
      *
-     * 표도 머리줄까지는 남긴다. 머리줄의 열별 검색칸이 0건을 만든 장본인일 때가
+     * 표도 열 이름 줄까지는 남긴다. 열 이름 줄의 열별 검색칸이 0건을 만든 장본인일 때가
      * 많아서, 그 칸이 보여야 무엇을 지울지 알 수 있다. 비는 것은 몸통뿐이다.
      */
     empty.classList.toggle('hidden', hasRows);
@@ -632,7 +632,7 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
   // 창 크기가 바뀌면 보이는 행 수도 바뀐다. 다시 그리지 않으면 아래쪽이 빈 채로 남는다
   if (globalThis.ResizeObserver) {
     /*
-     * 화면 폭이 바뀌면 **실제로 고정할 열 수**가 달라진다. 머리줄을 그대로 두면
+     * 화면 폭이 바뀌면 **실제로 고정할 열 수**가 달라진다. 열 이름 줄을 그대로 두면
      * 자리 값만 바뀌어 고정 표시와 실제 고정이 어긋나므로, 바뀐 때만 다시 그린다.
      */
     new globalThis.ResizeObserver(() => {

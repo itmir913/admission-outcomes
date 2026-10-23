@@ -82,8 +82,8 @@ describe('값 목록의 전체 선택·해제', () => {
     expect(단추('전체 선택').disabled).toBe(false);
   });
 
-  /** 머리줄 검색은 다른 자리의 다른 조작이다. 값 선택이 그것을 지우면 안 된다 */
-  it('같은 열의 머리줄 검색을 지우지 않는다', () => {
+  /** 열 이름 줄 검색은 다른 자리의 다른 조작이다. 값 선택이 그것을 지우면 안 된다 */
+  it('같은 열의 열 이름 줄 검색을 지우지 않는다', () => {
     const 상태 = 패널세우기([{ key: 'univ', op: 'contains', text: '대학교' }]);
     단추('전체 선택').click();
     expect(상태.filters).toContainEqual({ key: 'univ', op: 'contains', text: '대학교' });

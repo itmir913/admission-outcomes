@@ -32,7 +32,7 @@ export default defineConfig({
    *
    * 적지 않으면 Vite가 모듈을 훑다가 새 의존성을 발견할 때마다 다시 번들하고,
    * 그 사이에 날아간 요청은 `504 Outdated Optimize Dep`으로 떨어진다.
-   * 그러면 화면은 머리줄만 뜨고 아래가 비는데, 콘솔을 안 보면 CSS 문제처럼 보인다.
+   * 그러면 화면은 상단바만 뜨고 아래가 비는데, 콘솔을 안 보면 CSS 문제처럼 보인다.
    * xlsx는 특히 크고 느려서 이 창이 넓다.
    */
   optimizeDeps: {

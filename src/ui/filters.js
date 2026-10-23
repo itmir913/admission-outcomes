@@ -79,7 +79,7 @@ export function entryOrder(field) {
  * 적히고, 「… 외 N」의 N까지 틀린다(`describeFilter`는 `values.length`로 센다).
  *
  * **이 함수는 `in`만 다룬다.** 같은 열의 다른 op를 함께 손대면 무엇을 지우는
- * 함수인지 흐려진다. 머리줄 검색(`contains`)은 다른 자리에 있는 다른 조작이다.
+ * 함수인지 흐려진다. 열 이름 줄 검색(`contains`)은 다른 자리에 있는 다른 조작이다.
  *
  * 받는 값은 **비어 있지 않은 것**이다. 빈칸을 고르는 길은 값 목록에 따로 있다.
  *
@@ -141,9 +141,9 @@ export function createFilters({ mount, read, onChange, onClose }) {
   /**
    * 이 패널이 맡은 필터만 갈아 끼운다.
    *
-   * **같은 열의 머리줄 검색(`contains`)은 건드리지 않는다.** 둘은 다른 조작이고
+   * **같은 열의 열 이름 줄 검색(`contains`)은 건드리지 않는다.** 둘은 다른 조작이고
    * 다른 자리에 있다. 여기서 함께 지우면, 왼쪽에서 값을 하나 선택했을 뿐인데
-   * 머리줄에 적어 둔 검색어가 소리 없이 사라진다.
+   * 열 이름 줄에 적어 둔 검색어가 소리 없이 사라진다.
    */
   function setFilter(key, next) {
     const { filters } = read();
@@ -424,9 +424,9 @@ export function createFilters({ mount, read, onChange, onClose }) {
 
   function block(field, filters, rows, search, { withHead = true } = {}) {
     /*
-     * **머리줄 검색(`contains`)은 이 칸의 필터가 아니다.**
+     * **열 이름 줄 검색(`contains`)은 이 칸의 필터가 아니다.**
      *
-     * 한 열에 머리줄 검색과 값 선택이 함께 걸릴 수 있는데, 배열에서 검색이 앞에 오면
+     * 한 열에 열 이름 줄 검색과 값 선택이 함께 걸릴 수 있는데, 배열에서 검색이 앞에 오면
      * 여기서 그것을 집어 `values`가 빈 집합이 됐다. 그러면 이미 선택한 값들이 꺼진 채로
      * 보이고, 다음 값을 누르는 순간 **앞서 선택한 것이 조용히 사라진다.** 범위 칸도
      * 같은 까닭으로 걸린 범위를 전체 범위처럼 보여 주다가, 한쪽을 건드리면 반대쪽이
@@ -446,7 +446,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
      * 사이드바에서 값 목록이 그만큼 줄어든다.
      */
     /*
-     * **제목 줄 아래에 구분선을 긋는다** (2026-10-22, 사용자). 머리줄의 값 목록
+     * **제목 줄 아래에 구분선을 긋는다** (2026-10-22, 사용자). 열 이름 줄의 값 목록
      * 창과 같은 모양이다 — 같은 것을 두 군데서 보는데 한쪽만 선이 없으면 다른
      * 물건처럼 보인다. 선이 카드 너비를 다 쓰도록 여백은 머리와 몸이 따로 준다.
      */
@@ -482,7 +482,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
     if (!withHead) return el('div', {}, [body]);
 
     /*
-     * 위 여백만 좁다. 머리줄 높이는 단추(36px)가 정하는데 제목 글자는 그 안에서
+     * 위 여백만 좁다. 제목줄 높이는 단추(36px)가 정하는데 제목 글자는 그 안에서
      * 가운데 서므로, 좌우와 같은 여백을 주면 제목 위만 8px 더 벌어져 보인다.
      */
     return el('section', {
@@ -568,7 +568,7 @@ export function createFilters({ mount, read, onChange, onClose }) {
   return {
     render,
     /**
-     * 열 하나의 조건 블록만 따로 그려 준다. 머리줄의 깔때기 단추가 쓴다.
+     * 열 하나의 조건 블록만 따로 그려 준다. 열 이름 줄의 깔때기 단추가 쓴다.
      *
      * **왼쪽 패널과 같은 블록이다.** 둘을 따로 만들면 한쪽만 고쳐도 아무것도 울지 않고
      * 조작이 어긋난다 — 같은 열인데 자리에 따라 다르게 거르는 표가 된다.

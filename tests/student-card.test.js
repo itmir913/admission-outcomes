@@ -58,7 +58,7 @@ describe('addValueFilter', () => {
     expect(next).not.toBe(before);
   });
 
-  it('같은 열의 머리줄 검색과 다른 열의 필터는 그대로 둔다', () => {
+  it('같은 열의 열 이름 줄 검색과 다른 열의 필터는 그대로 둔다', () => {
     const before = [
       { key: 'univ', op: 'contains', text: '대학' },
       { key: 'cohortYear', op: 'in', values: [2025] }

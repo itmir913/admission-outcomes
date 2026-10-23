@@ -18,7 +18,7 @@ const registry = [{
   numeric: false, filled: rows.length, cardinality: 이름들.length
 }];
 
-/** 머리줄 깔대기가 여는 팝오버와 같은 길(`blockFor`)로 세운다 */
+/** 열 이름 줄 깔대기가 여는 팝오버와 같은 길(`blockFor`)로 세운다 */
 function 패널세우기() {
   document.body.innerHTML = '<div id="mount"></div>';
   const panel = createFilters({

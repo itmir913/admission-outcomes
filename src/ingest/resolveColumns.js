@@ -426,7 +426,7 @@ export function resolveSheet(grid, { sampleRows = 200 } = {}) {
       if (start + headerRows >= rows.length) break;
       const attempt = resolveColumns(rows.slice(start), headerRows, sampleRows);
       attempt.headerStart = start;
-      // 많이 해석한 쪽이 이기고, 같으면 머리줄이 짧은 쪽·위쪽에서 시작한 쪽이 이긴다
+      // 많이 해석한 쪽이 이기고, 같으면 머리글 줄이 짧은 쪽·위쪽에서 시작한 쪽이 이긴다
       const size = Object.keys(attempt.columns).length;
       const bestSize = best ? Object.keys(best.columns).length : -1;
       if (size > bestSize
