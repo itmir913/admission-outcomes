@@ -1,0 +1,30 @@
+{
+  "id": "neis-2027",
+  "program": "neis",
+  "programLabel": "나이스 대입제공현황조회",
+  "year": 2027,
+  "headerRows": 1,
+  "fingerprint": "ca899c0e77406bad53a59ee177f1b37cd9b07a39cec87098f391f6fba118ed76",
+  "yearBasis": "senior",
+  "columns": {
+    "enrollStatus": 0,
+    "sourceYear": 1,
+    "schoolYear": 2,
+    "identity.class": 3,
+    "identity.number": 4,
+    "identity.name": 5,
+    "univ": 6,
+    "period": 8
+  },
+  "yearNote": "1(졸업학년도)은 이름과 달리 고3 년도다. 2027학년도 수시 파일에 2026이 적혀 있다. 학년도로 읽으면 한 해 밀린다.",
+  "unmappedNote": "10(수험번호)은 대학마다 따로 받는 응시 번호라 학번이 아니다. 주키로 쓰면 지원 건마다 다른 학생이 된다. 식별 열이라 extra에서도 버려진다(§1). 9(평가단위명)는 '전형명-모집단위-시기(캠퍼스)'를 한 칸에 붙인 값이라 어느 필드에도 통째로 넣지 않는다. 7·11·12·13은 제공 처리 상태라 담을 필드가 없다. 사람이 확인했으므로 묻지 않는다.",
+  "source": "반별제공현황진행상황(2027학년도-수시).xlsx",
+  "extraColumns": [
+    7,
+    9,
+    10,
+    11,
+    12,
+    13
+  ]
+}
