@@ -45,6 +45,11 @@ describe('나이스 대입제공현황', () => {
     expect(new Set(dataset.applications.map((row) => row.sid)).size).toBe(2);
   });
 
+  it('평가단위명을 통째로 모집단위로 받는다', async () => {
+    const dataset = await commitSheets((await prepared()).sheets);
+    expect(dataset.applications[0].dept).toBe('논술전형-물리학과-수시(본교)');
+  });
+
   it('수험번호·이름이 어디에도 남지 않는다', async () => {
     const dataset = await commitSheets((await prepared()).sheets);
     const text = JSON.stringify(dataset);
