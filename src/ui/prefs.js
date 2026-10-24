@@ -9,7 +9,7 @@
 
 const KEY = 'admission-outcomes:view';
 
-/** @typedef {{columns: string[], widths: Record<string, number>, pinned: number, sorts: object[], filters: object[], filtersOpen: boolean|null, summary: boolean, grouping: string}} ViewState */
+/** @typedef {{columns: string[], widths: Record<string, number>, pinned: number, sorts: object[], filters: object[], filtersOpen: boolean|null, summary: boolean, grouping: string, summaryTable: {columns: string[], widths: Record<string, number>, pinned: number, sorts: object[]}}} ViewState */
 
 /**
  * 처음 상태.
@@ -22,7 +22,9 @@ const KEY = 'admission-outcomes:view';
 export function emptyView() {
   // `filtersOpen`이 null이면 화면 폭이 정한다. 사람이 한 번 전환하면 그 선택이 남는다
   // `summary`는 대학×전형 요약표를 보는 중인지, `grouping`은 그 표의 묶음 기준이다
-  return { columns: [], widths: {}, pinned: 3, sorts: [], filters: [], filtersOpen: null, summary: false, grouping: 'univAdm' };
+  return { columns: [], widths: {}, pinned: 3, sorts: [], filters: [], filtersOpen: null, summary: false, grouping: 'univAdm',
+    // 요약표도 목록표와 같은 표라 열·너비·고정·정렬을 따로 가진다. 대학·전형 두 칸을 고정해 시작한다
+    summaryTable: { columns: [], widths: {}, pinned: 2, sorts: [] } };
 }
 
 /**
@@ -46,11 +48,23 @@ export function loadView() {
       filters: Array.isArray(saved.filters) ? saved.filters.filter((filter) => filter?.key && filter?.op) : base.filters,
       filtersOpen: typeof saved.filtersOpen === 'boolean' ? saved.filtersOpen : base.filtersOpen,
       summary: saved.summary === true,
-      grouping: typeof saved.grouping === 'string' ? saved.grouping : base.grouping
+      grouping: typeof saved.grouping === 'string' ? saved.grouping : base.grouping,
+      summaryTable: readSummaryTable(saved.summaryTable, base.summaryTable)
     };
   } catch {
     return base;
   }
+}
+
+/** 저장된 요약표 상태를 믿을 수 있는 것만 읽는다 */
+function readSummaryTable(saved, base) {
+  if (!saved || typeof saved !== 'object') return base;
+  return {
+    columns: Array.isArray(saved.columns) ? saved.columns.filter((key) => typeof key === 'string') : base.columns,
+    widths: saved.widths && typeof saved.widths === 'object' ? saved.widths : base.widths,
+    pinned: Number.isInteger(saved.pinned) ? saved.pinned : base.pinned,
+    sorts: Array.isArray(saved.sorts) ? saved.sorts.filter((sort) => sort?.key) : base.sorts
+  };
 }
 
 /** @param {ViewState} view */
@@ -64,7 +78,8 @@ export function saveView(view) {
       filters: view.filters,
       filtersOpen: view.filtersOpen,
       summary: view.summary,
-      grouping: view.grouping
+      grouping: view.grouping,
+      summaryTable: view.summaryTable
     }));
   } catch {
     // 저장 자리가 없거나 시크릿 모드다. 화면은 그대로 돌아가야 하므로 삼킨다

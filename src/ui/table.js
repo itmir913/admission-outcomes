@@ -89,8 +89,10 @@ export function cellText(key, value) {
  * @param {HTMLElement} options.empty 결과가 없을 때 보일 자리
  * @param {(row: object) => void} [options.onRowOpen]
  * @param {(state: object) => void} [options.onStateChange] 정렬·너비가 바뀔 때
+ * @param {(key: string) => boolean} [options.canFilter] 그 열에 검색칸·값 목록을 둘지.
+ *        요약표의 집계 열(지원 건수 같은)은 원본 행의 열이 아니라 거를 수 없다
  */
-export function createTable({ scroller, colgroup, headRow, searchRow, body, empty, onRowOpen, onStateChange, onColumnSearch, columnSearch = () => '', columnFiltered = () => false, onColumnFilter, onPinnedChange }) {
+export function createTable({ scroller, colgroup, headRow, searchRow, body, empty, onRowOpen, onStateChange, onColumnSearch, columnSearch = () => '', columnFiltered = () => false, onColumnFilter, onPinnedChange, canFilter = () => true }) {
   /** @type {object[]} */
   let rows = [];
   /** @type {Map<string, object>} */
@@ -307,10 +309,12 @@ export function createTable({ scroller, colgroup, headRow, searchRow, body, empt
         on: { pointerdown: (event) => startResize(event, key) }
       });
 
-      searchRow?.append(el('th', {
+      const 검색칸 = {
         class: `${pinned ? 'pinned' : ''} ${pinned && index === 고정수 - 1 ? 'pin-edge' : ''}`,
         style: pinned ? { left: `${offsets[index]}px` } : {}
-      }, [
+      };
+      // 거를 수 없는 열도 칸은 둔다. 빼면 아래 줄의 칸이 한 칸씩 밀린다
+      searchRow?.append(el('th', 검색칸, !canFilter(key) ? [] : [
         el('div', { class: 'col-search' }, [
           el('input', {
             attrs: {

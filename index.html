@@ -379,8 +379,23 @@
           0건이 되는 순간 요약 띠·검색칸·단추줄이 표와 함께 사라졌다. 여기 두면
           열 이름 줄과 검색칸은 그대로 서 있고 몸통 자리에만 안내가 뜬다.
         -->
-        <!-- 대학×전형 요약표. 보기를 전환하면 목록표 자리에 선다 -->
-        <div id="요약표" class="hidden px-4 pb-6 sm:px-6"></div>
+        <!--
+          대학×전형 요약표. 보기를 전환하면 목록표 자리에 선다.
+          표는 목록표와 같은 컴포넌트가 그린다 — 정렬·너비·순서·고정이 똑같이 움직여야 한다.
+        -->
+        <div id="요약표" class="hidden">
+          <div id="요약머리" class="sticky left-0 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6"></div>
+          <table class="grid-table">
+            <colgroup id="요약열너비"></colgroup>
+            <thead>
+              <tr id="요약헤더행"></tr>
+              <tr id="요약검색행"></tr>
+            </thead>
+            <tbody id="요약본문행"></tbody>
+          </table>
+          <p id="요약없음" class="sticky left-0 hidden w-full px-6 py-20 text-center text-lg text-ink-soft"></p>
+          <ul id="요약각주" class="sticky left-0 mt-4 max-w-3xl list-disc space-y-1 px-4 pl-9 pb-6 text-base text-ink-soft sm:px-6 sm:pl-11"></ul>
+        </div>
 
         <p id="표없음" class="sticky left-0 hidden w-full px-6 py-20 text-center text-lg text-ink-soft"></p>
       </div>

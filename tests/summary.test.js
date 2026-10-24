@@ -143,3 +143,31 @@ describe('합친 고3 년도 범위를 돌려준다', () => {
     expect(summarize(rows, { keys: ['univ'], gpaKey: null }).years).toEqual({ from: 2023, to: 2025 });
   });
 });
+
+describe('표 한 줄씩으로 편다 — 지원 목록과 같은 표로 그리기 위해', () => {
+  const rows = rowsOf([app('a', '가', '교과', '합'), app('b', '가', '교과', '불')], { a: 2.1 });
+  const summary = summarize(rows, { keys: ['univ', 'admType'], gpaKey: 'gpa.전교과' });
+
+  it('숫자 칸에는 숫자만 담는다 — 글자가 섞이면 정렬이 뜻을 잃는다', async () => {
+    const { summaryRows } = await import('../src/analysis/summary.js');
+    const { rows: flat, fields } = summaryRows(summary, { keys: ['univ', 'admType'], gpaLabel: '전교과' });
+    for (const field of fields.filter((item) => item.numeric)) {
+      const value = flat[0][field.key];
+      expect(value === null || typeof value === 'number', field.key).toBe(true);
+    }
+    // 판정 2건뿐이라 합격률은 비운다
+    expect(flat[0]['sum.합격률']).toBeNull();
+    expect(flat[0]['sum.판정']).toBe(2);
+    expect(flat[0]['#values']).toEqual(['가', '교과']);
+  });
+
+  it('자료에 없는 칸은 열로 만들지 않는다', async () => {
+    const { summaryRows } = await import('../src/analysis/summary.js');
+    const { fields } = summaryRows(summary, { keys: ['univ'], gpaLabel: null });
+    const keys = fields.map((field) => field.key);
+    expect(keys).not.toContain('admType');
+    expect(keys).not.toContain('sum.내신');
+    expect(keys).not.toContain('sum.등록');
+    expect(fields.find((field) => field.key === 'sum.학생').label).toBe('지원 학생 수');
+  });
+});

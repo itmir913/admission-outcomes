@@ -10,7 +10,7 @@
 
 import { tallyOutcomes, passRate } from '../ui/outcome.js';
 import { STAGE1_FAIL_LABEL } from '../core/outcome.js';
-import { isBlank } from './registry.js';
+import { isBlank, formatNumber } from './registry.js';
 
 /** 이보다 적으면 비율을 내지 않고, 내신은 범위 대신 값을 늘어놓는다 */
 export const SMALL_SAMPLE = 5;
@@ -119,4 +119,64 @@ export function summarize(rows, { keys, gpaKey }) {
     hasWaitRank,
     years: years.length === 0 ? null : { from: Math.min(...years), to: Math.max(...years) }
   };
+}
+
+/**
+ * 묶음 결과를 표 한 줄씩으로 편다. 지원 목록과 **같은 표 컴포넌트**로 그리기 위해서다 —
+ * 정렬·열 너비·열 순서·열 고정을 두 표에서 똑같이 다뤄야 상담 중에 손이 헷갈리지 않는다.
+ *
+ * 숫자 칸에는 **숫자만** 담는다. 「표본 2건」 같은 글자를 섞으면 그 열의 정렬이 뜻을 잃는다.
+ * 비율을 내지 않은 자리는 빈칸이고, 왜 빈칸인지는 「최종 판정」 칸과 각주가 말한다.
+ *
+ * @param {ReturnType<typeof summarize>} summary
+ * @param {{keys: string[], gpaLabel: string|null}} options
+ * @returns {{rows: object[], fields: {key: string, label: string, group: string, type: string, numeric: boolean}[]}}
+ */
+export function summaryRows(summary, { keys, gpaLabel }) {
+  const 숫자칸 = (key, label) => ({ key, label, group: 'summary', type: 'number', numeric: true });
+  const fields = [
+    ...keys.map((key) => ({ key, label: key === 'univ' ? '대학' : '전형', group: 'summary', type: 'text', numeric: false })),
+    숫자칸('sum.지원', '지원 건수'),
+    숫자칸('sum.학생', '지원 학생 수'),
+    숫자칸('sum.합격', '● 합격'),
+    숫자칸('sum.충원합격', '△ 충원합격'),
+    숫자칸('sum.불합격', '✕ 불합격'),
+    숫자칸('sum.1단계불합격', '1단계 불합격'),
+    숫자칸('sum.판정', '최종 판정'),
+    숫자칸('sum.합격률', '합격률(%)'),
+    ...(gpaLabel ? [
+      { key: 'sum.내신', label: `합격자 내신 (${gpaLabel})`, group: 'summary', type: 'text', numeric: false },
+      숫자칸('sum.내신빈칸', '내신 빈칸')
+    ] : []),
+    ...(summary.hasRegister ? [숫자칸('sum.등록', '등록')] : []),
+    ...(summary.hasWaitRank ? [숫자칸('sum.예비순위', '충원 예비순위(최대)')] : [])
+  ];
+
+  const 내신글자 = (gpa) => {
+    if (!gpa || gpa.kind === 'none') return null;
+    if (gpa.kind === 'list') return gpa.values.map(formatNumber).join(' · ');
+    return `${formatNumber(gpa.min)} / 중앙 ${formatNumber(gpa.median)} / ${formatNumber(gpa.max)}`;
+  };
+
+  const rows = summary.groups.map((group) => {
+    const row = { '#values': group.values };
+    keys.forEach((key, index) => { row[key] = group.values[index]; });
+    row['sum.지원'] = group.tally.지원;
+    row['sum.학생'] = group.tally.학생;
+    row['sum.합격'] = group.tally.합격;
+    row['sum.충원합격'] = group.tally.충원합격;
+    row['sum.불합격'] = group.tally.불합격;
+    row['sum.1단계불합격'] = group.stage1Fail;
+    row['sum.판정'] = group.judged;
+    // 소수 첫째 자리까지만 — 표본이 수십 건인 자리에서 그 아래 자릿수는 뜻이 없다
+    row['sum.합격률'] = group.rate === null ? null : Math.round(group.rate * 1000) / 10;
+    if (gpaLabel) {
+      row['sum.내신'] = 내신글자(group.gpa);
+      row['sum.내신빈칸'] = group.gpaBlank;
+    }
+    if (summary.hasRegister) row['sum.등록'] = group.registered;
+    if (summary.hasWaitRank) row['sum.예비순위'] = group.maxWaitRank;
+    return row;
+  });
+  return { rows, fields };
 }

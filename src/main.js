@@ -19,7 +19,7 @@ import {
 
 import { buildRows } from './analysis/rows.js';
 import { buildRegistry, defaultColumns, fieldLabel, primaryGpaField } from './analysis/registry.js';
-import { applyQuery, describeFilter } from './analysis/query.js';
+import { applyQuery, describeFilter, sortRows } from './analysis/query.js';
 import { unknownOutcomeTerms } from './core/outcome.js';
 
 import { pick, el, clear, debounce } from './ui/dom.js';
@@ -29,7 +29,8 @@ import { readFiles, confirmUploads, bindDropzone } from './ui/upload.js';
 import { openStudent } from './ui/student.js';
 import { outcomeBar, passRate, rateNote, tallyOutcomes } from './ui/outcome.js';
 import { openFiles, openColumns } from './ui/panels.js';
-import { renderSummaryTable } from './ui/summaryTable.js';
+import { paintSummaryChrome } from './ui/summaryTable.js';
+import { summarize, summaryRows, GROUPINGS } from './analysis/summary.js';
 import { loadView, saveView, forgetView, pruneView, emptyView } from './ui/prefs.js';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -70,8 +71,6 @@ const state = {
   search: '',
   /** 지금 보는 쪽(0부터). 조건이 바뀌면 첫 쪽으로 돌아간다 */
   page: 0,
-  /** 요약표의 정렬. 상담 중 잠깐 바꿔 보는 값이라 저장하지 않는다 */
-  summarySort: 'name',
   warnings: []
 };
 
@@ -81,15 +80,11 @@ function busy(on) {
 }
 
 // ── 표 ────────────────────────────────────────────────────────────────────────
-const table = createTable({
-  scroller: dom.표,
-  colgroup: pick('#열너비'),
-  headRow: pick('#헤더행'),
-  searchRow: pick('#검색행'),
-  body: pick('#본문행'),
-  empty: dom.표없음,
-  // 실제로 고정된 수가 달라졌으면 도구줄의 숫자도 따라가야 한다
-  onPinnedChange: () => paintToolbar(),
+/**
+ * 열 이름 줄의 검색칸·값 목록. **두 표가 같은 것을 쓴다.** 요약표의 대학·전형 칸에서
+ * 거른 것은 지원 목록의 같은 열 필터다 — 요약표는 그 결과를 묶어 셀 뿐이다.
+ */
+const 열필터 = {
   /** 열 이름 줄 검색칸에 지금 무엇이 적혀 있는지. 다시 그려도 글자가 남아야 한다 */
   columnSearch: (key) => {
     const found = state.view.filters.find((filter) => filter.key === key && filter.op === 'contains');
@@ -106,7 +101,19 @@ const table = createTable({
     state.view = { ...state.view, filters: next };
     saveView(state.view);
     refresh({ keepScroll: true });
-  },
+  }
+};
+
+const table = createTable({
+  scroller: dom.표,
+  colgroup: pick('#열너비'),
+  headRow: pick('#헤더행'),
+  searchRow: pick('#검색행'),
+  body: pick('#본문행'),
+  empty: dom.표없음,
+  // 실제로 고정된 수가 달라졌으면 도구줄의 숫자도 따라가야 한다
+  onPinnedChange: () => paintToolbar(),
+  ...열필터,
   onRowOpen: (row) => {
     // 지금 걸린 조건과 무관하게 그 학생의 **전체** 이력을 보여 준다.
     // 상담에서 알고 싶은 것은 "이 학생이 어디에 어떻게 지원했나" 전부다
@@ -148,6 +155,35 @@ const table = createTable({
   },
   onStateChange: (next) => {
     state.view = { ...state.view, sorts: next.sorts, widths: next.widths, pinned: next.pinned, columns: next.columns };
+    saveView(state.view);
+    refresh({ keepScroll: true });
+  }
+});
+
+/**
+ * 대학×전형 요약표. 지원 목록과 **같은 컴포넌트**다 — 정렬·너비·순서·고정이 똑같이 움직인다.
+ * 다른 것은 줄을 눌렀을 때뿐이다. 학생이 아니라 그 대학·전형의 지원 목록으로 간다.
+ */
+const 요약격자 = createTable({
+  scroller: dom.표,
+  colgroup: pick('#요약열너비'),
+  headRow: pick('#요약헤더행'),
+  searchRow: pick('#요약검색행'),
+  body: pick('#요약본문행'),
+  empty: pick('#요약없음'),
+  onPinnedChange: () => paintToolbar(),
+  ...열필터,
+  // 집계 칸(지원 건수 같은)은 원본 행의 열이 아니라 거를 수 없다
+  canFilter: (key) => key === 'univ' || key === 'admType',
+  onRowOpen: (row) => {
+    const 묶음 = GROUPINGS[state.view.grouping] ?? GROUPINGS.univAdm;
+    요약줄열기(묶음.keys.map((key, index) => ({ key, value: row['#values'][index] })));
+  },
+  onStateChange: (next) => {
+    state.view = {
+      ...state.view,
+      summaryTable: { columns: next.columns, widths: next.widths, pinned: next.pinned, sorts: next.sorts }
+    };
     saveView(state.view);
     refresh({ keepScroll: true });
   }
@@ -320,7 +356,7 @@ function 팝오버닫기() {
   열린열 = null;
   dom.열팝오버.classList.add('hidden');
   clear(dom.열팝오버);
-  table.markOpenFilter(null);
+  지금표().markOpenFilter(null);
 }
 
 /** 내용만 다시 그린다. 자리는 그대로 둔다 — 값을 선택할 때마다 창이 뛰면 다음 값을 누를 수 없다. */
@@ -369,7 +405,7 @@ function 팝오버열기(key, anchor) {
   열린열 = key;
   dom.열팝오버.classList.remove('hidden');
   팝오버그리기();
-  table.markOpenFilter(key);
+  지금표().markOpenFilter(key);
   const 폭 = dom.열팝오버.offsetWidth;
   const 높이 = dom.열팝오버.offsetHeight;
   // 화면 밖으로 나가지 않게 가둔다. 오른쪽 끝 열에서 특히 자주 넘친다
@@ -442,8 +478,10 @@ function paintToolbar() {
    * 정하고 그것은 사람마다 매 순간 다르다 — 숫자로 박으면 넓은 화면에서 필요 없이
    * 막기만 한다. 누를 수 없으니 「눌러도 아무 일 없음」도 생기지 않는다.
    */
-  disable('#고정늘리기', 보이는고정 >= state.view.columns.length || !table.canPinMore());
-  disable('#정렬초기화', state.view.sorts.length === 0);
+  disable('#고정늘리기', 보이는고정 >= 지금보기().columns.length || !지금표().canPinMore());
+  disable('#정렬초기화', 지금보기().sorts.length === 0);
+  // 요약표의 열은 묶음 기준이 정한다. 고를 열이 따로 없다
+  disable('#열선택', state.view.summary === true);
   disable('#필터초기화', state.view.filters.length === 0);
   disable('#열초기화', false);
 }
@@ -462,8 +500,8 @@ function paintToolbar() {
  * 숫자는 「안 들어간다」가 아니라 「아직 모른다」다.
  */
 function 고정보이는수() {
-  const 천장 = Math.min(state.view.pinned, state.view.columns.length);
-  return table.drawnPinned() ?? 천장;
+  const 천장 = Math.min(지금보기().pinned, 지금보기().columns.length);
+  return 지금표().drawnPinned() ?? 천장;
 }
 
 /** 보존할 것만 남기고 화면 상태를 바꾼다. */
@@ -517,7 +555,6 @@ function paintView(visible) {
   pick('#목록표').classList.toggle('hidden', 요약);
   pick('#요약표').classList.toggle('hidden', !요약);
   pick('#쪽넘김').classList.toggle('hidden', 요약);
-  pick('#표설정').classList.toggle('hidden', 요약);
   for (const [selector, on] of [['#보기목록', !요약], ['#보기요약', 요약]]) {
     const node = pick(selector);
     node.setAttribute('aria-pressed', String(on));
@@ -526,17 +563,59 @@ function paintView(visible) {
   if (!요약) return;
 
   const gpa = primaryGpaField(state.registry);
-  renderSummaryTable(pick('#요약표'), {
-    rows: visible,
-    gpaField: gpa ? { key: gpa.key, label: fieldLabel(gpa.key) } : null,
+  const gpaLabel = gpa ? fieldLabel(gpa.key) : null;
+  const 묶음 = GROUPINGS[state.view.grouping] ?? GROUPINGS.univAdm;
+  const summary = summarize(visible, { keys: 묶음.keys, gpaKey: gpa?.key ?? null });
+  const { rows, fields } = summaryRows(summary, { keys: 묶음.keys, gpaLabel });
+
+  paintSummaryChrome(pick('#요약머리'), pick('#요약각주'), {
+    summary,
+    gpaLabel,
     grouping: state.view.grouping,
-    sort: state.summarySort,
-    onChange: ({ grouping, sort }) => {
-      if (sort) { state.summarySort = sort; refresh({ keepScroll: true }); }
-      if (grouping) updateView({ grouping });
-    },
-    onOpen: 요약줄열기
+    onGrouping: (grouping) => updateView({ grouping })
   });
+
+  /*
+   * **열 목록은 묶음 기준과 자료가 정한다.** 사람이 바꾼 집계 열의 순서는 지키되, 지금 없는 열
+   * (대학만으로 접었을 때의 전형, 등록 열이 없는 자료의 등록)은 빼고 새로 생긴 열은 뒤에 붙인다.
+   */
+  const 있는열 = fields.map((field) => field.key);
+  const 보기 = state.view.summaryTable;
+  // 묶음 열(대학·전형)은 늘 맨 앞이다. 대학만으로 묶었다 돌아오면 전형이 맨 뒤에 붙어 줄이 무엇인지 안 보였다
+  const 나머지 = 있는열.filter((key) => !묶음.keys.includes(key));
+  const columns = [
+    ...묶음.keys,
+    ...보기.columns.filter((key) => 나머지.includes(key)),
+    ...나머지.filter((key) => !보기.columns.includes(key))
+  ];
+  const sorts = 보기.sorts.filter((sort) => 있는열.includes(sort.key));
+  state.view = { ...state.view, summaryTable: { ...보기, columns, sorts } };
+
+  pick('#요약없음').textContent = '걸려 있는 조건에 맞는 지원 기록이 없습니다. 위 칩에서 필터를 하나씩 떼어 보세요.';
+  // 정렬을 걸지 않았으면 이름순으로 둔다. 다시 그릴 때마다 줄 순서가 흔들리면 보던 줄을 놓친다
+  const 이름순 = [...rows].sort((left, right) => 묶음.keys
+    .map((key) => String(left[key] ?? '').localeCompare(String(right[key] ?? ''), 'ko'))
+    .find((order) => order !== 0) ?? 0);
+  요약격자.render({
+    rows: sortRows(이름순, sorts),
+    registry: fields,
+    state: { columns, widths: 보기.widths, pinned: 보기.pinned, sorts }
+  });
+}
+
+/** 지금 보이는 표. 도구줄의 열 고정·정렬 초기화가 이 표를 다룬다 */
+function 지금표() {
+  return state.view.summary ? 요약격자 : table;
+}
+
+/** 지금 보이는 표의 열·정렬 상태 */
+function 지금보기() {
+  return state.view.summary ? state.view.summaryTable : state.view;
+}
+
+function 지금보기바꾸기(patch) {
+  if (state.view.summary) updateView({ summaryTable: { ...state.view.summaryTable, ...patch } });
+  else updateView(patch);
 }
 
 /**
@@ -559,6 +638,7 @@ function 요약줄열기(picked) {
 }
 
 function refresh({ keepScroll = false } = {}) {
+  const 처음자리 = dom.표.scrollTop;
   const hasData = state.rows.length > 0;
   dom.시작화면.classList.toggle('hidden', hasData);
   dom.본화면.classList.toggle('hidden', !hasData);
@@ -603,13 +683,9 @@ function refresh({ keepScroll = false } = {}) {
   paintNotices();
   filters.render();
 
-  if (keepScroll) {
-    const top = dom.표.scrollTop;
-    table.render({ rows: 이쪽, registry: state.registry, state: viewForTable() });
-    dom.표.scrollTop = top;
-  } else {
-    table.render({ rows: 이쪽, registry: state.registry, state: viewForTable() });
-  }
+  table.render({ rows: 이쪽, registry: state.registry, state: viewForTable() });
+  // 두 표 모두 그릴 때 맨 위로 돌아가므로, 자리는 그리기 전에 적어 둔 것으로 되돌린다
+  if (keepScroll) dom.표.scrollTop = 처음자리;
   // 목록표가 0건이면 안내를 띄우는데, 요약표는 자기 자리에서 따로 말한다
   if (state.view.summary) dom.표없음.classList.add('hidden');
 }
@@ -784,19 +860,21 @@ globalThis.addEventListener('keydown', (event) => {
  * 천장이 5인데 셋만 들어가는 화면에서 「−」가 천장을 4로 내리면 화면은 그대로
  * 셋이고 숫자도 그대로 셋이다 — 눌렀는데 아무 일도 안 일어난다.
  */
-const 고정조정 = (step) => updateView({
-  pinned: Math.max(0, Math.min(state.view.columns.length, 고정보이는수() + step))
+const 고정조정 = (step) => 지금보기바꾸기({
+  pinned: Math.max(0, Math.min(지금보기().columns.length, 고정보이는수() + step))
 });
 pick('#고정줄이기').addEventListener('click', () => 고정조정(-1));
 pick('#고정늘리기').addEventListener('click', () => 고정조정(1));
 
-pick('#정렬초기화').addEventListener('click', () => updateView({ sorts: [] }));
+pick('#정렬초기화').addEventListener('click', () => 지금보기바꾸기({ sorts: [] }));
 pick('#필터초기화').addEventListener('click', () => updateView({ filters: [] }));
 
 // 열 구성·순서·너비를 한꺼번에 되돌린다. 하나씩 되돌리게 하면 아무도 안 쓴다
 pick('#열초기화').addEventListener('click', () => {
   const base = emptyView();
-  updateView({ columns: defaultColumns(state.registry), widths: {}, pinned: base.pinned });
+  // 요약표의 열 목록은 그릴 때마다 묶음 기준에서 다시 채워진다. 비워 두면 기본 순서로 돌아온다
+  if (state.view.summary) 지금보기바꾸기({ columns: [], widths: {}, pinned: base.summaryTable.pinned });
+  else updateView({ columns: defaultColumns(state.registry), widths: {}, pinned: base.pinned });
 });
 
 pick('#인쇄').addEventListener('click', () => globalThis.print());
