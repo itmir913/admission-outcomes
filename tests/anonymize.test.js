@@ -99,6 +99,22 @@ describe('식별 키 만들기', () => {
   });
 });
 
+describe('반·번호 표기 차이', () => {
+  it("'3반'·'5번'·'3.0'은 '3'·'5'와 같은 키가 된다", () => {
+    // 파일마다 단위를 붙이거나 소수로 담아도 한 학생이 둘로 나뉘면 안 된다
+    const plain = identityKeys(2025, { classNo: '3', number: '5' })[0].text;
+    expect(identityKeys(2025, { classNo: '3반', number: '5번' })[0].text).toBe(plain);
+    expect(identityKeys(2025, { classNo: '3.0', number: '05' })[0].text).toBe(plain);
+  });
+
+  it('그 밖의 모양은 벗기지 않는다', () => {
+    // 넓게 지우면 서로 다른 값이 한 키로 합쳐질 수 있다
+    const plain = identityKeys(2025, { classNo: '3', number: '5' })[0].text;
+    expect(identityKeys(2025, { classNo: '3-1', number: '5' })[0].text).not.toBe(plain);
+    expect(identityKeys(2025, { classNo: '3.5', number: '5' })[0].text).not.toBe(plain);
+  });
+});
+
 describe('익명 ID 발급', () => {
   it('행마다 ID를 매긴다', async () => {
     const result = await assignStudentIds([entry(2025, 김가온), entry(2025, 박서린)]);

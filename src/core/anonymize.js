@@ -116,7 +116,10 @@ function normalizePart(value, options = {}) {
   if (isBlankMark(text, options)) return '';
   // 엑셀은 같은 반·번호·학번을 파일마다 문자열('01')로도 숫자(1)로도 담는다.
   // 앞의 0을 떼어 표기 차이를 흡수하지 않으면 한 학생이 둘로 나뉜다
-  return /^\d+$/.test(text) ? String(Number(text)) : text;
+  // '3반'·'5번'·'3.0'도 같은 반·번호다. 이 셋만 벗기고, 그 밖의 모양은 건드리지 않는다 —
+  // 넓게 지우면 서로 다른 값이 한 키로 합쳐질 수 있다(§3 모호하면 합치지 않는다)
+  const stripped = options.nameField ? text : text.replace(/(?:\.0+|반|번)$/, '');
+  return /^\d+$/.test(stripped) ? String(Number(stripped)) : text;
 }
 
 /**
