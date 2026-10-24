@@ -365,3 +365,27 @@ describe('보관소까지 이어지는 왕복', () => {
     expect(after).toHaveLength(6);
   });
 });
+
+describe('행마다 연도가 적힌 누적 파일', () => {
+  /*
+   * 사람이 고3 년도 칸을 비우면 행별 연도로 읽어야 한다. 예전에는 `??`로 파일 이름의
+   * 추정 연도가 메워져 모든 행이 한 해로 덮였다 — 한 해 밀린 값이 조용히 저장된다 (§2).
+   */
+  it('고3 년도 칸을 비우면 파일 이름 연도로 덮지 않고 행별로 읽는다', async () => {
+    const grid = senjinhakGrid(2026);
+    grid[3][0] = 2025;
+    grid[4][0] = 2025;
+    const { sheets } = await prepareUploads(
+      [upload('2026학년도 누적.xlsx', makeWorkbook({ result: grid }))],
+      { profiles: await profilesFor(grid), currentYear: NOW }
+    );
+    expect(sheets[0].reading.perRowYear).toBe(true);
+
+    const dataset = await commitSheets(sheets, { decisions: { [sheets[0].id]: { cohortYear: null } } });
+    expect(dataset.applications.map((row) => row.cohortYear).sort()).toEqual([2024, 2024, 2025, 2025]);
+    // 파일 연도가 없으니 파일 기록에도 null을 적지 않는다
+    expect(dataset.files[0].cohortYears).not.toContain(null);
+    expect(dataset.files[0].yearBySheet ?? {}).not.toHaveProperty(sheets[0].sheetName);
+  });
+});
+
