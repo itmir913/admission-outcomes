@@ -7,7 +7,7 @@
  * **축과 필터에 개수 제한을 두지 않는다.** 필터는 배열이고, 정렬 키도 배열이다.
  */
 
-import { isBlank, valueLabel } from './registry.js';
+import { isBlank, valueLabel, formatNumber } from './registry.js';
 
 /**
  * @typedef {object} Filter
@@ -59,8 +59,14 @@ export function matchesFilter(row, filter) {
 
   if (filter.op === 'range') {
     if (typeof value !== 'number' || !Number.isFinite(value)) return false;
-    if (filter.min !== null && filter.min !== undefined && value < filter.min) return false;
-    if (filter.max !== null && filter.max !== undefined && value > filter.max) return false;
+    /*
+     * **화면에 적힌 값으로 견준다.** 엑셀 수식으로 낸 2.333333은 「2.3333」으로 적히는데,
+     * 원값으로 견주면 보이는 대로 잡은 「≤ 2.3333」에서 그 학생이 조용히 빠졌다 (§5).
+     * 사람이 보고 판단하는 것은 화면 글자다.
+     */
+    const shown = Number(formatNumber(value));
+    if (filter.min !== null && filter.min !== undefined && shown < filter.min) return false;
+    if (filter.max !== null && filter.max !== undefined && shown > filter.max) return false;
     return true;
   }
 
@@ -107,7 +113,8 @@ export function matchesFilter(row, filter) {
  * @param {string} text
  */
 export function searchTokens(text) {
-  return String(text ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  // 맥에서 친 한글은 자모가 풀린 꼴(NFD)로 올 수 있다. 셀 값과 같은 꼴로 맞춰야 찾힌다
+  return String(text ?? '').normalize('NFC').trim().toLowerCase().split(/\s+/).filter(Boolean);
 }
 
 /**
