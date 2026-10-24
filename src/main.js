@@ -30,7 +30,7 @@ import { openStudent } from './ui/student.js';
 import { outcomeBar, passRate, rateNote, tallyOutcomes } from './ui/outcome.js';
 import { openFiles, openColumns } from './ui/panels.js';
 import { paintSummaryChrome } from './ui/summaryTable.js';
-import { summarize, summaryRows, GROUPINGS } from './analysis/summary.js';
+import { summarize, summaryRows, GROUPINGS, SMALL_SAMPLE } from './analysis/summary.js';
 import { loadView, saveView, forgetView, pruneView, emptyView } from './ui/prefs.js';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -218,6 +218,7 @@ function paintSummary(visible, total) {
   const tally = tallyOutcomes(visible);
   const rate = passRate(tally);
   const 걸러짐 = visible.length !== total;
+  const 표본적음 = tally.합격 + tally.충원합격 + tally.불합격 < SMALL_SAMPLE;
 
   const cell = (name, value, tone = '') => el('div', { class: `stat ${tone}` }, [
     el('p', { class: 'stat-name', text: name }),
@@ -238,7 +239,8 @@ function paintSummary(visible, total) {
     cell('합격', tally.합격, 'text-pass'),
     cell('충원합격', tally.충원합격, 'text-wait'),
     cell('불합격', tally.불합격, 'text-fail'),
-    cell('합격률', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`)
+    // 요약표와 같은 기준이다. 판정 1건에 「100.0%」를 띄우면 필터로 좁힌 자리가 합격선처럼 보인다
+    cell('합격률', rate === null || 표본적음 ? '—' : `${(rate * 100).toFixed(1)}%`)
   ];
 
   clear(dom.요약띠).append(el('div', { class: 'card overflow-hidden' }, [
@@ -246,7 +248,9 @@ function paintSummary(visible, total) {
     el('div', { class: 'border-t border-line-soft px-4 py-3' }, [outcomeBar(tally)]),
     el('p', {
       class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-base text-ink-soft',
-      text: rateNote(tally)
+      text: 표본적음 && rate !== null
+        ? `${rateNote(tally)} 최종 판정이 ${SMALL_SAMPLE}건 미만이라 합격률을 내지 않습니다.`
+        : rateNote(tally)
     })
   ]));
 }
