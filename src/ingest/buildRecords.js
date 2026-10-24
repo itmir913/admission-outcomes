@@ -62,7 +62,14 @@ export function coerce(key, raw) {
       if (성적 || !/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) return null;
     }
     const value = Number(text.replace(/,/g, ''));
-    return Number.isFinite(value) ? value : null;
+    if (!Number.isFinite(value)) return null;
+    /*
+     * **내신과 수능 등급의 0은 빈칸이다.** 등급에 0은 나올 수 없어, 값이 없는 자리를
+     * 0으로 채운 것이다. 그대로 두면 요약표 합격자 내신의 최저값에 「0」이 찍힌다.
+     * 표준점수·백분위의 0은 있을 수 있는 값이라 건드리지 않는다.
+     */
+    if (value === 0 && (parts[0] === 'gpa' || (parts[0] === 'suneung' && parts.at(-1) === 'grade'))) return null;
+    return value;
   }
   /*
    * **식별 열의 빈칸 표시는 빈칸으로 본다.**
