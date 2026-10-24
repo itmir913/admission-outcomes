@@ -546,15 +546,14 @@ function 필터판열림() {
  * 보기 전환 — 지원 목록과 대학×전형 요약표 (roadmap.md 1단계).
  *
  * 요약표는 **목록과 같은 행 집합**을 받는다. 그래서 요약표의 합계가 요약 띠와 같다.
- * 목록에만 뜻이 있는 쪽 넘김과 열 설정은 감춘다. 자리만 남겼더니 좁은 화면에서
- * 두 줄로 접힌 빈 자리가 요약표를 한참 밀어냈다. 보기 전환은 사람이 일부러 하는
- * 일이라, 그때 줄 높이가 바뀌는 것은 D15가 막으려던 들썩임이 아니다.
+ * 도구줄(쪽 넘김·열 고정·정렬 초기화…)은 두 보기에서 같은 자리에 같은 모양으로 선다.
+ * 단추는 지금 보이는 표를 다룬다(`지금표`). 요약표에 뜻이 없는 「열 선택」만 꺼 둔다.
  */
 function paintView(visible) {
   const 요약 = state.view.summary === true;
   pick('#목록표').classList.toggle('hidden', 요약);
   pick('#요약표').classList.toggle('hidden', !요약);
-  pick('#쪽넘김').classList.toggle('hidden', 요약);
+  dom.쪽번호.disabled = 요약;
   for (const [selector, on] of [['#보기목록', !요약], ['#보기요약', 요약]]) {
     const node = pick(selector);
     node.setAttribute('aria-pressed', String(on));
@@ -590,6 +589,15 @@ function paintView(visible) {
   ];
   const sorts = 보기.sorts.filter((sort) => 있는열.includes(sort.key));
   state.view = { ...state.view, summaryTable: { ...보기, columns, sorts } };
+
+  /*
+   * **도구줄은 목록과 똑같이 둔다.** 줄이 수십 개라 쪽은 늘 하나지만, 쪽 넘김을 감추면
+   * 보기를 바꿀 때마다 도구줄 모양이 달라진다. 줄 수는 요약표의 줄로 적는다.
+   */
+  dom.쪽수.textContent = '/ 1쪽';
+  dom.쪽번호.value = '1';
+  for (const selector of ['#첫쪽', '#앞쪽', '#뒤쪽', '#끝쪽']) pick(selector).disabled = true;
+  dom.행수.textContent = `${수.format(rows.length)}줄 · 지원 ${수.format(visible.length)}건`;
 
   pick('#요약없음').textContent = '걸려 있는 조건에 맞는 지원 기록이 없습니다. 위 칩에서 필터를 하나씩 떼어 보세요.';
   // 정렬을 걸지 않았으면 이름순으로 둔다. 다시 그릴 때마다 줄 순서가 흔들리면 보던 줄을 놓친다
