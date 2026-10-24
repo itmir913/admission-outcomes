@@ -312,7 +312,16 @@
                 쪽 넘김. 행이 수천이면 한 번에 다 그려도 눈으로 다 훑지 못하고,
                 「지금 어디쯤인가」를 스크롤 막대 하나로만 알게 된다. 쪽 번호가 그 자리를 말한다.
               -->
-              <div class="flex shrink-0 items-center gap-2 whitespace-nowrap">
+              <!--
+                보기 전환. 지원 한 건씩 보는 목록과, 대학×전형으로 묶은 요약표.
+                두 보기는 **같은 필터를 쓴다** — 따로 두면 같은 자료가 두 조건으로 세어진다.
+              -->
+              <div class="flex shrink-0 items-center gap-1 rounded-md border border-line bg-surface p-0.5" role="group" aria-label="보기">
+                <button type="button" id="보기목록" class="btn btn-sm min-h-8 border-transparent" aria-pressed="true">지원 목록</button>
+                <button type="button" id="보기요약" class="btn btn-sm min-h-8 border-transparent" aria-pressed="false">대학별 요약</button>
+              </div>
+
+              <div id="쪽넘김" class="flex shrink-0 items-center gap-2 whitespace-nowrap">
                 <button type="button" id="첫쪽" class="pager-btn" aria-label="첫 쪽" title="첫 쪽">⏮</button>
                 <button type="button" id="앞쪽" class="pager-btn" aria-label="이전 쪽" title="이전 쪽">◀</button>
                 <input id="쪽번호" class="pager-input" inputmode="numeric" aria-label="쪽 번호" value="1" />
@@ -321,7 +330,7 @@
                 <button type="button" id="끝쪽" class="pager-btn" aria-label="마지막 쪽" title="마지막 쪽">⏭</button>
               </div>
 
-              <div class="ml-auto flex flex-wrap items-center justify-end gap-2">
+              <div id="표설정" class="ml-auto flex flex-wrap items-center justify-end gap-2">
                 <!--
                   열 고정 (#3). 대화상자 안에만 있어서 표를 볼 때는 조정할 길이 없었다.
                   0까지 내리면 고정이 해제된다.
@@ -355,7 +364,7 @@
           </div>
         </div>
 
-        <table class="grid-table">
+        <table id="목록표" class="grid-table">
               <colgroup id="열너비"></colgroup>
               <thead>
                 <tr id="헤더행"></tr>
@@ -370,6 +379,9 @@
           0건이 되는 순간 요약 띠·검색칸·단추줄이 표와 함께 사라졌다. 여기 두면
           열 이름 줄과 검색칸은 그대로 서 있고 몸통 자리에만 안내가 뜬다.
         -->
+        <!-- 대학×전형 요약표. 보기를 전환하면 목록표 자리에 선다 -->
+        <div id="요약표" class="hidden px-4 pb-6 sm:px-6"></div>
+
         <p id="표없음" class="sticky left-0 hidden w-full px-6 py-20 text-center text-lg text-ink-soft"></p>
       </div>
     </div>

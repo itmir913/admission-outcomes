@@ -18,7 +18,7 @@ import {
 } from './store/db.js';
 
 import { buildRows } from './analysis/rows.js';
-import { buildRegistry, defaultColumns, fieldLabel } from './analysis/registry.js';
+import { buildRegistry, defaultColumns, fieldLabel, primaryGpaField } from './analysis/registry.js';
 import { applyQuery, describeFilter } from './analysis/query.js';
 import { unknownOutcomeTerms } from './core/outcome.js';
 
@@ -29,6 +29,7 @@ import { readFiles, confirmUploads, bindDropzone } from './ui/upload.js';
 import { openStudent } from './ui/student.js';
 import { outcomeBar, passRate, rateNote, tallyOutcomes } from './ui/outcome.js';
 import { openFiles, openColumns } from './ui/panels.js';
+import { renderSummaryTable } from './ui/summaryTable.js';
 import { loadView, saveView, forgetView, pruneView, emptyView } from './ui/prefs.js';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -69,6 +70,8 @@ const state = {
   search: '',
   /** 지금 보는 쪽(0부터). 조건이 바뀌면 첫 쪽으로 돌아간다 */
   page: 0,
+  /** 요약표의 정렬. 상담 중 잠깐 바꿔 보는 값이라 저장하지 않는다 */
+  summarySort: 'name',
   warnings: []
 };
 
@@ -230,7 +233,9 @@ function paintChips() {
   if (걸린것 === 0) {
     dom.칩줄.append(el('span', {
       class: 'truncate text-ink-soft',
-      text: '열 제목을 눌러 정렬 / 열을 드래그해 순서 변경 / 열 사이 선을 드래그해 너비 조절'
+      text: state.view.summary
+        ? '줄을 누르면 그 대학·전형으로 필터를 걸고 지원 목록으로 갑니다'
+        : '열 제목을 눌러 정렬 / 열을 드래그해 순서 변경 / 열 사이 선을 드래그해 너비 조절'
     }));
     return;
   }
@@ -499,6 +504,60 @@ function 필터판열림() {
   return globalThis.matchMedia?.('(min-width: 64rem)').matches ?? false;
 }
 
+/**
+ * 보기 전환 — 지원 목록과 대학×전형 요약표 (roadmap.md 1단계).
+ *
+ * 요약표는 **목록과 같은 행 집합**을 받는다. 그래서 요약표의 합계가 요약 띠와 같다.
+ * 목록에만 뜻이 있는 쪽 넘김과 열 설정은 감춘다. 자리만 남겼더니 좁은 화면에서
+ * 두 줄로 접힌 빈 자리가 요약표를 한참 밀어냈다. 보기 전환은 사람이 일부러 하는
+ * 일이라, 그때 줄 높이가 바뀌는 것은 D15가 막으려던 들썩임이 아니다.
+ */
+function paintView(visible) {
+  const 요약 = state.view.summary === true;
+  pick('#목록표').classList.toggle('hidden', 요약);
+  pick('#요약표').classList.toggle('hidden', !요약);
+  pick('#쪽넘김').classList.toggle('hidden', 요약);
+  pick('#표설정').classList.toggle('hidden', 요약);
+  for (const [selector, on] of [['#보기목록', !요약], ['#보기요약', 요약]]) {
+    const node = pick(selector);
+    node.setAttribute('aria-pressed', String(on));
+    node.classList.toggle('btn-primary', on);
+  }
+  if (!요약) return;
+
+  const gpa = primaryGpaField(state.registry);
+  renderSummaryTable(pick('#요약표'), {
+    rows: visible,
+    gpaField: gpa ? { key: gpa.key, label: fieldLabel(gpa.key) } : null,
+    grouping: state.view.grouping,
+    sort: state.summarySort,
+    onChange: ({ grouping, sort }) => {
+      if (sort) { state.summarySort = sort; refresh({ keepScroll: true }); }
+      if (grouping) updateView({ grouping });
+    },
+    onOpen: 요약줄열기
+  });
+}
+
+/**
+ * 요약표의 줄을 누르면 그 대학·전형으로 거르고 목록으로 돌아간다.
+ *
+ * 같은 열의 값 목록 필터는 **누적하지 않고 바꾼다.** 줄 하나를 눌렀으면 그 줄만 보고
+ * 싶은 것이다 — 누적하면 앞서 누른 대학이 남아 「이 줄의 지원」이 아닌 것이 섞인다.
+ * 되돌아가는 길은 칩줄에 바로 보인다.
+ */
+function 요약줄열기(picked) {
+  let next = state.view.filters;
+  for (const { key, value } of picked) {
+    next = next.filter((filter) => !(filter.key === key && (filter.op === 'in' || filter.op === 'blank')));
+    next = [...next, value === null ? { key, op: 'blank' } : { key, op: 'in', values: [value] }];
+  }
+  state.view = { ...state.view, filters: next, summary: false };
+  saveView(state.view);
+  refresh();
+  dom.표.scrollTop = 0;
+}
+
 function refresh({ keepScroll = false } = {}) {
   const hasData = state.rows.length > 0;
   dom.시작화면.classList.toggle('hidden', hasData);
@@ -539,6 +598,7 @@ function refresh({ keepScroll = false } = {}) {
   paintToolbar();
   팝오버그리기();
   paintSummary(visible, state.rows.length);
+  paintView(visible);
   paintChips();
   paintNotices();
   filters.render();
@@ -550,6 +610,8 @@ function refresh({ keepScroll = false } = {}) {
   } else {
     table.render({ rows: 이쪽, registry: state.registry, state: viewForTable() });
   }
+  // 목록표가 0건이면 안내를 띄우는데, 요약표는 자기 자리에서 따로 말한다
+  if (state.view.summary) dom.표없음.classList.add('hidden');
 }
 
 // ── 쪽 넘김 ──────────────────────────────────────────────────────────────────
@@ -586,6 +648,8 @@ function 쪽가기(page) {
   refresh();
 }
 
+pick('#보기목록').addEventListener('click', () => { if (state.view.summary) updateView({ summary: false }); });
+pick('#보기요약').addEventListener('click', () => { if (!state.view.summary) updateView({ summary: true }); });
 pick('#첫쪽').addEventListener('click', () => 쪽가기(0));
 pick('#앞쪽').addEventListener('click', () => 쪽가기(state.page - 1));
 pick('#뒤쪽').addEventListener('click', () => 쪽가기(state.page + 1));

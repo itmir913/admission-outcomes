@@ -9,7 +9,7 @@
 
 const KEY = 'admission-outcomes:view';
 
-/** @typedef {{columns: string[], widths: Record<string, number>, pinned: number, sorts: object[], filters: object[], filtersOpen: boolean|null}} ViewState */
+/** @typedef {{columns: string[], widths: Record<string, number>, pinned: number, sorts: object[], filters: object[], filtersOpen: boolean|null, summary: boolean, grouping: string}} ViewState */
 
 /**
  * 처음 상태.
@@ -21,7 +21,8 @@ const KEY = 'admission-outcomes:view';
  */
 export function emptyView() {
   // `filtersOpen`이 null이면 화면 폭이 정한다. 사람이 한 번 전환하면 그 선택이 남는다
-  return { columns: [], widths: {}, pinned: 3, sorts: [], filters: [], filtersOpen: null };
+  // `summary`는 대학×전형 요약표를 보는 중인지, `grouping`은 그 표의 묶음 기준이다
+  return { columns: [], widths: {}, pinned: 3, sorts: [], filters: [], filtersOpen: null, summary: false, grouping: 'univAdm' };
 }
 
 /**
@@ -43,7 +44,9 @@ export function loadView() {
       pinned: Number.isInteger(saved.pinned) ? saved.pinned : base.pinned,
       sorts: Array.isArray(saved.sorts) ? saved.sorts.filter((sort) => sort?.key) : base.sorts,
       filters: Array.isArray(saved.filters) ? saved.filters.filter((filter) => filter?.key && filter?.op) : base.filters,
-      filtersOpen: typeof saved.filtersOpen === 'boolean' ? saved.filtersOpen : base.filtersOpen
+      filtersOpen: typeof saved.filtersOpen === 'boolean' ? saved.filtersOpen : base.filtersOpen,
+      summary: saved.summary === true,
+      grouping: typeof saved.grouping === 'string' ? saved.grouping : base.grouping
     };
   } catch {
     return base;
@@ -59,7 +62,9 @@ export function saveView(view) {
       pinned: view.pinned,
       sorts: view.sorts,
       filters: view.filters,
-      filtersOpen: view.filtersOpen
+      filtersOpen: view.filtersOpen,
+      summary: view.summary,
+      grouping: view.grouping
     }));
   } catch {
     // 저장 자리가 없거나 시크릿 모드다. 화면은 그대로 돌아가야 하므로 삼킨다
