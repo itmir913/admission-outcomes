@@ -224,6 +224,18 @@ export async function saveDataset(db, dataset) {
    * 읽은 시트 목록을 쓴다. 지원 기록에서 거꾸로 뽑으면 **행이 0건이 된 시트가 빠져**,
    * 그 시트의 옛 기록이 지워지지 않고 남는다. 목록이 없는 옛 호출은 기록에서 뽑는다.
    */
+  /*
+   * **사람이 교체하겠다고 선택한 같은 이름의 옛 파일을 먼저 걷어낸다.**
+   *
+   * 내용 해시가 달라 아래의 시트 단위 걷어내기로는 잡히지 않는다. 학생 정리는 맨 끝의
+   * 「기록이 없는 학생 지우기」가 맡는다.
+   */
+  for (const hash of dataset.replacedFiles ?? []) {
+    for (const old of await promisify(applications.index('fileHash').getAll(hash))) {
+      applications.delete(old.id);
+    }
+    files.delete(hash);
+  }
   const incomingSheets = new Set([
     ...(dataset.readSheets ?? []).map((sheet) => 시트키(sheet.fileHash, sheet.sheetName)),
     ...(dataset.applications ?? [])

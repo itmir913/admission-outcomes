@@ -92,6 +92,9 @@ export function uploadBlockers(sheets, decisions) {
     if (decision.cohortYear === null && needsFileYear(sheet)) {
       problems.push(`${sheet.fileName}: 고3 년도를 넣어 주세요`);
     }
+    if ((sheet.sameName ?? []).length > 0 && typeof decision.replace !== 'boolean') {
+      problems.push(`${sheet.fileName}: 같은 이름의 옛 파일을 교체할지 선택해 주세요`);
+    }
   }
   return problems;
 }
@@ -229,6 +232,46 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         : 'mr-auto text-base text-ink-soft';
     }
 
+    /*
+     * 교체 여부는 **파일 단위**다. 한 파일의 시트가 여럿이면 카드마다 같은 질문이 뜨는데,
+     * 한 곳에서 선택하면 나머지도 따라가게 해 두 번 묻지 않는다.
+     */
+    const 교체표시 = new Map();
+    function replaceChoice(sheet) {
+      const 옛이름 = sheet.sameName.map((file) => file.name)[0];
+      const 바꾸기 = el('button', { class: 'btn w-full sm:w-auto', text: '옛 파일을 지우고 바꾸기', attrs: { type: 'button' } });
+      const 더하기 = el('button', { class: 'btn w-full sm:w-auto', text: '따로 더하기', attrs: { type: 'button' } });
+      const 보이기 = (replace) => {
+        // 색만으로 구분하지 않는다 — 선택한 쪽에 ● 표식을 붙인다 (§9)
+        바꾸기.textContent = `${replace === true ? '● ' : ''}옛 파일을 지우고 바꾸기`;
+        더하기.textContent = `${replace === false ? '● ' : ''}따로 더하기`;
+        바꾸기.setAttribute('aria-pressed', String(replace === true));
+        더하기.setAttribute('aria-pressed', String(replace === false));
+        바꾸기.classList.toggle('btn-primary', replace === true);
+        더하기.classList.toggle('btn-primary', replace === false);
+      };
+      const 선택 = (replace) => {
+        for (const other of prepared.sheets) {
+          if (other.fileHash !== sheet.fileHash) continue;
+          decisions.get(other.id).replace = replace;
+        }
+        for (const update of 교체표시.get(sheet.fileHash) ?? []) update(replace);
+        refreshFooter();
+      };
+      바꾸기.addEventListener('click', () => 선택(true));
+      더하기.addEventListener('click', () => 선택(false));
+      교체표시.set(sheet.fileHash, [...(교체표시.get(sheet.fileHash) ?? []), 보이기]);
+      보이기(decisions.get(sheet.id).replace);
+      return el('div', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-3' }, [
+        el('p', {
+          class: 'text-base text-wait',
+          text: `이름이 같은 「${옛이름}」 파일을 이미 불러왔는데 내용이 다릅니다. 고친 파일이면 바꾸고, 다른 자료면 따로 더하세요. 따로 더하면 같은 지원 기록이 두 번 셀 수 있습니다.`
+        }),
+        // 좁은 화면에서는 위아래로 쌓는다. 나란히 두면 긴 단추 글자가 한 글자씩 꺾인다
+        el('div', { class: 'mt-3 flex flex-col gap-3 sm:flex-row' }, [바꾸기, 더하기])
+      ]);
+    }
+
     function sheetCard(sheet) {
       const decision = decisions.get(sheet.id);
       const guess = sheet.yearGuess;
@@ -349,6 +392,8 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
                 prefilledYear(sheet) === null ? '' : ` 고3 년도는 지난번에 정한 ${prefilledYear(sheet)}년으로 채워 두었습니다.`}`
             ])
           : null,
+
+        (sheet.sameName ?? []).length > 0 ? replaceChoice(sheet) : null,
 
         !reading?.readable
           ? el('p', { class: 'mt-3 rounded-lg bg-fail-soft px-4 py-2 text-base text-fail' }, [

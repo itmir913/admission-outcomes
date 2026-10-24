@@ -239,6 +239,12 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
       match,
       yearGuess,
       duplicate: knownFiles.get(sheet.fileHash) ?? null,
+      /*
+       * **이름은 같은데 내용이 다른 보관된 파일.** 셀 하나만 고쳐도 해시가 달라져 교체로
+       * 인식되지 않고 옛 기록 위에 쌓인다 — 합격률의 분모와 분자가 함께 부푼다 (§5).
+       * 이름만 보고 바꾸면 다른 해의 같은 이름 파일을 지울 수 있으니 사람에게 묻는다.
+       */
+      sameName: existingFiles.filter((file) => file.name === sheet.fileName && file.hash !== sheet.fileHash),
       rowCount: Math.max(0, body.length - reading.headerRows),
       // 사람이 확인해 둔 프로파일로 읽었고 연도까지 확실할 때만 손댈 것이 없다.
       // 이름으로 해석한 것은 맞아 보여도 한 번은 눈으로 보게 한다
@@ -255,12 +261,14 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
  *
  * @param {PreparedSheet[]} prepared
  * @param {object} options
- * @param {Record<string, {cohortYear?: number|null, include?: boolean}>} [options.decisions]
- *        시트 id별 결정. `cohortYear`를 주면 제안을 덮고, `include: false`면 건너뛴다
+ * @param {Record<string, {cohortYear?: number|null, include?: boolean, replace?: boolean}>} [options.decisions]
+ *        시트 id별 결정. `cohortYear`를 주면 제안을 덮고, `include: false`면 건너뛴다.
+ *        `replace: true`면 이름이 같은 옛 파일(`sameName`)을 걷어내고 넣는다
  * @param {object[]} [options.existingStudents] 이미 보관된 학생 (익명 ID 이어 붙이기)
  * @returns {Promise<{students: object[], applications: object[], suneung: object[], files: object[], warnings: object[]}>}
  */
 export async function commitSheets(prepared, { decisions = {}, existingStudents = [] } = {}) {
+  const replacedFiles = new Set();
   const warnings = [];
   const inputs = [];
   /** @type {Map<string, object>} */
@@ -302,6 +310,10 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
         message: `${sheet.fileName}의 고3 년도가 정해지지 않아 넣지 않았습니다.`
       });
       continue;
+    }
+
+    if (decision.replace === true) {
+      for (const old of sheet.sameName ?? []) replacedFiles.add(old.hash);
     }
 
     inputs.push({
@@ -408,6 +420,7 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
      * 거꾸로 뽑으면 **행이 0건이 된 시트가 빠진다** — 잘못 들어간 시트를 비워
      * 바로잡으려는 사람의 수정이 반영되지 않는다. 읽은 사실은 여기서만 안다.
      */
+    replacedFiles: [...replacedFiles],
     readSheets: inputs.map((input) => ({
       fileHash: input.source?.fileHash,
       sheetName: input.source?.sourceSheet

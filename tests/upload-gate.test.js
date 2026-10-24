@@ -122,3 +122,17 @@ describe('고3 년도의 상식적 범위', () => {
     expect(toSchoolYear(2025)).toBe(2026);
   });
 });
+
+describe('이름이 같은 옛 파일이 있으면 교체 여부를 선택해야 불러온다', () => {
+  // 선택하지 않은 채 넣으면 지원 건수가 두 배가 될 수 있다. 어느 쪽인지는 사람만 안다
+  const sheet = { ...readable('a'), sameName: [{ hash: 'old', name: 'a.xlsx' }] };
+
+  it('선택하기 전에는 막는다', () => {
+    expect(uploadBlockers([sheet], { a: { include: true, cohortYear: 2025 } })).toHaveLength(1);
+  });
+
+  it('바꾸기든 더하기든 선택하면 풀린다', () => {
+    expect(uploadBlockers([sheet], { a: { include: true, cohortYear: 2025, replace: true } })).toEqual([]);
+    expect(uploadBlockers([sheet], { a: { include: true, cohortYear: 2025, replace: false } })).toEqual([]);
+  });
+});

@@ -389,3 +389,47 @@ describe('행마다 연도가 적힌 누적 파일', () => {
   });
 });
 
+
+describe('이름은 같고 내용이 다른 파일을 다시 올릴 때', () => {
+  /*
+   * 셀 하나만 고쳐도 해시가 달라 교체로 인식되지 않았다. 지원 건수가 두 배가 되고
+   * 합격률의 분모와 분자가 함께 부푼다 (§5).
+   */
+  async function 두번올리기(replace) {
+    const grid = senjinhakGrid(2026);
+    const profiles = await profilesFor(grid);
+    const db = await openDatabase(`same-name-${replace}-${Date.now()}`);
+    await clearAll(db);
+
+    const first = await prepareUploads([upload('결과.xlsx', makeWorkbook({ result: grid }))], { profiles, currentYear: NOW });
+    await saveDataset(db, await commitSheets(first.sheets));
+
+    const fixed = senjinhakGrid(2026);
+    fixed[4][11] = '합';
+    const stored = await loadDataset(db);
+    const second = await prepareUploads([upload('결과.xlsx', makeWorkbook({ result: fixed }))], {
+      profiles, existingFiles: stored.files, currentYear: NOW
+    });
+    expect(second.sheets[0].duplicate).toBeNull();
+    expect(second.sheets[0].sameName.map((file) => file.hash)).toEqual([first.sheets[0].fileHash]);
+
+    await saveDataset(db, await commitSheets(second.sheets, {
+      decisions: { [second.sheets[0].id]: { replace } },
+      existingStudents: stored.students
+    }));
+    return loadDataset(db);
+  }
+
+  it('바꾸기로 고르면 옛 파일 기록을 걷어내고 새 것만 남긴다', async () => {
+    const loaded = await 두번올리기(true);
+    expect(loaded.applications).toHaveLength(4);
+    expect(loaded.files).toHaveLength(1);
+    expect(loaded.applications.filter((row) => row.univ?.includes('아주'))).toHaveLength(1);
+  });
+
+  it('따로 더하기로 고르면 둘 다 남긴다', async () => {
+    const loaded = await 두번올리기(false);
+    expect(loaded.applications).toHaveLength(8);
+    expect(loaded.files).toHaveLength(2);
+  });
+});
