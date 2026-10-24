@@ -37,9 +37,27 @@ export async function readFiles(files) {
  *
  * @param {object} sheet
  */
-export function needsFileYear(sheet) {
+export function needsFileYear(sheet, decision) {
   // 판단은 prepare 단계가 이미 내려 두었다. 화면이 따로 셈하면 둘이 어긋난다
-  return !sheet?.reading?.perRowYear;
+  if (sheet?.reading?.perRowYear) return false;
+  // 사람이 연도 열의 기준을 정했으면 행마다 읽는다
+  return !(needsBasisChoice(sheet) && ['admission', 'senior'].includes(decision?.yearBasis));
+}
+
+/**
+ * **연도 열에 여러 해가 섞였는데 그 기준을 모르는 시트.**
+ *
+ * 값이 올해를 넘지 않으면 학년도인지 고3 년도인지 값만으로는 알 수 없다. 예전에는
+ * 「정해 주세요」라고만 적고 고를 장치가 없어, 숫자 하나를 넣어야 불러오기가 열렸고
+ * 그러면 모든 행이 한 해로 저장됐다. 같은 양식이 올해를 넘는 값을 품으면 행마다 맞게
+ * 들어가니, 올리는 해에 따라 결과가 달라지는 셈이었다 (§2).
+ *
+ * @param {object} sheet
+ */
+export function needsBasisChoice(sheet) {
+  const reading = sheet?.reading;
+  if (!reading || reading.perRowYear || reading.columns?.sourceYear === undefined) return false;
+  return new Set(sheet.yearGuess?.rawCandidates ?? []).size > 1;
 }
 
 /**
@@ -97,7 +115,9 @@ export function uploadBlockers(sheets, decisions) {
       problems.push(`${이름(sheet)}: 학번·반·번호·이름 중 하나도 없어 저장할 수 없습니다`);
       continue;
     }
-    if (decision.cohortYear === null && needsFileYear(sheet)) {
+    if (needsBasisChoice(sheet) && decision.yearBasis === undefined) {
+      problems.push(`${이름(sheet)}: 연도 열이 학년도인지 고3 년도인지 선택해 주세요`);
+    } else if (decision.cohortYear === null && needsFileYear(sheet, decision)) {
       problems.push(`${이름(sheet)}: 고3 년도를 넣어 주세요`);
     }
     if ((sheet.sameName ?? []).length > 0 && typeof decision.replace !== 'boolean') {
@@ -332,6 +352,47 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
       }
       echoYear();
 
+      /*
+       * 연도 열의 기준을 사람이 정한다 (`needsBasisChoice`). 셋 중 하나를 선택할 때까지
+       * 불러오기는 막힌다. 「파일 전체를 한 해로」를 선택하면 연도 칸이 나온다.
+       */
+      const 기준칸 = el('div', { class: 'mt-3 hidden' }, [yearInput, yearEcho]);
+      const 기준설명 = el('p', { class: 'mt-2 text-base text-ink-soft' });
+      const 원값 = [...new Set(sheet.yearGuess.rawCandidates ?? [])].sort((left, right) => left - right);
+      const 기준들 = [
+        { id: 'admission', label: '학년도입니다', note: () => `고3 년도는 ${원값.map((value) => value - 1).join(' · ')}로 읽습니다 (학년도 − 1).` },
+        { id: 'senior', label: '고3 년도입니다', note: () => `고3 년도는 ${원값.join(' · ')} 그대로 읽습니다.` },
+        { id: 'file', label: '파일 전체를 한 해로', note: () => '행의 연도는 쓰지 않고, 아래 넣은 한 해로 모든 행을 저장합니다.' }
+      ];
+      const 기준단추 = 기준들.map((choice) => el('button', {
+        class: 'btn w-full sm:w-auto',
+        text: choice.label,
+        attrs: { type: 'button', 'aria-pressed': 'false' },
+        on: {
+          click: () => {
+            decision.yearBasis = choice.id;
+            for (const [index, button] of 기준단추.entries()) {
+              const on = 기준들[index].id === choice.id;
+              button.setAttribute('aria-pressed', String(on));
+              button.classList.toggle('btn-primary', on);
+            }
+            기준설명.textContent = choice.note();
+            기준칸.classList.toggle('hidden', choice.id !== 'file');
+            refreshFooter();
+          }
+        }
+      }));
+      const 기준선택 = needsBasisChoice(sheet)
+        ? el('div', { class: 'mt-4 rounded-lg bg-wait-soft px-4 py-3' }, [
+            el('p', { class: 'text-base font-semibold text-wait', text: `연도 열에 여러 해가 섞여 있습니다 (${원값.join(' · ')}).` }),
+            el('p', { class: 'mt-1 text-base text-wait', text: '이 값이 학년도인지 고3 년도인지 선택해 주세요. 한 해 밀리면 화면에서는 알아챌 방법이 없습니다.' }),
+            // 좁은 화면에서는 위아래로 쌓는다. 나란히 두면 단추 글자가 꺾인다
+            el('div', { class: 'mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap' }, 기준단추),
+            기준설명,
+            기준칸
+          ])
+        : null;
+
       return el('section', { class: 'card px-5 py-4' }, [
         el('div', { class: 'flex flex-wrap items-start gap-3' }, [
           /*
@@ -425,7 +486,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
             ])
           : null,
 
-        perRowYear
+        기준선택 ?? (perRowYear
           ? el('div', { class: 'mt-4 rounded-lg bg-brand-soft px-4 py-3' }, [
               el('p', { class: 'text-base font-medium text-brand', text: '이 파일은 행마다 연도가 실려 있습니다.' }),
               el('p', { class: 'mt-1 text-base text-ink-soft', text: '비워 두면 행의 연도를 그대로 씁니다. 값을 넣으면 파일 전체를 그 연도로 봅니다.' }),
@@ -443,7 +504,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
                   ? el('p', { class: 'mt-1 text-base text-ink-soft', text: guess.explanation })
                   : el('p', { class: 'mt-1 text-base text-ink-soft', text: '파일에서 연도를 찾지 못했습니다. 직접 넣어 주세요.' }),
               yearInput, yearEcho
-            ])
+            ]))
       ]);
     }
 

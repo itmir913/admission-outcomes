@@ -159,3 +159,27 @@ describe('zip 폴더가 다른 같은 이름 파일은 폴더로 구별한다', 
     expect(problems).toEqual(['2026학년도/결과.xlsx: 고3 년도를 넣어 주세요']);
   });
 });
+
+describe('연도 열의 기준을 정해야 불러온다', async () => {
+  const { needsBasisChoice } = await import('../src/ui/upload.js');
+  const sheet = {
+    id: 'a', fileName: '누적.xlsx',
+    reading: { source: 'names', readable: true, perRowYear: false, columns: { univ: 0, sourceYear: 1 } },
+    yearGuess: { rawCandidates: [2024, 2025, 2026] }
+  };
+
+  it('기준을 정하기 전에는 막는다 — 숫자 하나만 넣어도 막는다', () => {
+    expect(needsBasisChoice(sheet)).toBe(true);
+    expect(uploadBlockers([sheet], { a: { include: true, cohortYear: 2025 } })).toHaveLength(1);
+  });
+
+  it('학년도·고3 년도로 정하면 연도 칸 없이 풀린다', () => {
+    expect(uploadBlockers([sheet], { a: { include: true, cohortYear: null, yearBasis: 'admission' } })).toEqual([]);
+    expect(uploadBlockers([sheet], { a: { include: true, cohortYear: null, yearBasis: 'senior' } })).toEqual([]);
+  });
+
+  it('파일 전체를 한 해로 정하면 연도를 넣어야 풀린다', () => {
+    expect(uploadBlockers([sheet], { a: { include: true, cohortYear: null, yearBasis: 'file' } })).toHaveLength(1);
+    expect(uploadBlockers([sheet], { a: { include: true, cohortYear: 2025, yearBasis: 'file' } })).toEqual([]);
+  });
+});

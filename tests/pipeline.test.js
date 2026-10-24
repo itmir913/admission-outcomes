@@ -482,3 +482,37 @@ describe('다른 폴더의 같은 이름 파일은 교체 대상이 아니다', 
     expect(loaded.applications).toHaveLength(4 + 5);
   });
 });
+
+describe('기준을 모르는 누적 파일 — 사람이 연도 열의 기준을 정한다', () => {
+  async function 누적() {
+    const grid = senjinhakGrid(2026);
+    grid[2][0] = 2025;
+    grid[4][0] = 2024;
+    return prepareUploads([upload('누적.xlsx', makeWorkbook({ result: grid }))], { profiles: new ProfileSet([]), currentYear: NOW });
+  }
+
+  it('값이 올해를 넘지 않으면 기준을 묻는다', async () => {
+    const { sheets } = await 누적();
+    const { needsBasisChoice } = await import('../src/ui/upload.js');
+    expect(needsBasisChoice(sheets[0])).toBe(true);
+  });
+
+  it('학년도로 정하면 행마다 한 해 당겨 읽는다', async () => {
+    const { sheets } = await 누적();
+    const dataset = await commitSheets(sheets, { decisions: { [sheets[0].id]: { yearBasis: 'admission', cohortYear: 2030 } } });
+    // 넣어 둔 파일 연도(2030)는 쓰지 않는다
+    expect(dataset.applications.map((row) => row.cohortYear).sort()).toEqual([2023, 2024, 2025, 2025]);
+  });
+
+  it('고3 년도로 정하면 그대로 읽는다', async () => {
+    const { sheets } = await 누적();
+    const dataset = await commitSheets(sheets, { decisions: { [sheets[0].id]: { yearBasis: 'senior' } } });
+    expect(dataset.applications.map((row) => row.cohortYear).sort()).toEqual([2024, 2025, 2026, 2026]);
+  });
+
+  it('파일 전체를 한 해로 정하면 넣은 연도 하나로 저장한다', async () => {
+    const { sheets } = await 누적();
+    const dataset = await commitSheets(sheets, { decisions: { [sheets[0].id]: { yearBasis: 'file', cohortYear: 2025 } } });
+    expect(new Set(dataset.applications.map((row) => row.cohortYear))).toEqual(new Set([2025]));
+  });
+});

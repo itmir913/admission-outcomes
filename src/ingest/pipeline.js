@@ -267,7 +267,7 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
  *
  * @param {PreparedSheet[]} prepared
  * @param {object} options
- * @param {Record<string, {cohortYear?: number|null, include?: boolean, replace?: boolean}>} [options.decisions]
+ * @param {Record<string, {cohortYear?: number|null, include?: boolean, replace?: boolean, yearBasis?: 'admission'|'senior'|'file'}>} [options.decisions]
  *        시트 id별 결정. `cohortYear`를 주면 제안을 덮고, `include: false`면 건너뛴다.
  *        `replace: true`면 이름이 같은 옛 파일(`sameName`)을 걷어내고 넣는다
  * @param {object[]} [options.existingStudents] 이미 보관된 학생 (익명 ID 이어 붙이기)
@@ -301,14 +301,23 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
      * `??`로 메우면 행마다 연도가 적힌 누적 파일에서도 파일 이름 연도가 모든 행을 덮어,
      * 한 해 밀린 값이 조용히 저장된다 (§2). 결정에 연도가 아예 없을 때만 추정을 쓴다.
      */
-    const cohortYear = decision.cohortYear !== undefined ? decision.cohortYear : sheet.yearGuess.cohortYear;
+    /*
+     * **사람이 연도 열의 기준을 정했으면 행마다 읽는다.** 이때 파일 연도는 쓰지 않는다 —
+     * 파일 연도가 있으면 행의 연도를 덮어, 정한 기준이 아무 일도 하지 않는다.
+     */
+    const 사람기준 = reading.columns.sourceYear !== undefined && ['admission', 'senior'].includes(decision.yearBasis)
+      ? decision.yearBasis
+      : null;
+    const cohortYear = 사람기준
+      ? null
+      : decision.cohortYear !== undefined ? decision.cohortYear : sheet.yearGuess.cohortYear;
     /*
      * 여러 해가 섞인 누적 파일이면 파일 연도 없이 행마다 읽는다.
      *
      * 어떤 기준으로 읽을지는 prepare 단계에서 이미 정해 두었다 (§2).
      */
-    const basis = reading.effectiveBasis ?? null;
-    const perRowYear = Boolean(reading.perRowYear);
+    const basis = 사람기준 ?? reading.effectiveBasis ?? null;
+    const perRowYear = Boolean(사람기준) || Boolean(reading.perRowYear);
     if ((cohortYear === null || cohortYear === undefined) && !perRowYear) {
       warnings.push({
         type: 'year-not-set',
