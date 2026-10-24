@@ -242,9 +242,6 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
       const 바꾸기 = el('button', { class: 'btn w-full sm:w-auto', text: '옛 파일을 지우고 바꾸기', attrs: { type: 'button' } });
       const 더하기 = el('button', { class: 'btn w-full sm:w-auto', text: '따로 더하기', attrs: { type: 'button' } });
       const 보이기 = (replace) => {
-        // 색만으로 구분하지 않는다 — 선택한 쪽에 ● 표식을 붙인다 (§9)
-        바꾸기.textContent = `${replace === true ? '● ' : ''}옛 파일을 지우고 바꾸기`;
-        더하기.textContent = `${replace === false ? '● ' : ''}따로 더하기`;
         바꾸기.setAttribute('aria-pressed', String(replace === true));
         더하기.setAttribute('aria-pressed', String(replace === false));
         바꾸기.classList.toggle('btn-primary', replace === true);

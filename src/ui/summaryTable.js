@@ -57,9 +57,9 @@ export function renderSummaryTable(mount, { rows, gpaField, grouping, sort, onCh
     class: 'flex flex-wrap items-center gap-1 rounded-md border border-line bg-surface p-0.5',
     attrs: { role: 'group' }
   }, Object.entries(choices).map(([id, choice]) => el('button', {
-    // 색만으로 구분하지 않는다 — 선택한 쪽에 ●를 붙인다 (§9)
+    // 다른 전환 단추(보기·필터 패널)와 같은 모양이다 — 선택한 쪽이 채워진다
     class: `btn btn-sm min-h-8 border-transparent ${id === current ? 'btn-primary' : ''}`,
-    text: `${id === current ? '● ' : ''}${choice.label}`,
+    text: choice.label,
     attrs: { type: 'button', 'aria-pressed': String(id === current) },
     on: { click: () => { if (id !== current) onChange({ [key]: id }); } }
   })));
