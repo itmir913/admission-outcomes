@@ -78,11 +78,13 @@ export function uploadBlockers(sheets, decisions) {
 
   const problems = [];
   // 한 파일에 시트가 여럿이면 파일 이름만으로는 어느 시트를 끄라는 말인지 모른다
+  // zip의 다른 폴더에 같은 이름 파일이 있으면 폴더까지 적어야 어느 것인지 구별한다
+  const 파일이름 = (sheet) => (sheet.folder ? `${sheet.folder}/${sheet.fileName}` : sheet.fileName);
   const 시트수 = new Map();
-  for (const sheet of sheets ?? []) 시트수.set(sheet.fileName, (시트수.get(sheet.fileName) ?? 0) + 1);
-  const 이름 = (sheet) => (시트수.get(sheet.fileName) > 1 && sheet.sheetName
-    ? `${sheet.fileName} 「${sheet.sheetName}」 시트`
-    : sheet.fileName);
+  for (const sheet of sheets ?? []) 시트수.set(파일이름(sheet), (시트수.get(파일이름(sheet)) ?? 0) + 1);
+  const 이름 = (sheet) => (시트수.get(파일이름(sheet)) > 1 && sheet.sheetName
+    ? `${파일이름(sheet)} 「${sheet.sheetName}」 시트`
+    : 파일이름(sheet));
   for (const sheet of sheets ?? []) {
     const decision = lookup(sheet.id);
     if (!decision?.include) continue;
@@ -353,7 +355,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
               el('span', {
                 class: 'block text-base text-ink-soft',
                 text: [
-                  sheet.container ? `${sheet.container} 안` : null,
+                  sheet.container ? `${sheet.folder ? `${sheet.container}/${sheet.folder}` : sheet.container} 안` : null,
                   `시트 ${sheet.sheetName}`,
                   `${sheet.rowCount}행`
                 ].filter(Boolean).join(' · ')

@@ -150,3 +150,12 @@ describe('막는 까닭이 어느 시트 것인지 말한다', () => {
     expect(problems).toEqual(['결과.xlsx: 고3 년도를 넣어 주세요']);
   });
 });
+
+describe('zip 폴더가 다른 같은 이름 파일은 폴더로 구별한다', () => {
+  it('막는 까닭에 폴더를 적는다', () => {
+    const a = { ...readable('a', '결과.xlsx'), sheetName: '진학결과', folder: '2025학년도' };
+    const b = { ...readable('b', '결과.xlsx'), sheetName: '진학결과', folder: '2026학년도' };
+    const problems = uploadBlockers([a, b], { a: { include: true, cohortYear: 2024 }, b: { include: true, cohortYear: null } });
+    expect(problems).toEqual(['2026학년도/결과.xlsx: 고3 년도를 넣어 주세요']);
+  });
+});

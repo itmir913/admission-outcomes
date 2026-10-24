@@ -116,7 +116,7 @@ function isNoise(entryName) {
 }
 
 /**
- * @typedef {{ name: string, bytes: Uint8Array, container?: string }} SourceFile
+ * @typedef {{ name: string, bytes: Uint8Array, container?: string, folder?: string }} SourceFile
  */
 
 /**
@@ -211,7 +211,13 @@ export function expandUploads(uploads, { limits = ARCHIVE_LIMITS } = {}) {
     let found = 0;
     for (const [entryName, innerBytes] of Object.entries(entries)) {
       if (!innerBytes?.length) continue;
-      files.push({ name: decodeEntryName(baseName(entryName)), bytes: innerBytes, container: name });
+      /*
+       * **zip 안의 폴더도 적어 둔다.** `2025학년도/결과.xlsx`와 `2026학년도/결과.xlsx`가
+       * 확인 창에 똑같이 「결과.xlsx」로만 보이면 어느 쪽이 어느 해인지 구별할 수 없어,
+       * 고3 년도를 서로 바꿔 넣어도 알아챌 길이 없다 (§2).
+       */
+      const folder = decodeEntryName(String(entryName).split(/[/\\]/).slice(0, -1).join('/'));
+      files.push({ name: decodeEntryName(baseName(entryName)), bytes: innerBytes, container: name, folder: folder || undefined });
       found += 1;
     }
     if (found === 0) {
@@ -242,6 +248,7 @@ export function normalizeCell(value) {
  * @typedef {object} SheetSource
  * @property {string} fileName
  * @property {string} [container] zip으로 올렸다면 그 zip 이름
+ * @property {string} [folder] zip 안의 폴더 경로
  * @property {string} fileHash 같은 파일을 다시 올렸는지 판별한다
  * @property {string} sheetName
  * @property {unknown[][]} grid 헤더를 포함한 전체 행렬
@@ -282,7 +289,7 @@ export async function readSheets(files) {
       });
       const grid = raw.map((row) => (Array.isArray(row) ? row.map(normalizeCell) : []));
       if (!grid.some((row) => row.some((cell) => cell !== null))) continue;
-      sheets.push({ fileName: file.name, container: file.container, fileHash, sheetName, grid });
+      sheets.push({ fileName: file.name, container: file.container, folder: file.folder, fileHash, sheetName, grid });
       usable += 1;
     }
     if (usable === 0) skipped.push({ name: file.name, reason: '내용이 있는 시트가 없습니다.' });
