@@ -76,7 +76,8 @@ describe('개인정보가 extra로 새던 통로', () => {
       '학생', '수험생', '지원자', '핸드폰', 'HP', 'phone', 'E-mail', '학부모']) {
       expect(isIdentityLabel(label), label).toBe(true);
     }
-    for (const label of ['비고', '최초후보순위', '모집단위', '모집인원', '국어·표점', '학교유형']) {
+    for (const label of ['비고', '최초후보순위', '모집단위', '모집인원', '국어·표점', '학교유형',
+      '지원자수', '지원자 평균', '학생부종합', '학생부교과', '수험생활', '메일링']) {
       expect(isIdentityLabel(label), label).toBe(false);
     }
   });

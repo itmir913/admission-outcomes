@@ -107,6 +107,8 @@ export function readRow(row, columns) {
 }
 
 const IDENTITY_TOKENS = fields.identityLabels.tokens.map((token) => token.toLowerCase());
+// 흔한 낱말은 머리글 전체가 같을 때만 본다. 부분으로 맞추면 '지원자수' 같은 상담 열이 버려진다
+const IDENTITY_EXACT = new Set((fields.identityLabels.exactTokens ?? []).map((token) => token.toLowerCase()));
 
 /**
  * 해석하지 못한 열이 사람을 특정하는 열인지 본다.
@@ -119,7 +121,7 @@ const IDENTITY_TOKENS = fields.identityLabels.tokens.map((token) => token.toLowe
  */
 export function isIdentityLabel(label) {
   const normalized = String(label ?? '').replace(/[\s()[\]·_-]/g, '').toLowerCase();
-  return IDENTITY_TOKENS.some((token) => normalized.includes(token));
+  return IDENTITY_EXACT.has(normalized) || IDENTITY_TOKENS.some((token) => normalized.includes(token));
 }
 
 /**
