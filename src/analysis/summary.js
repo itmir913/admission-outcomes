@@ -8,7 +8,7 @@
  * 판정은 요약 띠와 같은 `tallyOutcomes`로 센다. 한쪽만 고쳐도 숫자가 어긋나는 일을 막는다.
  */
 
-import { tallyOutcomes, passRate } from '../ui/outcome.js';
+import { tallyOutcomes, passRate, ratePercent } from '../ui/outcome.js';
 import { STAGE1_FAIL_LABEL } from '../core/outcome.js';
 import { isBlank, formatNumber } from './registry.js';
 
@@ -169,7 +169,8 @@ export function summaryRows(summary, { keys, gpaLabel }) {
     row['sum.1단계불합격'] = group.stage1Fail;
     row['sum.판정'] = group.judged;
     // 소수 첫째 자리까지만 — 표본이 수십 건인 자리에서 그 아래 자릿수는 뜻이 없다
-    row['sum.합격률'] = group.rate === null ? null : Math.round(group.rate * 1000) / 10;
+    // 요약 띠와 같은 함수로 적는다. 따로 반올림하면 .x5 자리에서 0.1씩 어긋난다
+    row['sum.합격률'] = group.rate === null ? null : ratePercent(group.tally);
     if (gpaLabel) {
       row['sum.내신'] = 내신글자(group.gpa);
       row['sum.내신빈칸'] = group.gpaBlank;

@@ -27,7 +27,7 @@ import { createTable } from './ui/table.js';
 import { createFilters, addValueFilter } from './ui/filters.js';
 import { readFiles, confirmUploads, bindDropzone } from './ui/upload.js';
 import { openStudent } from './ui/student.js';
-import { outcomeBar, passRate, rateNote, tallyOutcomes } from './ui/outcome.js';
+import { outcomeBar, passRate, ratePercent, rateNote, tallyOutcomes } from './ui/outcome.js';
 import { openFiles, openColumns } from './ui/panels.js';
 import { paintSummaryChrome } from './ui/summaryTable.js';
 import { summarize, summaryRows, GROUPINGS, SMALL_SAMPLE } from './analysis/summary.js';
@@ -240,7 +240,7 @@ function paintSummary(visible, total) {
     cell('충원합격', tally.충원합격, 'text-wait'),
     cell('불합격', tally.불합격, 'text-fail'),
     // 요약표와 같은 기준이다. 판정 1건에 「100.0%」를 띄우면 필터로 좁힌 자리가 합격선처럼 보인다
-    cell('합격률', rate === null || 표본적음 ? '—' : `${(rate * 100).toFixed(1)}%`)
+    cell('합격률', rate === null || 표본적음 ? '—' : `${ratePercent(tally).toFixed(1)}%`)
   ];
 
   clear(dom.요약띠).append(el('div', { class: 'card overflow-hidden' }, [

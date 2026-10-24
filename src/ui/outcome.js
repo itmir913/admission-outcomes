@@ -56,6 +56,21 @@ export function rateNote(tally) {
     : `${바탕}. 판정 미상 ${tally.미상}건(최종 열이 비었거나 읽지 못한 표기)은 분모에서 빠집니다.`;
 }
 
+/**
+ * 합격률을 화면에 적을 글자로. **모든 화면이 이 함수 하나로 적는다.**
+ *
+ * 요약 띠는 `(rate*100).toFixed(1)`, 요약표는 `Math.round(rate*1000)/10`으로 적었더니
+ * 같은 자료에서 28.7%와 28.8이 나란히 떴다(합격 23 ÷ 80 = 28.75). 비율을 한 번 실수로
+ * 만든 뒤 반올림하면 .x5 자리에서 오차가 어긋난다. 그래서 **건수에서 바로** 천분율 정수를 낸다.
+ *
+ * @returns {number|null} 소수 첫째 자리까지의 백분율 수. 셀 판정이 없으면 null
+ */
+export function ratePercent(tally) {
+  const judged = tally.합격 + tally.충원합격 + tally.불합격;
+  if (judged === 0) return null;
+  return Math.round(((tally.합격 + tally.충원합격) * 1000) / judged) / 10;
+}
+
 export function passRate(tally) {
   /*
    * 분모는 **최종 열에서 판정을 읽어 낸 건수**다. 1단계 탈락만 적힌 건은 빠진다 —
