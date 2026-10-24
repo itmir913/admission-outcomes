@@ -22,6 +22,22 @@ const PART_TYPE = fields.partTypes;
 /** 숫자로만 적힌 칸. 앞자리 0이 붙은 것은 코드로 보고 제외한다 */
 const NUMERIC_TEXT = /^-?(0|[1-9]\d*)(\.\d+)?$/;
 
+/**
+ * 셀 하나를 글자로. 날짜 셀은 `2025-12-13`으로 적는다.
+ *
+ * 그대로 `String()`을 거치면 「Sat Dec 13 2025 00:00:00 GMT+0900 (한국 표준시)」가 되어,
+ * 「최종발표일」 같은 열에 열 이름과 딴 세상인 글자가 보관됐다.
+ *
+ * @param {unknown} value
+ */
+function 셀글자(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const 두자리 = (number) => String(number).padStart(2, '0');
+    return `${value.getFullYear()}-${두자리(value.getMonth() + 1)}-${두자리(value.getDate())}`;
+  }
+  return String(value).normalize('NFC').trim();
+}
+
 /** @param {string} key */
 function typeOf(key) {
   if (SCALAR_TYPE.has(key)) return SCALAR_TYPE.get(key);
@@ -44,7 +60,7 @@ export function coerce(key, raw) {
    * **한글은 한 꼴(NFC)로 맞춘다.** 맥에서 만든 파일은 자모가 풀린 꼴(NFD)로 올 수 있는데,
    * 그러면 똑같이 보이는 「서울대」 두 줄이 요약표에 생기고 검색에도 안 걸린다 (§5).
    */
-  const text = String(raw).normalize('NFC').trim();
+  const text = 셀글자(raw);
   if (text === '') return null;
 
   if (type === 'number' || type === 'year') {
@@ -182,7 +198,7 @@ function readExtra(row, columns, labels) {
      */
     if (label === '') continue;
     if (isIdentityLabel(label)) { dropped.push(label); continue; }
-    const text = String(value).normalize('NFC').trim();
+    const text = 셀글자(value);
     /*
      * 빈칸 표시는 빈칸으로 둔다. `-`를 글자로 담아 두면 그 열은 영영 숫자 열이 못 된다.
      *

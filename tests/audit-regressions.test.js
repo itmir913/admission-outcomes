@@ -869,3 +869,35 @@ describe('감사 A — 빈칸 표시 때문에 내신 열이 배정에서 빠지
     expect(resolved.columns['gpa.전교과']).toBe(4);
   });
 });
+
+describe('2차 코드 감사', async () => {
+  const { coerce, isIdentityLabel } = await import('../src/ingest/buildRecords.js');
+  const { primaryGpaField } = await import('../src/analysis/registry.js');
+  const { resolveSheet } = await import('../src/ingest/resolveColumns.js');
+
+  it('학생 코드·출생연도 열은 보관하지 않는다', () => {
+    for (const label of ['학생코드', '학생ID', 'student_id', '출생연도', 'birth']) expect(isIdentityLabel(label), label).toBe(true);
+    for (const label of ['모집단위코드', '전형코드']) expect(isIdentityLabel(label), label).toBe(false);
+  });
+
+  it('날짜 셀은 날짜 글자로 읽는다', () => {
+    expect(coerce('extra.최종발표일', new Date(2025, 11, 13))).toBe('2025-12-13');
+  });
+
+  it('전교과가 없으면 값 개수가 같을 때 사전 차례로 대표 내신을 정한다 — 과학이 되지 않는다', () => {
+    const field = (key) => ({ key, group: 'gpa', filled: 10 });
+    const picked = primaryGpaField([field('gpa.과학'), field('gpa.국수영사'), field('gpa.국어')]);
+    expect(picked.key).not.toBe('gpa.과학');
+  });
+
+  it('코드 열이 이름 열의 자리를 빼앗지 않는다', () => {
+    const grid = [
+      ['학번', '대학코드', '대학명', '모집단위코드', '모집단위명', '전형유형코드', '전형유형명', '최종'],
+      ['30101', 'U1', '가대학', 'D1', '국문', 'T1', '학생부위주(교과)', '합']
+    ];
+    const { columns } = resolveSheet(grid);
+    expect(columns.dept).toBe(4);
+    expect(columns.admType).toBe(6);
+    expect(columns.univ).toBe(2);
+  });
+});
