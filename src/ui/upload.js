@@ -77,23 +77,29 @@ export function uploadBlockers(sheets, decisions) {
     : (id) => decisions[id];
 
   const problems = [];
+  // 한 파일에 시트가 여럿이면 파일 이름만으로는 어느 시트를 끄라는 말인지 모른다
+  const 시트수 = new Map();
+  for (const sheet of sheets ?? []) 시트수.set(sheet.fileName, (시트수.get(sheet.fileName) ?? 0) + 1);
+  const 이름 = (sheet) => (시트수.get(sheet.fileName) > 1 && sheet.sheetName
+    ? `${sheet.fileName} 「${sheet.sheetName}」 시트`
+    : sheet.fileName);
   for (const sheet of sheets ?? []) {
     const decision = lookup(sheet.id);
     if (!decision?.include) continue;
     if (!sheet.reading?.readable) {
-      problems.push(`${sheet.fileName}: 대학명 열을 찾지 못했습니다`);
+      problems.push(`${이름(sheet)}: 대학명 열을 찾지 못했습니다`);
       continue;
     }
     // 학생을 알아낼 열이 하나도 없으면 읽은 행이 한 건도 저장되지 않는다 (§3)
     if (sheet.reading.identifiable === false) {
-      problems.push(`${sheet.fileName}: 학번·반·번호·이름 중 하나도 없어 저장할 수 없습니다`);
+      problems.push(`${이름(sheet)}: 학번·반·번호·이름 중 하나도 없어 저장할 수 없습니다`);
       continue;
     }
     if (decision.cohortYear === null && needsFileYear(sheet)) {
-      problems.push(`${sheet.fileName}: 고3 년도를 넣어 주세요`);
+      problems.push(`${이름(sheet)}: 고3 년도를 넣어 주세요`);
     }
     if ((sheet.sameName ?? []).length > 0 && typeof decision.replace !== 'boolean') {
-      problems.push(`${sheet.fileName}: 같은 이름의 옛 파일을 교체할지 선택해 주세요`);
+      problems.push(`${이름(sheet)}: 같은 이름의 옛 파일을 교체할지 선택해 주세요`);
     }
   }
   return problems;

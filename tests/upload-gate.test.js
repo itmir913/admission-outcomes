@@ -136,3 +136,17 @@ describe('이름이 같은 옛 파일이 있으면 교체 여부를 선택해야
     expect(uploadBlockers([sheet], { a: { include: true, cohortYear: 2025, replace: false } })).toEqual([]);
   });
 });
+
+describe('막는 까닭이 어느 시트 것인지 말한다', () => {
+  it('한 파일에 시트가 여럿이면 시트 이름을 함께 적는다', () => {
+    const a = { ...readable('a', '결과.xlsx'), sheetName: '1반' };
+    const b = { ...readable('b', '결과.xlsx'), sheetName: '2반' };
+    const problems = uploadBlockers([a, b], { a: { include: true, cohortYear: 2025 }, b: { include: true, cohortYear: null } });
+    expect(problems).toEqual(['결과.xlsx 「2반」 시트: 고3 년도를 넣어 주세요']);
+  });
+
+  it('시트가 하나면 파일 이름만 적는다', () => {
+    const problems = uploadBlockers([{ ...readable('a', '결과.xlsx'), sheetName: '1반' }], { a: { include: true, cohortYear: null } });
+    expect(problems).toEqual(['결과.xlsx: 고3 년도를 넣어 주세요']);
+  });
+});
