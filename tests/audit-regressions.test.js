@@ -785,3 +785,31 @@ describe('계산 감사에서 드러난 것', async () => {
     expect(matchesFilter(row, { key: 'gpa.전교과', op: 'range', min: null, max: 2.35 })).toBe(false);
   });
 });
+
+describe('결측과 백분율', async () => {
+  const { coerce } = await import('../src/ingest/buildRecords.js');
+  const { percentsSummingTo100 } = await import('../src/ui/outcome.js');
+
+  it('내신·수능 등급의 0은 빈칸이다 — 요약표 최저값에 0이 찍히지 않게', () => {
+    expect(coerce('gpa.전교과', '0')).toBeNull();
+    expect(coerce('gpa.전교과', 0)).toBeNull();
+    expect(coerce('suneung.국어.grade', '0')).toBeNull();
+  });
+
+  it('표준점수·백분위의 0은 값으로 둔다', () => {
+    expect(coerce('suneung.국어.percentile', '0')).toBe(0);
+  });
+
+  it('범례 백분율의 합은 정확히 100.0이다', () => {
+    // 칸마다 반올림하면 33.3 × 3 = 99.9가 된다
+    const thirds = percentsSummingTo100([1, 1, 1]);
+    expect(Math.round(thirds.reduce((a, b) => a + b, 0) * 10)).toBe(1000);
+    for (const counts of [[24, 16, 121], [30, 37, 239], [1, 2, 3, 994], [7, 0, 0]]) {
+      const parts = percentsSummingTo100(counts);
+      expect(Math.round(parts.reduce((a, b) => a + b, 0) * 10), counts.join()).toBe(1000);
+      // 어느 칸도 정확한 값에서 0.1 넘게 벗어나지 않는다
+      const total = counts.reduce((a, b) => a + b, 0);
+      counts.forEach((count, index) => expect(Math.abs(parts[index] - (count / total) * 100)).toBeLessThan(0.1 + 1e-9));
+    }
+  });
+});

@@ -67,6 +67,33 @@ export function passRate(tally) {
 }
 
 /**
+ * 건수들을 소수 첫째 자리 백분율로 바꾸되, **합이 정확히 100.0이 되게** 한다.
+ *
+ * 칸마다 따로 반올림하면 합이 99.9나 100.1이 된다. 범례를 더해 보는 사람에게
+ * 숫자가 맞지 않는 화면이 된다. 가장 큰 나머지 방식으로 모자라거나 넘치는 0.1을
+ * 반올림 오차가 가장 큰 칸에 나눠 준다.
+ *
+ * @param {number[]} counts
+ * @returns {number[]}
+ */
+export function percentsSummingTo100(counts) {
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  if (total === 0) return counts.map(() => 0);
+  // 0.1% 단위의 정수로 다룬다. 부동소수점 덧셈이 100을 99.99999로 만들지 않게
+  const exact = counts.map((count) => (count / total) * 1000);
+  const floors = exact.map(Math.floor);
+  let left = 1000 - floors.reduce((sum, value) => sum + value, 0);
+  const order = exact.map((value, index) => ({ index, rest: value - floors[index] }))
+    .sort((a, b) => b.rest - a.rest || a.index - b.index);
+  for (const { index } of order) {
+    if (left <= 0) break;
+    floors[index] += 1;
+    left -= 1;
+  }
+  return floors.map((value) => value / 10);
+}
+
+/**
  * 판정 구성 막대.
  *
  * 숫자 넷만으로는 서로의 비율이 눈에 들어오지 않는다. 띠 하나가 그걸 대신한다.
@@ -94,6 +121,8 @@ export function outcomeBar(tally) {
   ].filter((part) => part.count > 0);
 
   const 몫 = (count) => (count / tally.지원) * 100;
+  const 적을몫 = percentsSummingTo100(parts.map((part) => part.count));
+  const 몫글자 = (part) => `${적을몫[parts.indexOf(part)].toFixed(1)}%`;
 
   /*
    * 칸 안의 글자는 **자리가 허락하는 만큼만** 적는다.
@@ -104,7 +133,7 @@ export function outcomeBar(tally) {
    */
   const 글자 = (part) => {
     const 비율 = 몫(part.count);
-    if (비율 >= 18) return `${part.mark} ${비율.toFixed(1)}%`;
+    if (비율 >= 18) return `${part.mark} ${몫글자(part)}`;
     if (비율 >= 5) return part.mark;
     return '';
   };
@@ -117,7 +146,7 @@ export function outcomeBar(tally) {
       class: `${part.tone} flex items-center justify-center overflow-hidden whitespace-nowrap text-base font-semibold`,
       // 칸 너비는 자료에서 나온다. 클래스로는 적을 수 없는 값이다 (§9의 예외)
       style: { width: `${몫(part.count).toFixed(2)}%` },
-      attrs: { title: `${part.name} ${part.count}건 (${몫(part.count).toFixed(1)}%)` },
+      attrs: { title: `${part.name} ${part.count}건 (${몫글자(part)})` },
       text: 글자(part)
     }))),
     el('ul', {
@@ -125,7 +154,7 @@ export function outcomeBar(tally) {
     }, parts.map((part) => el('li', {
       // 범례 글자는 띠의 색을 이어받는다. 어느 칸을 가리키는 말인지 색이 먼저 말해 준다
       class: `${part.ink} font-medium`,
-      text: `${part.mark} ${part.name} ${part.count}건 (${몫(part.count).toFixed(1)}%)`
+      text: `${part.mark} ${part.name} ${part.count}건 (${몫글자(part)})`
     }))),
     /*
      * **분모를 적는다.** 띠의 비율은 지원 건수 전체로 나눈 값이고, 바로 옆 칸의
