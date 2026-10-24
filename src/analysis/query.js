@@ -65,8 +65,16 @@ export function matchesFilter(row, filter) {
      * 사람이 보고 판단하는 것은 화면 글자다.
      */
     const shown = Number(formatNumber(value));
-    if (filter.min !== null && filter.min !== undefined && shown < filter.min) return false;
-    if (filter.max !== null && filter.max !== undefined && shown > filter.max) return false;
+    /*
+     * **경계도 같은 자릿수로 맞춘다.** 슬라이더의 기본 경계는 자료의 원래 최저·최고값
+     * (2.333333)인데 값만 「2.3333」으로 맞추면, 손잡이 하나만 움직였을 때 맨 끝 학생이
+     * 2.3333 < 2.333333으로 빠진다.
+     */
+    const 경계 = (bound) => (bound === null || bound === undefined ? null : Number(formatNumber(bound)));
+    const min = 경계(filter.min);
+    const max = 경계(filter.max);
+    if (min !== null && shown < min) return false;
+    if (max !== null && shown > max) return false;
     return true;
   }
 

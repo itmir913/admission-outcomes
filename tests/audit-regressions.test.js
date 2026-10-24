@@ -837,6 +837,9 @@ describe('감사 B — 화면 숫자가 서로 어긋나지 않는다', async ()
     expect(matchesFilter(row(2.333333), { key: 'gpa.전교과', op: 'range', min: null, max: 2.3333 })).toBe(true);
     expect(matchesFilter(row(2.666667), { key: 'gpa.전교과', op: 'range', min: 2.6667, max: null })).toBe(true);
     expect(matchesFilter(row(2.99999), { key: 'gpa.전교과', op: 'range', min: 3, max: null })).toBe(true);
+    // 슬라이더 기본 경계(원래 최저·최고값)를 둔 채 손잡이 하나만 움직여도 끝 학생이 남는다
+    expect(matchesFilter(row(2.333333), { key: 'gpa.전교과', op: 'range', min: 2.333333, max: 3 })).toBe(true);
+    expect(matchesFilter(row(4.666667), { key: 'gpa.전교과', op: 'range', min: 1, max: 4.666667 })).toBe(true);
     // 정말로 큰 값은 여전히 빠진다
     expect(matchesFilter(row(2.354), { key: 'gpa.전교과', op: 'range', min: null, max: 2.35 })).toBe(false);
   });
