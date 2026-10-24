@@ -32,7 +32,7 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
             el('p', {
               class: 'mt-0.5 text-base text-ink-soft',
               text: [
-                file.container ? `${file.container} 안` : null,
+                file.container ? `${file.folder ? `${file.container}/${file.folder}` : file.container} 안` : null,
                 (file.cohortYears ?? []).filter((year) => year !== null && year !== undefined).length > 0
                   ? `고3 ${file.cohortYears.filter(Boolean).join(', ')}년`
                   : '행마다 연도',

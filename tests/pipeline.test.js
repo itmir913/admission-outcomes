@@ -433,3 +433,52 @@ describe('이름은 같고 내용이 다른 파일을 다시 올릴 때', () => 
     expect(loaded.files).toHaveLength(2);
   });
 });
+
+describe('zip 안 폴더가 다른 같은 이름 파일', () => {
+  /*
+   * 2025학년도/결과.xlsx와 2026학년도/결과.xlsx가 확인 창에 똑같이 「결과.xlsx」로 보이면
+   * 어느 쪽이 어느 해인지 구별할 수 없다. 폴더를 적어 두고, 고3 년도 제안에도 쓴다.
+   */
+  it('폴더를 시트에 남기고, 폴더 이름의 학년도로 고3 년도를 제안한다', async () => {
+    const grid = senjinhakGrid(2026).map((row) => row.slice(1));
+    const zip = makeZip({
+      '2025학년도/결과.xlsx': makeWorkbook({ result: grid }),
+      '2026학년도/결과.xlsx': makeWorkbook({ result: grid.concat([grid[1]]) })
+    });
+    const { sheets } = await prepareUploads([upload('전체.zip', zip)], { profiles: new ProfileSet([]), currentYear: NOW });
+    expect(sheets.map((sheet) => sheet.folder).sort()).toEqual(['2025학년도', '2026학년도']);
+    const byFolder = Object.fromEntries(sheets.map((sheet) => [sheet.folder, sheet.yearGuess.cohortYear]));
+    expect(byFolder['2025학년도']).toBe(2024);
+    expect(byFolder['2026학년도']).toBe(2025);
+  });
+});
+
+describe('다른 폴더의 같은 이름 파일은 교체 대상이 아니다', () => {
+  it('2025학년도/결과.xlsx를 고쳐 올려도 2026학년도/결과.xlsx는 묻지도 지우지도 않는다', async () => {
+    const grid = senjinhakGrid(2026).map((row) => row.slice(1));
+    const profiles = new ProfileSet([]);
+    const db = await openDatabase(`folder-${Date.now()}`);
+    await clearAll(db);
+    const zip = makeZip({
+      '2025학년도/결과.xlsx': makeWorkbook({ result: grid }),
+      '2026학년도/결과.xlsx': makeWorkbook({ result: grid.concat([grid[1]]) })
+    });
+    const first = await prepareUploads([upload('전체.zip', zip)], { profiles, currentYear: NOW });
+    await saveDataset(db, await commitSheets(first.sheets));
+
+    const fixed = grid.map((row) => [...row]);
+    fixed[4][10] = '합';
+    const again = makeZip({ '2025학년도/결과.xlsx': makeWorkbook({ result: fixed }) });
+    const stored = await loadDataset(db);
+    const second = await prepareUploads([upload('고침.zip', again)], { profiles, existingFiles: stored.files, currentYear: NOW });
+    expect(second.sheets[0].sameName).toHaveLength(1);
+    expect(second.sheets[0].sameName[0].folder).toBe('2025학년도');
+    await saveDataset(db, await commitSheets(second.sheets, {
+      decisions: { [second.sheets[0].id]: { replace: true } },
+      existingStudents: stored.students
+    }));
+    const loaded = await loadDataset(db);
+    expect(loaded.files.map((file) => file.folder).sort()).toEqual(['2025학년도', '2026학년도']);
+    expect(loaded.applications).toHaveLength(4 + 5);
+  });
+});

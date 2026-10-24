@@ -198,7 +198,8 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
     const body = sheet.grid.slice(reading.headerStart);
 
     const yearGuess = inferCohortYear({
-      fileName: sheet.fileName,
+      // 폴더 이름(`2025학년도/`)도 파일 이름과 같은 단서다. zip 이름은 넣지 않는다 — 여러 해를 묶은 이름이 흔하다
+      fileName: sheet.folder ? `${sheet.folder}/${sheet.fileName}` : sheet.fileName,
       sheetName: sheet.sheetName,
       grid: body,
       headerRows: reading.headerRows,
@@ -233,6 +234,7 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
       sheetName: sheet.sheetName,
       fileHash: sheet.fileHash,
       container: sheet.container,
+      folder: sheet.folder,
       grid: sheet.grid,
       reading,
       profile: match.profile,
@@ -244,7 +246,10 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
        * 인식되지 않고 옛 기록 위에 쌓인다 — 합격률의 분모와 분자가 함께 부푼다 (§5).
        * 이름만 보고 바꾸면 다른 해의 같은 이름 파일을 지울 수 있으니 사람에게 묻는다.
        */
-      sameName: existingFiles.filter((file) => file.name === sheet.fileName && file.hash !== sheet.fileHash),
+      // zip의 다른 폴더(다른 해)에 든 같은 이름 파일까지 교체 대상에 넣으면 그 해 자료가 함께 지워진다
+      sameName: existingFiles.filter((file) => file.name === sheet.fileName
+        && (file.folder ?? null) === (sheet.folder ?? null)
+        && file.hash !== sheet.fileHash),
       rowCount: Math.max(0, body.length - reading.headerRows),
       // 사람이 확인해 둔 프로파일로 읽었고 연도까지 확실할 때만 손댈 것이 없다.
       // 이름으로 해석한 것은 맞아 보여도 한 번은 눈으로 보게 한다
@@ -336,6 +341,7 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
       hash: sheet.fileHash,
       name: sheet.fileName,
       container: sheet.container ?? null,
+      folder: sheet.folder ?? null,
       sheets: [],
       cohortYears: [],
       profileId: reading.profileId,
