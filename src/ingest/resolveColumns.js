@@ -84,7 +84,12 @@ export function scoreLabel(label, rule) {
     const target = norm(word);
     if (!target) continue;
     if (forms.some((form) => form !== target && (form.startsWith(target) || form.endsWith(target)))) {
-      return SCORES.affix;
+      /*
+       * **코드 열은 이름 열에 진다.** `모집단위코드`와 `모집단위명`이 나란히 있으면 둘 다
+       * 같은 점수라 왼쪽(코드)이 자리를 가져갔고, 요약표가 전형 **코드**로 묶였다.
+       */
+      const 코드 = forms.some((form) => /코드|code/.test(form)) && !/코드|code/.test(target);
+      return 코드 ? SCORES.affix - 10 : SCORES.affix;
     }
   }
   let best = 0;
