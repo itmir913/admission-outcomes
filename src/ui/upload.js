@@ -186,7 +186,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
      */
     const decisions = new Map(prepared.sheets.map((sheet) => [
       sheet.id,
-      { cohortYear: prefilledYear(sheet) ?? sheet.yearGuess.cohortYear, include: Boolean(sheet.reading?.readable) }
+      { cohortYear: prefilledYear(sheet) ?? (needsFileYear(sheet) ? sheet.yearGuess.cohortYear : null), include: Boolean(sheet.reading?.readable) }
     ]));
 
     /*
@@ -409,13 +409,13 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         : null
     ]);
 
-    footerNote = el('p', { class: 'mr-auto text-base text-ink-soft' });
+    footerNote = el('p', { class: 'w-full text-base text-ink-soft sm:mr-auto sm:w-auto' });
     cancelButton = el('button', {
-      class: 'btn shrink-0', text: '취소', attrs: { type: 'button' },
+      class: 'btn flex-1 sm:flex-none', text: '취소', attrs: { type: 'button' },
       on: { click: () => finish(false) }
     });
     submitButton = el('button', {
-      class: 'btn btn-primary shrink-0 whitespace-nowrap', text: '불러오기', attrs: { type: 'button' },
+      class: 'btn btn-primary flex-1 whitespace-nowrap sm:flex-none', text: '불러오기', attrs: { type: 'button' },
       on: {
         click: async () => {
           if (working) return;
@@ -452,8 +452,8 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
        */
       footer: el('div', { class: 'flex w-full flex-wrap items-center gap-3' }, [
         footerNote,
-        cancelButton,
-        submitButton
+        // 좁은 화면에서 줄이 넘어가면 두 단추가 다른 줄로 나뉘었다. 한 묶음으로 두어 늘 나란히 선다
+        el('div', { class: 'flex w-full gap-3 sm:w-auto' }, [cancelButton, submitButton])
       ])
     }));
 
