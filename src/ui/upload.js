@@ -197,7 +197,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
      */
     const decisions = new Map(prepared.sheets.map((sheet) => [
       sheet.id,
-      { cohortYear: prefilledYear(sheet) ?? (needsFileYear(sheet) ? sheet.yearGuess.cohortYear : null), include: Boolean(sheet.reading?.readable) }
+      { cohortYear: prefilledYear(sheet) ?? (needsFileYear(sheet) ? sheet.yearGuess.cohortYear : null), include: Boolean(sheet.reading?.readable) && !sheet.hidden }
     ]));
 
     /*
@@ -376,7 +376,9 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
               : reading.source === 'profile'
                 ? el('span', { class: 'tag tag-pass', text: `${reading.label} 양식` })
                 : el('span', { class: 'tag tag-wait', text: '이름으로 알아냄' }),
-            sheet.duplicate ? el('span', { class: 'tag tag-wait', text: '이미 불러온 파일' }) : null
+            sheet.duplicate ? el('span', { class: 'tag tag-wait', text: '이미 불러온 파일' }) : null,
+            // 백업으로 숨겨 둔 같은 표일 수 있다. 꺼진 채로 시작한다
+            sheet.hidden ? el('span', { class: 'tag tag-wait', text: '숨은 시트' }) : null
           ])
         ]),
 

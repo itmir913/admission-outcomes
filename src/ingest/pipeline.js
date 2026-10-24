@@ -235,6 +235,7 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
       fileHash: sheet.fileHash,
       container: sheet.container,
       folder: sheet.folder,
+      hidden: Boolean(sheet.hidden),
       grid: sheet.grid,
       reading,
       profile: match.profile,

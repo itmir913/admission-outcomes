@@ -249,6 +249,7 @@ export function normalizeCell(value) {
  * @property {string} fileName
  * @property {string} [container] zip으로 올렸다면 그 zip 이름
  * @property {string} [folder] zip 안의 폴더 경로
+ * @property {boolean} [hidden] 엑셀에서 숨긴 시트인지
  * @property {string} fileHash 같은 파일을 다시 올렸는지 판별한다
  * @property {string} sheetName
  * @property {unknown[][]} grid 헤더를 포함한 전체 행렬
@@ -283,13 +284,19 @@ export async function readSheets(files) {
     const fileHash = await sha256Hex(file.bytes);
     let usable = 0;
 
-    for (const sheetName of workbook.SheetNames) {
+    for (const [index, sheetName] of workbook.SheetNames.entries()) {
+      /*
+       * **숨은 시트도 읽되 표시한다.** 백업으로 숨겨 둔 같은 표가 함께 들어가면 지원 건수가
+       * 두 배가 되는데, 이름이 달라 중복으로도 걸리지 않는다. 버리면 숨긴 자료를 쓰려는
+       * 사람이 길을 잃으니, 꺼진 채로 보여 주고 사람이 정하게 한다.
+       */
+      const hidden = Boolean(workbook.Workbook?.Sheets?.[index]?.Hidden);
       const raw = sheetUtils.sheet_to_json(workbook.Sheets[sheetName], {
         header: 1, defval: null, blankrows: false, raw: true
       });
       const grid = raw.map((row) => (Array.isArray(row) ? row.map(normalizeCell) : []));
       if (!grid.some((row) => row.some((cell) => cell !== null))) continue;
-      sheets.push({ fileName: file.name, container: file.container, folder: file.folder, fileHash, sheetName, grid });
+      sheets.push({ fileName: file.name, container: file.container, folder: file.folder, fileHash, sheetName, grid, hidden });
       usable += 1;
     }
     if (usable === 0) skipped.push({ name: file.name, reason: '내용이 있는 시트가 없습니다.' });
