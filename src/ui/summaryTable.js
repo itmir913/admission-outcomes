@@ -14,10 +14,13 @@ import { GROUPINGS, SMALL_SAMPLE } from '../analysis/summary.js';
  * @param {object} options
  * @param {ReturnType<import('../analysis/summary.js').summarize>} options.summary
  * @param {string|null} options.gpaLabel
+ * @param {{key: string, label: string}[]} options.gpaChoices 선택할 수 있는 내신 열
+ * @param {string|null} options.gpaKey 지금 선택한 내신 열
+ * @param {(key: string) => void} options.onGpa
  * @param {string} options.grouping
  * @param {(grouping: string) => void} options.onGrouping
  */
-export function paintSummaryChrome(head, notes, { summary, gpaLabel, grouping, onGrouping }) {
+export function paintSummaryChrome(head, notes, { summary, gpaLabel, gpaChoices, gpaKey, onGpa, grouping, onGrouping }) {
   const current = grouping in GROUPINGS ? grouping : 'univAdm';
 
   const 연도 = summary.years
@@ -32,10 +35,23 @@ export function paintSummaryChrome(head, notes, { summary, gpaLabel, grouping, o
      * 보이면 그 사실이 숨는다.
      */
     el('p', { class: 'text-base font-semibold text-ink', text: 연도 }),
-    el('p', {
-      class: 'text-base text-ink-soft',
-      text: gpaLabel ? `합격자 내신: ${gpaLabel}` : '내신 열이 없어 합격자 내신을 내지 않습니다'
-    }),
+    /*
+     * **어느 내신으로 낸 범위인지 선택할 수 있게 하되, 늘 보이게 한다.** 전교과와 국수영사는
+     * 다른 숫자다. 상담하는 학생의 대학이 어느 조합을 반영하는지에 따라 봐야 할 열이 다르다.
+     */
+    gpaChoices.length === 0
+      ? el('p', { class: 'text-base text-ink-soft', text: '내신 열이 없어 합격자 내신을 내지 않습니다' })
+      // 좁은 화면에서 선택 칸이 줄지 않으면 상자 밖으로 밀고 나간다
+      : el('label', { class: 'flex min-w-0 items-center gap-2 text-base text-ink-soft' }, [
+          '합격자 내신',
+          el('select', {
+            class: 'field min-h-9 w-auto min-w-0 max-w-full text-base',
+            attrs: { 'aria-label': '합격자 내신 기준' },
+            on: { change: (event) => onGpa(event.target.value) }
+          }, gpaChoices.map((choice) => el('option', {
+            text: choice.label, attrs: { value: choice.key, selected: choice.key === gpaKey }
+          })))
+        ]),
     el('div', {
       class: 'flex flex-wrap items-center gap-1 rounded-md border border-line bg-surface p-0.5 sm:ml-auto',
       attrs: { role: 'group', 'aria-label': '묶음 기준' }

@@ -9,7 +9,7 @@
 
 const KEY = 'admission-outcomes:view';
 
-/** @typedef {{columns: string[], widths: Record<string, number>, pinned: number, sorts: object[], filters: object[], filtersOpen: boolean|null, summary: boolean, grouping: string, summaryTable: {columns: string[], widths: Record<string, number>, pinned: number, sorts: object[]}}} ViewState */
+/** @typedef {{columns: string[], widths: Record<string, number>, pinned: number, sorts: object[], filters: object[], filtersOpen: boolean|null, summary: boolean, grouping: string, summaryGpa: string|null, summaryTable: {columns: string[], widths: Record<string, number>, pinned: number, sorts: object[]}}} ViewState */
 
 /**
  * 처음 상태.
@@ -23,6 +23,8 @@ export function emptyView() {
   // `filtersOpen`이 null이면 화면 폭이 정한다. 사람이 한 번 전환하면 그 선택이 남는다
   // `summary`는 대학×전형 요약표를 보는 중인지, `grouping`은 그 표의 묶음 기준이다
   return { columns: [], widths: {}, pinned: 3, sorts: [], filters: [], filtersOpen: null, summary: false, grouping: 'univAdm',
+    // 요약표 합격자 내신의 기준 열. null이면 대표 내신 열(전교과)을 쓴다
+    summaryGpa: null,
     // 요약표도 목록표와 같은 표라 열·너비·고정·정렬을 따로 가진다. 대학·전형 두 칸을 고정해 시작한다
     summaryTable: { columns: [], widths: {}, pinned: 2, sorts: [] } };
 }
@@ -49,6 +51,7 @@ export function loadView() {
       filtersOpen: typeof saved.filtersOpen === 'boolean' ? saved.filtersOpen : base.filtersOpen,
       summary: saved.summary === true,
       grouping: typeof saved.grouping === 'string' ? saved.grouping : base.grouping,
+      summaryGpa: typeof saved.summaryGpa === 'string' ? saved.summaryGpa : base.summaryGpa,
       summaryTable: readSummaryTable(saved.summaryTable, base.summaryTable)
     };
   } catch {
@@ -79,6 +82,7 @@ export function saveView(view) {
       filtersOpen: view.filtersOpen,
       summary: view.summary,
       grouping: view.grouping,
+      summaryGpa: view.summaryGpa,
       summaryTable: view.summaryTable
     }));
   } catch {

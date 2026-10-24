@@ -561,7 +561,15 @@ function paintView(visible) {
   }
   if (!요약) return;
 
-  const gpa = primaryGpaField(state.registry);
+  /*
+   * 선택한 내신 열이 이 자료에 없으면(다른 양식을 올렸거나 지웠으면) 대표 내신으로 돌아간다.
+   * 없는 열로 내면 범위가 통째로 빈칸이 되고, 왜 비었는지 알 길이 없다.
+   */
+  const gpaChoices = state.registry
+    .filter((field) => field.group === 'gpa' && field.filled > 0)
+    .map((field) => ({ key: field.key, label: fieldLabel(field.key) }));
+  const gpa = gpaChoices.find((choice) => choice.key === state.view.summaryGpa)
+    ?? primaryGpaField(state.registry) ?? null;
   const gpaLabel = gpa ? fieldLabel(gpa.key) : null;
   const 묶음 = GROUPINGS[state.view.grouping] ?? GROUPINGS.univAdm;
   const summary = summarize(visible, { keys: 묶음.keys, gpaKey: gpa?.key ?? null });
@@ -570,6 +578,9 @@ function paintView(visible) {
   paintSummaryChrome(pick('#요약머리'), pick('#요약각주'), {
     summary,
     gpaLabel,
+    gpaChoices,
+    gpaKey: gpa?.key ?? null,
+    onGpa: (key) => updateView({ summaryGpa: key }),
     grouping: state.view.grouping,
     onGrouping: (grouping) => updateView({ grouping })
   });
