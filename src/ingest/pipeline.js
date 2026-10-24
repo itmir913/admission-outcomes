@@ -281,7 +281,13 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
       continue;
     }
 
-    const cohortYear = decision.cohortYear ?? sheet.yearGuess.cohortYear;
+    /*
+     * **사람이 비운 칸(null)은 추정값으로 메우지 않는다.**
+     *
+     * `??`로 메우면 행마다 연도가 적힌 누적 파일에서도 파일 이름 연도가 모든 행을 덮어,
+     * 한 해 밀린 값이 조용히 저장된다 (§2). 결정에 연도가 아예 없을 때만 추정을 쓴다.
+     */
+    const cohortYear = decision.cohortYear !== undefined ? decision.cohortYear : sheet.yearGuess.cohortYear;
     /*
      * 여러 해가 섞인 누적 파일이면 파일 연도 없이 행마다 읽는다.
      *
@@ -348,15 +354,18 @@ export async function commitSheets(prepared, { decisions = {}, existingStudents 
     }
 
     file.sheets.push(sheet.sheetName);
-    if (!file.cohortYears.includes(cohortYear)) file.cohortYears.push(cohortYear);
-    /*
-     * **시트마다 확정한 연도를 따로 적어 둔다.**
-     *
-     * 파일 단위 목록(`cohortYears`)만 두면 시트가 둘이고 해가 다른 파일에서 「연도가
-     * 섞였다」로 보여, 다시 올릴 때 두 시트 다 빈칸이 된다. 또박또박 적어 둔 값을
-     * 두고 사람에게 다시 치게 하는 셈이다 (§2).
-     */
-    file.yearBySheet = { ...(file.yearBySheet ?? {}), [sheet.sheetName]: cohortYear };
+    // 행별 연도 시트는 파일 연도가 없다. null을 적어 두면 합칠 때 「정해진 연도」로 해석된다
+    if (cohortYear !== null && cohortYear !== undefined) {
+      if (!file.cohortYears.includes(cohortYear)) file.cohortYears.push(cohortYear);
+      /*
+       * **시트마다 확정한 연도를 따로 적어 둔다.**
+       *
+       * 파일 단위 목록(`cohortYears`)만 두면 시트가 둘이고 해가 다른 파일에서 「연도가
+       * 섞였다」로 보여, 다시 올릴 때 두 시트 다 빈칸이 된다. 또박또박 적어 둔 값을
+       * 두고 사람에게 다시 치게 하는 셈이다 (§2).
+       */
+      file.yearBySheet = { ...(file.yearBySheet ?? {}), [sheet.sheetName]: cohortYear };
+    }
     files.set(sheet.fileHash, file);
   }
 
