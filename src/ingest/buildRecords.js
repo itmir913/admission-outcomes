@@ -51,6 +51,16 @@ export function coerce(key, raw) {
 
   if (type === 'number' || type === 'year') {
     if (BLANK_MARKS.has(text)) return null;
+    /*
+     * **쉼표는 천 단위 모양일 때만 지운다.** 통째로 지웠더니 소수점 쉼표(`2,5`)가 **25**가
+     * 되어, 내신 25가 경고 없이 보관되고 요약표 최고값과 범위 필터에 섞였다 (§5).
+     * 내신·수능은 천 단위가 나올 수 없는 값이라 쉼표가 있으면 무엇이든 읽지 않는다 —
+     * `1,234`가 천이백인지 1.234인지 알 길이 없다.
+     */
+    if (text.includes(',')) {
+      const 성적 = parts[0] === 'gpa' || parts[0] === 'suneung';
+      if (성적 || !/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) return null;
+    }
     const value = Number(text.replace(/,/g, ''));
     return Number.isFinite(value) ? value : null;
   }
