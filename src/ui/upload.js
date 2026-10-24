@@ -10,6 +10,7 @@
 
 import { el, clear, openDialog, dialogFrame } from './dom.js';
 import { isIdentityLabel } from '../ingest/buildRecords.js';
+import { fieldLabel } from '../analysis/registry.js';
 
 /** 고3 년도를 학년도로. 화면에서 둘을 늘 나란히 보여 준다. */
 export const toSchoolYear = (cohortYear) => cohortYear + 1;
@@ -157,6 +158,24 @@ export function chosenCount(sheets, decisions) {
  * 식별 열로 보이는 이름은 보관소에 넣지 않는다(§1). 한 숫자로 묶어 「원본 이름
  * 그대로 둔다」고 적으면, 나중에 그 열을 찾는 사람이 사라진 까닭을 알 수 없다.
  */
+/**
+ * 이름으로 해석한 열이 **어느 칸으로 갔는지** 보여 준다.
+ *
+ * 「열 9개 중 9개를 해석했습니다」만 적으면 가장 깨끗해 보이는 카드가 가장 위험할 수 있다 —
+ * 수능 등급 열이 내신 과목으로 들어가도 숫자는 다 맞아 보인다. 접어 두되 늘 열 수 있게 한다.
+ *
+ * @param {{key: string, label: string}[]|undefined} mapping
+ */
+function 열배정표(mapping) {
+  if (!mapping || mapping.length === 0) return null;
+  return el('details', { class: 'mt-2' }, [
+    el('summary', { class: 'cursor-pointer text-base font-medium', text: `열 배정 보기 (${mapping.length}개)` }),
+    el('ul', { class: 'mt-2 space-y-1 text-base' }, mapping.map((item) => el('li', {
+      text: `${item.label} → ${fieldLabel(item.key)}`
+    })))
+  ]);
+}
+
 function 미해결안내(unresolved) {
   if (!unresolved || unresolved.length === 0) return [];
   const 보존 = unresolved.filter((item) => !isIdentityLabel(item.label));
@@ -482,7 +501,8 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
               el('p', { class: 'font-semibold', text: '등록된 양식과 달라 열 이름으로 해석했습니다. 한 번 확인해 주세요.' }),
               el('p', { class: 'mt-1 text-base' , text: `열 ${reading.columnCount}개 중 ${Object.keys(reading.columns).length}개를 해석했습니다.` }),
               ...미해결안내(reading.unresolved),
-              ...reading.notes.map((note) => el('p', { class: 'mt-1 text-base', text: note }))
+              ...reading.notes.map((note) => el('p', { class: 'mt-1 text-base', text: note })),
+              열배정표(reading.mapping)
             ])
           : null,
 

@@ -516,3 +516,16 @@ describe('기준을 모르는 누적 파일 — 사람이 연도 열의 기준�
     expect(new Set(dataset.applications.map((row) => row.cohortYear))).toEqual(new Set([2025]));
   });
 });
+
+describe('이름으로 해석한 시트의 열 배정을 보여 준다', () => {
+  it('어느 열이 어느 칸으로 갔는지 돌려주고, 수능 표지 없는 과목 열을 알린다', async () => {
+    const grid = [
+      ['학번', '이름', '대학명', '모집단위', '최종', '전교과', '국어', '수학', '영어'],
+      ['30101', '가', '가대학', '국문', '합', 2.1, 3, 2, 1]
+    ];
+    const { sheets } = await prepareUploads([upload('자체.xlsx', makeWorkbook({ result: grid }))], { profiles: new ProfileSet([]), currentYear: NOW });
+    const reading = sheets[0].reading;
+    expect(reading.mapping.find((item) => item.label === '국어')?.key).toBe('gpa.국어');
+    expect(reading.notes.some((note) => note.includes('수능 구역 표지'))).toBe(true);
+  });
+});

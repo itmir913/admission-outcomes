@@ -17,6 +17,9 @@ import { resolveSheet } from './resolveColumns.js';
 import { buildHeaderLabels } from './headerBlock.js';
 import { inferCohortYear } from './year.js';
 import { buildDataset, isIdentityLabel } from './buildRecords.js';
+import fields from '../dict/fields.json' with { type: 'json' };
+
+const GPA_SUBJECT_KEYS = fields.repeating.gpa.subjects.map((entry) => `gpa.${entry.key}`);
 
 /**
  * 학생을 알아낼 열이 있는지.
@@ -141,6 +144,18 @@ export function readSheetColumns(grid, match) {
 
   const resolved = resolveSheet(grid);
   const notes = [...resolved.notes];
+  /*
+   * **수능 구역 표지 없이 과목 이름이 내신으로 간 경우를 알린다.** 학교 자체 양식에
+   * 「전교과, 국어, 수학, 영어」가 있고 뒤 셋이 수능 등급이면, 표지(한국사 등)가 없어
+   * 내신 과목으로 해석된다. 값 범위(1~9)도 같아 교차검증으로는 걸러지지 않는다 (§4).
+   */
+  const 과목키 = new Set(GPA_SUBJECT_KEYS);
+  const 내신과목 = Object.keys(resolved.columns).filter((key) => 과목키.has(key));
+  const 수능있음 = Object.keys(resolved.columns).some((key) => key.startsWith('suneung.'));
+  if (내신과목.length > 0 && !수능있음) {
+    notes.push(`수능 구역 표지(한국사 등)가 없어 ${내신과목.map((key) => key.slice(4)).join('·')} 열을 내신 과목으로 읽었습니다. `
+      + '수능 등급이라면 아래 열 배정을 확인하고, 맞지 않으면 이 시트를 꺼 주세요.');
+  }
   if (match.match === 'conflict') {
     notes.unshift(`지문이 같은 프로파일 ${match.conflict.join(' · ')}의 열 매핑이 서로 달라`
       + ' 어느 쪽도 쓰지 않았습니다. 이름으로 해석합니다 — 프로파일을 수정해 주세요.');
@@ -159,7 +174,11 @@ export function readSheetColumns(grid, match) {
     readable: resolved.columns.univ !== undefined,
     identifiable: hasIdentity(resolved.columns),
     nameOnlyIdentity: hasIdentity(resolved.columns) && !hasPrimaryIdentity(resolved.columns),
-    columnCount: resolved.labels.length
+    columnCount: resolved.labels.length,
+    // 이름으로 해석한 시트는 사람이 한 번 본다(§4). 무엇을 볼지가 있어야 한다
+    mapping: Object.entries(resolved.columns)
+      .map(([key, index]) => ({ key, index, label: resolved.labels[index]?.label ?? `${index + 1}번째 열` }))
+      .sort((left, right) => left.index - right.index)
   };
 }
 
