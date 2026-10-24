@@ -847,3 +847,22 @@ describe('감사 B — 화면 숫자가 서로 어긋나지 않는다', async ()
     expect(searchTokens(nfd)).toEqual(['서울대']);
   });
 });
+
+describe('감사 A — 빈칸 표시 때문에 내신 열이 배정에서 빠지지 않는다', async () => {
+  const { resolveSheet } = await import('../src/ingest/resolveColumns.js');
+  const { fitRatio } = await import('../src/ingest/resolveColumns.js');
+
+  it('`-`·`0`은 범위 밖 값으로 세지 않는다', () => {
+    const range = { min: 1, max: 9 };
+    expect(fitRatio(['-', '0', 0, 2.5], range, 'gpa.전교과')).toBe(1);
+    expect(fitRatio(['2,1', 3], range, 'gpa.전교과')).toBe(1);
+    // 글자만 든 열은 여전히 딴 세상으로 본다 — 교차검증이 무뎌지면 안 된다
+    expect(fitRatio(['서울', '부산', 3], range, 'gpa.전교과')).toBeCloseTo(1 / 3);
+  });
+
+  it('자리채움이 섞인 내신 열도 내신으로 배정한다', () => {
+    const grid = [['반', '번호', '대학', '최종', '전교과'], [1, 1, 'A대', '합', '-'], [1, 2, 'A대', '불', 2.5], [1, 3, 'A대', '불', 0]];
+    const resolved = resolveSheet(grid);
+    expect(resolved.columns['gpa.전교과']).toBe(4);
+  });
+});

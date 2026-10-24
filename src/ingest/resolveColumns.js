@@ -22,6 +22,7 @@ import synonyms from '../dict/field-synonyms.json' with { type: 'json' };
 import anchors from '../dict/section-anchors.json' with { type: 'json' };
 import { buildHeaderLabels, bodyRows } from './headerBlock.js';
 import { isKnownFieldKey } from './profile.js';
+import { isBlankCell } from './blankCell.js';
 
 const SCORES = synonyms.scores;
 
@@ -266,12 +267,24 @@ function rangeFor(key) {
   return VALUE_RANGE[key] ?? null;
 }
 
-/** 값이 범위에 드는 비율. 값이 아예 없으면 null — 검증할 거리가 없다는 뜻이다. */
-export function fitRatio(values, range) {
+/**
+ * 값이 범위에 드는 비율. 값이 아예 없으면 null — 검증할 거리가 없다는 뜻이다.
+ *
+ * **빈칸 표시는 값으로 세지 않는다.** 읽는 쪽이 빈칸으로 보는 `-`·`0`을 여기서
+ * 범위 밖으로 세면, 결측이 많은 열(미응시 영역)이 통째로 배정에서 빠진다.
+ *
+ * @param {unknown[]} values
+ * @param {{min: number, max: number}} range
+ * @param {string} [key] 논리 필드 키. 빈칸 판정에 쓴다
+ */
+export function fitRatio(values, range, key = '') {
   let seen = 0;
   let inside = 0;
   for (const raw of values) {
-    if (raw === null || raw === undefined || String(raw).trim() === '') continue;
+    if (isBlankCell(key, raw)) continue;
+    // 소수점 쉼표(`2,1`)는 읽는 쪽이 값으로 받지 않는다. 범위 밖 증거로도 세지 않는다
+    const text = String(raw).trim();
+    if (/^-?\d+,\d+$/.test(text) && !/^-?\d{1,3}(,\d{3})+$/.test(text)) continue;
     seen += 1;
     const value = Number(String(raw).replace(/,/g, ''));
     if (Number.isFinite(value) && value >= range.min && value <= range.max) inside += 1;
@@ -354,7 +367,7 @@ export function resolveColumns(grid, headerRows = 1, sampleRows = 200) {
   for (const [key, index] of [...columns]) {
     const range = rangeFor(key);
     if (!range) continue;
-    const ratio = fitRatio(body.map((row) => row?.[index]), range);
+    const ratio = fitRatio(body.map((row) => row?.[index]), range, key);
     if (ratio === null || ratio >= FIT_FLOOR) continue;
     columns.delete(key);
     taken.delete(index);

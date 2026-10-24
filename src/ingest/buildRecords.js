@@ -12,18 +12,12 @@ import fields from '../dict/fields.json' with { type: 'json' };
 import { buildHeaderLabels, bodyRows } from './headerBlock.js';
 import { assignStudentIds, isBlankMark, normalizeIdentityText } from '../core/anonymize.js';
 import { toCohortYear } from './year.js';
+// 숫자 칸의 빈칸 표기는 열을 고르는 쪽(resolveColumns)과 같은 판정을 쓴다
+import { isBlankCell } from './blankCell.js';
 
 const SCALAR_TYPE = new Map(fields.scalars.map((field) => [field.key, field.type]));
 const PART_TYPE = fields.partTypes;
 
-/*
- * 값이 비었다는 뜻으로 쓰이는 표기들. 엑셀에서 자리를 채우려고 넣는다.
- *
- * **식별 열의 판정과는 다른 목록이다.** 여기는 숫자·글자 칸을 보는 자리라 `0`이
- * 멀쩡한 값이지만(충원 0명), 학번·반·번호에서 `0`은 있을 수 없다. 식별 열은
- * `anonymize.js`의 `isBlankMark`가 본다.
- */
-const BLANK_MARKS = new Set(['-', '--', '.', '없음', '해당없음', '미해당', 'N/A', 'n/a']);
 
 /** 숫자로만 적힌 칸. 앞자리 0이 붙은 것은 코드로 보고 제외한다 */
 const NUMERIC_TEXT = /^-?(0|[1-9]\d*)(\.\d+)?$/;
@@ -54,7 +48,7 @@ export function coerce(key, raw) {
   if (text === '') return null;
 
   if (type === 'number' || type === 'year') {
-    if (BLANK_MARKS.has(text)) return null;
+    if (isBlankCell(key, text)) return null;
     /*
      * **쉼표는 천 단위 모양일 때만 지운다.** 통째로 지웠더니 소수점 쉼표(`2,5`)가 **25**가
      * 되어, 내신 25가 경고 없이 보관되고 요약표 최고값과 범위 필터에 섞였다 (§5).
@@ -66,14 +60,7 @@ export function coerce(key, raw) {
       if (성적 || !/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) return null;
     }
     const value = Number(text.replace(/,/g, ''));
-    if (!Number.isFinite(value)) return null;
-    /*
-     * **내신과 수능 등급의 0은 빈칸이다.** 등급에 0은 나올 수 없어, 값이 없는 자리를
-     * 0으로 채운 것이다. 그대로 두면 요약표 합격자 내신의 최저값에 「0」이 찍힌다.
-     * 표준점수·백분위의 0은 있을 수 있는 값이라 건드리지 않는다.
-     */
-    if (value === 0 && (parts[0] === 'gpa' || (parts[0] === 'suneung' && parts.at(-1) === 'grade'))) return null;
-    return value;
+    return Number.isFinite(value) ? value : null;
   }
   /*
    * **식별 열의 빈칸 표시는 빈칸으로 본다.**
