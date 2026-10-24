@@ -283,6 +283,14 @@ const DEFAULT_GPA_KEY = `gpa.${GPA_ENTRIES.find((entry) => entry.default)?.key}`
  */
 export function primaryGpaField(registry) {
   const candidates = registry.filter((field) => field.group === 'gpa' && field.filled > 0);
+  /*
+   * 값 개수가 같으면 **사전에 적힌 차례**(조합이 과목보다 앞)를 따른다. 레지스트리는
+   * 가나다순이라, 그대로 두면 동률일 때 「과학」이 대표 내신이 되었다.
+   */
+  const 차례 = (field) => {
+    const index = GPA_ENTRIES.findIndex((entry) => `gpa.${entry.key}` === field.key);
+    return index === -1 ? GPA_ENTRIES.length : index;
+  };
   return candidates.find((field) => field.key === DEFAULT_GPA_KEY)
-    ?? [...candidates].sort((left, right) => right.filled - left.filled)[0];
+    ?? [...candidates].sort((left, right) => right.filled - left.filled || 차례(left) - 차례(right))[0];
 }
