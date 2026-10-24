@@ -46,7 +46,11 @@ export function coerce(key, raw) {
   if (raw === null || raw === undefined) return null;
   const type = typeOf(key);
   const parts = key.split('.');
-  const text = String(raw).trim();
+  /*
+   * **한글은 한 꼴(NFC)로 맞춘다.** 맥에서 만든 파일은 자모가 풀린 꼴(NFD)로 올 수 있는데,
+   * 그러면 똑같이 보이는 「서울대」 두 줄이 요약표에 생기고 검색에도 안 걸린다 (§5).
+   */
+  const text = String(raw).normalize('NFC').trim();
   if (text === '') return null;
 
   if (type === 'number' || type === 'year') {
@@ -191,7 +195,7 @@ function readExtra(row, columns, labels) {
      */
     if (label === '') continue;
     if (isIdentityLabel(label)) { dropped.push(label); continue; }
-    const text = String(value).trim();
+    const text = String(value).normalize('NFC').trim();
     /*
      * 빈칸 표시는 빈칸으로 둔다. `-`를 글자로 담아 두면 그 열은 영영 숫자 열이 못 된다.
      *

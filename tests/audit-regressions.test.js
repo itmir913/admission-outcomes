@@ -813,3 +813,37 @@ describe('결측과 백분율', async () => {
     }
   });
 });
+
+describe('감사 B — 화면 숫자가 서로 어긋나지 않는다', async () => {
+  const { ratePercent } = await import('../src/ui/outcome.js');
+  const { matchesFilter, searchTokens } = await import('../src/analysis/query.js');
+  const { coerce } = await import('../src/ingest/buildRecords.js');
+
+  it('합격률은 건수에서 바로 반올림한다 — 23/80 = 28.75%는 28.8%다', () => {
+    expect(ratePercent({ 합격: 23, 충원합격: 0, 불합격: 57 })).toBe(28.8);
+    expect(ratePercent({ 합격: 41, 충원합격: 0, 불합격: 39 })).toBe(51.3);
+    expect(ratePercent({ 합격: 0, 충원합격: 0, 불합격: 0 })).toBeNull();
+    // 1~2000건 전수: 정수 연산으로 낸 값과 같다
+    for (let judged = 1; judged <= 400; judged += 1) {
+      for (let passed = 0; passed <= judged; passed += 7) {
+        const expected = Math.floor((passed * 2000 + judged) / (2 * judged)) / 10;
+        expect(ratePercent({ 합격: passed, 충원합격: 0, 불합격: judged - passed })).toBe(expected);
+      }
+    }
+  });
+
+  it('범위 필터는 화면에 적힌 값으로 견준다 — 2.333333은 「2.3333」이고 ≤ 2.3333에 든다', () => {
+    const row = (value) => ({ 'gpa.전교과': value });
+    expect(matchesFilter(row(2.333333), { key: 'gpa.전교과', op: 'range', min: null, max: 2.3333 })).toBe(true);
+    expect(matchesFilter(row(2.666667), { key: 'gpa.전교과', op: 'range', min: 2.6667, max: null })).toBe(true);
+    expect(matchesFilter(row(2.99999), { key: 'gpa.전교과', op: 'range', min: 3, max: null })).toBe(true);
+    // 정말로 큰 값은 여전히 빠진다
+    expect(matchesFilter(row(2.354), { key: 'gpa.전교과', op: 'range', min: null, max: 2.35 })).toBe(false);
+  });
+
+  it('자모가 풀린 한글(NFD)도 같은 값으로 읽고 찾는다', () => {
+    const nfd = '서울대'.normalize('NFD');
+    expect(coerce('univ', nfd)).toBe('서울대');
+    expect(searchTokens(nfd)).toEqual(['서울대']);
+  });
+});
