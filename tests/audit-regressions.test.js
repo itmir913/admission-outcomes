@@ -402,13 +402,19 @@ describe('4차 감사 — 고치면서 들여온 자리들', () => {
   });
 
   it('값 목록에 묶인 건수만큼 행이 남는다', () => {
-    // 소수 셋째 자리가 다른 두 값은 표에도 목록에도 같은 10.00으로 적힌다
+    /*
+     * 소수 셋째 자리가 다른 두 값은 예전에 같은 「10.00」으로 적혀 한 줄로 묶였다.
+     * 이제 셋째 자리부터는 있는 그대로 적으므로 두 줄이고, 어느 쪽이든 줄의 건수와
+     * 거른 행 수가 같아야 한다.
+     */
     const rows = [{ 'gpa.환산': 10.001 }, { 'gpa.환산': 10.002 }, { 'gpa.환산': 11.5 }];
     const counts = facetCounts(rows, [], 'gpa.환산');
-    const [대표, 건수] = [...counts.entries()].find(([value]) => Math.floor(Number(value)) === 10);
-    expect(건수).toBe(2);
-    const kept = applyQuery(rows, { filters: [{ key: 'gpa.환산', op: 'in', values: [대표] }] });
-    expect(kept).toHaveLength(건수);
+    const 열 = [...counts.entries()].filter(([value]) => Math.floor(Number(value)) === 10);
+    expect(열).toHaveLength(2);
+    for (const [대표, 건수] of 열) {
+      const kept = applyQuery(rows, { filters: [{ key: 'gpa.환산', op: 'in', values: [대표] }] });
+      expect(kept).toHaveLength(건수);
+    }
   });
 
   it('연도를 고쳐 다시 올리면 틀린 해가 남지 않는다', async () => {
@@ -752,5 +758,30 @@ describe('10차 감사 — 다른 학생으로 둔 둘이 같은 키를 들고 �
         expect(applications.length, `${이름} ${차례 + 1}회`).toBe(2);
       }
     }
+  });
+});
+
+describe('계산 감사에서 드러난 것', async () => {
+  const { coerce } = await import('../src/ingest/buildRecords.js');
+  const { formatNumber } = await import('../src/analysis/registry.js');
+  const { matchesFilter } = await import('../src/analysis/query.js');
+
+  it('소수점 쉼표를 열 배 값으로 읽지 않는다 — 내신 2,5가 25가 되면 안 된다', () => {
+    expect(coerce('gpa.전교과', '2,5')).toBeNull();
+    expect(coerce('gpa.전교과', '1,234')).toBeNull();
+    expect(coerce('gpa.전교과', '2.5')).toBe(2.5);
+  });
+
+  it('성적이 아닌 숫자는 천 단위 쉼표만 지운다', () => {
+    expect(coerce('quota', '1,234')).toBe(1234);
+    expect(coerce('quota', '12,5')).toBeNull();
+  });
+
+  it('화면 글자와 범위 필터가 같은 값을 말한다 — 2.354를 2.35로 적지 않는다', () => {
+    expect(formatNumber(2.354)).toBe('2.354');
+    expect(formatNumber(2.4)).toBe('2.40');
+    expect(formatNumber(2.35)).toBe('2.35');
+    const row = { 'gpa.전교과': 2.354 };
+    expect(matchesFilter(row, { key: 'gpa.전교과', op: 'range', min: null, max: 2.35 })).toBe(false);
   });
 });

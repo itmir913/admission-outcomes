@@ -104,7 +104,14 @@ export function isBlank(value) {
  */
 export function formatNumber(value) {
   if (typeof value !== 'number' || !Number.isFinite(value)) return String(value ?? '');
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+  if (Number.isInteger(value)) return String(value);
+  /*
+   * **둘째 자리에서 자르는 것은 값이 정말 둘째 자리까지일 때뿐이다.** 2.354를 「2.35」로
+   * 적었더니 필터 「≤ 2.35」에서 그 학생이 빠졌다 — 보이는 대로 경계를 잡은 사람에게
+   * 조용히 사라진다 (§5). 그보다 긴 값은 넷째 자리까지 있는 그대로 적는다.
+   */
+  const 둘째 = value.toFixed(2);
+  return Number(둘째) === value ? 둘째 : String(Number(value.toFixed(4)));
 }
 
 /**
