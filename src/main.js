@@ -658,6 +658,12 @@ function 요약줄열기(picked) {
   saveView(state.view);
   refresh();
   dom.표.scrollTop = 0;
+  /*
+   * **포커스를 방금 생긴 칩으로 보낸다.** 누른 줄은 요약표와 함께 사라져서, 키보드로
+   * 보는 사람의 포커스가 문서 맨 앞으로 떨어졌다. 학생 상세에서 대학을 눌렀을 때와 같다.
+   */
+  /** @type {HTMLElement|null} */
+  (dom.칩줄.querySelector(`[data-filter-key="${picked[0]?.key}"]`))?.focus();
 }
 
 function refresh({ keepScroll = false } = {}) {
