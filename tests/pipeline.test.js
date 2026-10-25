@@ -529,3 +529,13 @@ describe('이름으로 해석한 시트의 열 배정을 보여 준다', () => {
     expect(reading.notes.some((note) => note.includes('수능 구역 표지'))).toBe(true);
   });
 });
+
+describe('폴더를 적기 전 판이 남긴 zip 기록', () => {
+  it('folder가 없는 옛 zip 기록은 이름만 맞아도 교체를 묻는다', async () => {
+    const grid = senjinhakGrid(2026).map((row) => row.slice(1));
+    const zip = makeZip({ '2025학년도/결과.xlsx': makeWorkbook({ result: grid }) });
+    const 옛기록 = [{ hash: 'old', name: '결과.xlsx', container: '전체.zip', sheets: ['result'] }];
+    const { sheets } = await prepareUploads([upload('전체.zip', zip)], { profiles: new ProfileSet([]), existingFiles: 옛기록, currentYear: NOW });
+    expect(sheets[0].sameName.map((file) => file.hash)).toEqual(['old']);
+  });
+});

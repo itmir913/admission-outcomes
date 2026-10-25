@@ -267,8 +267,10 @@ export async function prepareUploads(uploads, { profiles, existingFiles = [], cu
        * 이름만 보고 바꾸면 다른 해의 같은 이름 파일을 지울 수 있으니 사람에게 묻는다.
        */
       // zip의 다른 폴더(다른 해)에 든 같은 이름 파일까지 교체 대상에 넣으면 그 해 자료가 함께 지워진다
+      // 폴더를 적기 전 판이 남긴 zip 기록에는 `folder` 자체가 없다. 그때는 이름만 보고 묻는다 —
+      // 빼 버리면 고친 zip을 다시 올려도 교체를 묻지 않고 옛 기록 위에 쌓인다
       sameName: existingFiles.filter((file) => file.name === sheet.fileName
-        && (file.folder ?? null) === (sheet.folder ?? null)
+        && ((file.folder ?? null) === (sheet.folder ?? null) || (file.container && !('folder' in file)))
         && file.hash !== sheet.fileHash),
       rowCount: Math.max(0, body.length - reading.headerRows),
       // 사람이 확인해 둔 프로파일로 읽었고 연도까지 확실할 때만 손댈 것이 없다.
