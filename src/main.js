@@ -671,6 +671,13 @@ function refresh({ keepScroll = false } = {}) {
   const hasData = state.rows.length > 0;
   dom.시작화면.classList.toggle('hidden', hasData);
   dom.본화면.classList.toggle('hidden', !hasData);
+  /*
+   * **시작 화면에서는 문서가 스크롤한다.** 긴 글을 스크롤 상자에 담아 두면
+   * 아이폰의 주소창 눌러 맨 위로, PC의 전체 페이지 캡처가 둘 다 먹지 않는다.
+   * 표가 선 뒤에는 다시 한 판으로 돌아간다 — 열 이름 줄과 고정 열이 제자리에
+   * 붙어 있어야 하므로 그쪽은 상자가 스크롤해야 한다.
+   */
+  document.body.classList.toggle('doc-scroll', !hasData);
 
   const students = new Set(state.dataset.students?.map((student) => student.sid)).size;
   dom.요약.textContent = hasData

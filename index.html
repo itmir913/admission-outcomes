@@ -41,7 +41,7 @@
     상단바는 한 줄이다. 줄이 늘면 표가 그만큼 줄어드는데,
     이 도구에서 세로 한 줄은 지원 기록 한 건이다.
   -->
-  <header class="no-print flex h-bar shrink-0 items-center gap-1.5 border-b border-line bg-surface px-2 sm:gap-4 sm:px-5">
+  <header class="no-print sticky top-0 z-20 flex h-bar shrink-0 items-center gap-1.5 border-b border-line bg-surface px-2 sm:gap-4 sm:px-5">
     <!--
       필터 패널의 표시를 전환하는 단추 (#1). 참고 UI처럼 상단바 맨 앞에 둔다 —
       화면 어디를 보고 있든 눈이 먼저 닿는 자리다.
@@ -87,7 +87,7 @@
   </header>
 
   <!-- 자료가 없을 때: 불러오기 화면 -->
-  <section id="시작화면" class="hidden min-h-0 flex-1 overflow-y-auto scroll-stable">
+  <section id="시작화면" class="hidden flex-1">
     <!--
       조각 사이 간격을 **한 군데서** 준다. 제목·안내·투하 영역·예시 카드·개인정보·푸터가
       같은 눈금(gutter)으로 떨어져야, 하나를 고칠 때 다른 것과 어긋나지 않는다.
