@@ -52,6 +52,7 @@ const dom = {
   열팝오버: pick('#열팝오버'),
   알림줄: pick('#알림줄'),
   표: pick('#표'),
+  맨위로: pick('#맨위로'),
   표없음: pick('#표없음'),
   진행: pick('#진행'),
   파일입력: /** @type {HTMLInputElement} */ (pick('#파일입력')),
@@ -453,11 +454,36 @@ document.addEventListener('click', () => {
  */
 let 마지막가로 = 0;
 dom.표.addEventListener('scroll', () => {
+  맨위단추갱신();
   const 가로 = dom.표.scrollLeft;
   if (가로 === 마지막가로) return;
   마지막가로 = 가로;
   팝오버닫기();
 }, { passive: true });
+
+/*
+ * **한 화면을 넘겨 내렸을 때만 보인다.** 조금 내린 자리에서는 올려다볼 것이 아직
+ * 화면에 남아 있어 단추가 할 일이 없고, 그 자리에서 떠 있으면 마지막 열만 가린다.
+ */
+function 맨위단추갱신() {
+  const 깊이 = dom.표.scrollTop;
+  dom.맨위로.classList.toggle('hidden', 깊이 <= dom.표.clientHeight);
+}
+
+dom.맨위로.addEventListener('click', () => {
+  /*
+   * **부드럽게 올리되, 그렇게 하지 말라고 한 사람에게는 그냥 올린다.** 움직임이
+   * 어지러운 사람이 운영체제에 켜 두는 설정이고, 긴 표에서는 그 미끄러짐이 길다.
+   */
+  const 줄여서 = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  dom.표.scrollTo({ top: 0, behavior: 줄여서 ? 'auto' : 'smooth' });
+  /*
+   * **포커스를 표 맨 앞으로 보낸다.** 단추는 곧 사라지는데, 거기 머문 포커스는
+   * 보이지 않는 자리에 남는다. 키보드로 다음에 누를 것은 맨 위의 검색칸이다.
+   */
+  dom.표.focus({ preventScroll: true });
+  맨위단추갱신();
+});
 
 /**
  * 툴바의 상태를 맞춘다 (#3).
@@ -678,6 +704,7 @@ function refresh({ keepScroll = false } = {}) {
    * 붙어 있어야 하므로 그쪽은 상자가 스크롤해야 한다.
    */
   document.body.classList.toggle('doc-scroll', !hasData);
+  맨위단추갱신();
 
   const students = new Set(state.dataset.students?.map((student) => student.sid)).size;
   dom.요약.textContent = hasData
