@@ -466,8 +466,10 @@ dom.표.addEventListener('scroll', () => {
  * 화면에 남아 있어 단추가 할 일이 없고, 그 자리에서 떠 있으면 마지막 열만 가린다.
  */
 function 맨위단추갱신() {
-  const 깊이 = dom.표.scrollTop;
-  dom.맨위로.classList.toggle('hidden', 깊이 <= dom.표.clientHeight);
+  const 보임 = dom.표.scrollTop > dom.표.clientHeight;
+  // `hidden`과 짝을 이루는 display 를 함께 켠다 — 진행 덮개와 같은 방식이다
+  dom.맨위로.classList.toggle('hidden', !보임);
+  dom.맨위로.classList.toggle('grid', 보임);
 }
 
 dom.맨위로.addEventListener('click', () => {

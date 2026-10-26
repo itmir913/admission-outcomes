@@ -409,9 +409,21 @@
         **상자 밖에 fixed 로 세운다.** 안에 두면 같이 밀려 올라가 정작 필요할 때 없다.
         한 화면을 넘겨 내렸을 때만 나타난다 — 늘 떠 있으면 마지막 열의 값을 가린다.
       -->
+      <!--
+        **글자가 아니라 동그란 아이콘이다.** 글자 단추로 두었더니 104×47px이 표
+        오른쪽 아래에 늘 얹혀, 마지막 열의 값을 그만큼 가렸다. 이 자리의 표준은
+        원형 아이콘이고, 지름 48px이면 손가락이 닿는 크기(44px)를 넘긴다.
+
+        이름은 `aria-label`이 진다 — 그림에는 읽을 글자가 없다.
+      -->
       <button type="button" id="맨위로"
-              class="no-print btn btn-primary fixed bottom-4 right-4 z-20 hidden shadow-lg"
-              aria-label="표를 맨 위로">↑ 맨 위로</button>
+              class="no-print fixed bottom-4 right-4 z-20 hidden h-12 w-12 place-items-center rounded-full bg-ink/80 text-surface shadow-lg backdrop-blur-sm transition-colors hover:bg-ink"
+              aria-label="표를 맨 위로">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 19V5M5 12l7-7 7 7" />
+        </svg>
+      </button>
     </div>
   </main>
 
