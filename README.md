@@ -27,3 +27,16 @@ npm run dev          # vite
 - IndexedDB 보관 · 파일 단위 되돌리기 · 전체 지우기
 
 앞으로 만들 것은 [docs/roadmap.md](docs/roadmap.md)에 있다.
+
+---
+
+## 라이선스
+
+[PolyForm Noncommercial License 1.0.0](LICENSE.md)
+
+- **허용**: 개인적인 용도, 학교 등 교육기관에서의 비영리적 목적의 사용 및 배포
+- **금지**: 본 프로그램이나 소스코드를 활용한 모든 종류의 상업적 영리 활동
+
+번들에 포함되는 외부 라이브러리는 각자의 라이선스를 따릅니다.
+
+© 2026 [luminousky.com](https://luminousky.com). All rights reserved.
