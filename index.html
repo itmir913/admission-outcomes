@@ -389,7 +389,12 @@
           그 상자는 보이는 폭만큼만 넓고 표는 그보다 넓어서, 버틸 자리가 0이었다.
           스크롤 상자의 바로 아래 칸으로 두면 표만큼 넓은 자리에서 버틴다.
         -->
-        <div id="요약머리" class="요약조각 hidden sticky left-0 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6"></div>
+        <!--
+          **위쪽 여백을 두지 않는다.** 바로 위 조작줄이 이미 제 아래쪽 여백(`p-gutter`)을
+          두고 끝난다. 여기서 한 번 더 띄우면 설명 줄과 머리줄 사이만 지원 목록보다
+          넓어져, 보기를 전환할 때 표가 한 번 내려앉는 것처럼 보인다.
+        -->
+        <div id="요약머리" class="요약조각 hidden sticky left-0 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 pb-3 sm:px-6"></div>
         <table id="요약표" class="요약조각 hidden grid-table">
           <colgroup id="요약열너비"></colgroup>
           <thead>
