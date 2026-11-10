@@ -100,7 +100,7 @@ export function summarize(rows, { keys, gpaKey }) {
       values,
       rows: members,
       tally,
-      // 1단계 불합격은 판정 미상 자리에 있다(분모를 맞추려고). 학부모 눈에는 곧 탈락이라 따로 센다
+      // 발표가 끝난 해는 불합격에 포함돼 있다(rows.js). 그중 1단계 탈락이 몇 건인지는 따로 보여 준다
       stage1Fail: members.filter((row) => row['#outcome']?.label === STAGE1_FAIL_LABEL).length,
       judged,
       // 표본이 적으면 비율을 내지 않는다. 1/1 = 100%가 합격선처럼 보인다

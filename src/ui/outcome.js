@@ -26,7 +26,7 @@ export function tallyOutcomes(rows) {
     else if (code === 'waitPass') tally.충원합격 += 1;
     else if (code === 'fail') tally.불합격 += 1;
     else tally.미상 += 1;
-    // 최종 열에서 읽은 판정만 센다. 1단계 탈락은 세되 비율의 분모에는 넣지 않는다
+    // 최종이 확정된 건만 센다. 아직 발표가 안 끝난 해의 1단계 탈락은 분모에 넣지 않는다(rows.js)
     if (row['#outcome']?.final && code !== 'unknown') tally.최종판정 += 1;
   }
   tally.학생 = students.size;

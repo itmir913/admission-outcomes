@@ -99,12 +99,50 @@ describe('내신은 학생 단위로 센다', () => {
   });
 });
 
-describe('1단계 불합격을 따로 센다', () => {
-  it('미상 자리에 있지만 학부모 눈에는 곧 탈락이다', () => {
+describe('1단계 불합격', () => {
+  it('발표가 끝난 해에서는 불합격으로 센다 — 떨어진 지원이 합격률 분모에서 빠지면 합격률이 과대평가된다', () => {
     const rows = rowsOf([app('a', '가', '종합', null, { stage1: '불' }), app('b', '가', '종합', '합')]);
     const group = summarize(rows, { keys: ['univ'], gpaKey: null }).groups[0];
     expect(group.stage1Fail).toBe(1);
-    expect(group.tally.미상).toBe(1);
+    expect(group.tally.불합격).toBe(1);
+    expect(group.tally.미상).toBe(0);
+    // 합격 1 + 불합격 1 = 분모 2. 칸을 더해 되검산할 수 있어야 한다
+    expect(group.judged).toBe(2);
+  });
+
+  it('아직 발표가 안 끝난 해에서는 분모에서 뺀다 — 1단계 합격자의 최종이 비어 있어 합격률 0%가 된다', () => {
+    const rows = rowsOf([
+      app('a', '가', '종합', null, { stage1: '불' }),
+      app('b', '가', '종합', null, { stage1: '합' })
+    ]);
+    const group = summarize(rows, { keys: ['univ'], gpaKey: null }).groups[0];
+    expect(group.stage1Fail).toBe(1);
+    expect(group.tally.불합격).toBe(0);
+    expect(group.tally.미상).toBe(2);
+    expect(group.judged).toBe(0);
+  });
+
+  it('진행 중인 해가 끝난 해의 집계를 흔들지 않는다 — 고3 년도별로 따로 본다', () => {
+    const 진행중 = { ...app('c', '가', '종합', null, { stage1: '합' }), cohortYear: 2026 };
+    const rows = rowsOf([
+      app('a', '가', '종합', null, { stage1: '불' }),
+      app('b', '가', '종합', '합'),
+      진행중,
+      { ...app('d', '가', '종합', null, { stage1: '불' }), cohortYear: 2026 }
+    ]);
+    const group = summarize(rows, { keys: ['univ'], gpaKey: null }).groups[0];
+    // 2025년의 1단계 불합격만 불합격으로 셌다. 2026년 두 건은 미상에 남는다
+    expect(group.tally.불합격).toBe(1);
+    expect(group.tally.미상).toBe(2);
+  });
+
+  it('불합격으로 세어도 이름표는 「1단계 불합격」 그대로다 — 표와 값 목록이 계속 구분해 보여 준다', () => {
+    const rows = rowsOf([app('a', '가', '종합', null, { stage1: '불' }), app('b', '가', '종합', '합')]);
+    const row = rows.find((item) => item.sid === 'a');
+    expect(row['#outcome'].label).toBe('1단계 불합격');
+    expect(row['#outcome'].code).toBe('fail');
+    expect(row['#outcome'].passed).toBe(false);
+    expect(row.outcome).toBe('fail');
   });
 });
 
