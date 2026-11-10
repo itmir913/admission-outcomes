@@ -584,7 +584,10 @@ function 필터판열림() {
 function paintView(visible) {
   const 요약 = state.view.summary === true;
   pick('#목록표').classList.toggle('hidden', 요약);
-  pick('#요약표').classList.toggle('hidden', !요약);
+  // 요약 보기의 조각은 스크롤 상자에 나란히 선다(index.html). 상자가 없으니 넷을 함께 여닫는다
+  for (const part of document.querySelectorAll('.요약조각')) part.classList.toggle('hidden', !요약);
+  // 「없습니다」 안내는 요약표가 그릴 때 줄 수를 보고 정한다. 여기서는 끌 때만 건드린다
+  if (!요약) pick('#요약없음').classList.add('hidden');
   dom.쪽번호.disabled = 요약;
   for (const [selector, on] of [['#보기목록', !요약], ['#보기요약', 요약]]) {
     const node = pick(selector);
