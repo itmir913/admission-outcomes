@@ -52,7 +52,7 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
             attrs: { type: 'button' },
             on: {
               click: () => {
-                if (confirm(`${file.name}이(가) 넣은 기록을 지웁니다. 계속할까요?`)) onRemove(file.hash);
+                if (confirm(`「${file.name}」에서 불러온 기록을 삭제합니다. 계속할까요?`)) onRemove(file.hash);
               }
             }
           })
@@ -66,7 +66,7 @@ export function openFiles(dialog, { files, rowCounts, onRemove, onClearAll, onAd
       el('p', {}, [
         '이 보관소는 ',
         el('strong', { class: 'text-ink', text: '원본이 아니라 캐시' }),
-        '입니다. 시크릿 모드·캐시 삭제·PC 교체로 사라집니다. 원본 엑셀은 따로 보관해 주세요.'
+        '입니다. 시크릿 모드, 캐시 삭제, 컴퓨터 교체 시 사라집니다. 원본 엑셀은 따로 보관해 주세요.'
       ])
     ])
   ]);
@@ -204,8 +204,8 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
     paintShown();
     paintPicker();
     pinNote.textContent = pinCount === 0
-      ? '고정한 열이 없습니다. 가로로 스크롤하면 왼쪽 열도 함께 밀려납니다.'
-      : `앞 ${pinCount}개 열이 왼쪽에 붙어 있습니다.`;
+      ? '고정한 열이 없습니다. 좌우로 스크롤하면 모든 열이 함께 움직입니다.'
+      : `선택한 ${pinCount}개 열이 고정되어 있습니다.`;
   }
 
   // 좁은 화면에서 좌우로 나누면 「자료에 있는 열」이 접혀 내려가 안 보인다.
@@ -213,7 +213,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
   const body = el('div', { class: 'grid gap-5 md:grid-cols-2' }, [
     el('section', {}, [
       el('h3', { class: 'text-lg font-bold tracking-tight', text: '보이는 열' }),
-      el('p', { class: 'text-base text-ink-soft', text: '끌어다 놓거나 화살표로 순서를 바꿉니다. 표의 열 이름을 끌어도 됩니다.' }),
+      el('p', { class: 'text-base text-ink-soft', text: '드래그하거나 화살표 버튼으로 순서를 바꿉니다. 표의 열 제목을 직접 드래그해도 됩니다.' }),
       shownList,
       el('div', { class: 'mt-4' }, [
         el('label', { class: 'text-base font-semibold', text: '왼쪽에 고정할 열 수' }),
@@ -223,7 +223,7 @@ export function openColumns(dialog, { registry, columns, pinned, onApply }) {
     ]),
     el('section', {}, [
       el('h3', { class: 'text-lg font-bold tracking-tight', text: '데이터에 있는 열' }),
-      el('p', { class: 'text-base text-ink-soft', text: '누르면 켜지고 꺼집니다. 해석하지 못한 열도 그대로 쓸 수 있습니다.' }),
+      el('p', { class: 'text-base text-ink-soft', text: '눌러서 켜고 끕니다. 해석하지 못한 열도 그대로 쓸 수 있습니다.' }),
       pickList
     ])
   ]);

@@ -237,7 +237,7 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     warnings.push({
       type: 'name-only-identity',
       count: nameOnlyRows,
-      message: `학번도 반·번호도 없어 이름만으로 식별한 행이 ${nameOnlyRows}건 있습니다. 동명이인이면 한 사람으로 묶입니다.`
+      message: `학번도 반·번호도 없어 이름만으로 식별한 행이 ${nameOnlyRows}건 있습니다. 동명이인이면 한 사람으로 간주됩니다.`
     });
   }
 
@@ -448,7 +448,7 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     const strongest = merged.best?.hash ?? [...merged.hashes].sort()[0];
     // 손상된 보관소를 만나면 사람이 읽을 문장으로 멈춘다. 그러지 않으면 화면에 TypeError가 뜬다
     if (!/^[0-9a-f]{32,}$/.test(strongest)) {
-      throw new Error('보관소의 키 기록이 손상됐습니다. 「데이터 초기화」 후 다시 불러와 주세요.');
+      throw new Error('저장된 키 정보가 손상되었습니다. 「데이터 초기화」 후 다시 불러와 주세요.');
     }
     const bytes = Uint8Array.from(
       strongest.slice(0, 16).match(/.{2}/g).map((pair) => Number.parseInt(pair, 16))
@@ -506,7 +506,7 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     warnings.push({
       type: 'stored-student-conflict',
       count: 합쳐진레코드,
-      message: `보관된 학생 ${합쳐진레코드}명은 서로 다른 학생이 한 익명 ID로 합쳐져 있는 것으로 보입니다. 판을 올리기 전에 들어간 자료입니다 — 다시 불러와도 낫지 않으니, 「데이터 초기화」 후 처음부터 다시 불러와 주세요.`
+      message: `저장된 학생 ${합쳐진레코드}명은 서로 다른 학생이 하나의 익명 ID로 합쳐진 것으로 보입니다. 이전 판에서 불러온 자료이고 다시 불러와도 고쳐지지 않습니다 — 「데이터 초기화」 후 처음부터 다시 불러와 주세요.`
     });
   }
 
@@ -514,7 +514,7 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     warnings.push({
       type: 'identity-conflict',
       count: 잇지않은행,
-      message: `서로 어긋나는 식별자가 있어, 그 이름이나 반·번호로는 잇지 않은 행이 ${잇지않은행}건 있습니다. 학번이 다른데 반·번호가 겹치거나, 이름이 같은데 번호가 다른 경우입니다 — 다른 학생으로 두었습니다.`
+      message: `식별자가 서로 맞지 않아 이름이나 반·번호로 연결하지 않은 행이 ${잇지않은행}건 있습니다. 학번이 다른데 반·번호가 겹치거나, 이름이 같은데 번호가 다른 경우입니다 — 다른 학생으로 두었습니다.`
     });
   }
 
@@ -522,7 +522,7 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     warnings.push({
       type: 'students-merged',
       count: merges.length,
-      message: `따로 있던 익명 ID ${merges.length}개가 같은 학생으로 이어졌습니다. 지난 기록도 함께 옮겼습니다.`
+      message: `같은 학생인데 익명 ID가 둘로 나뉘어 있던 경우를 ${merges.length}건 합쳤습니다. 지난 기록도 함께 옮겼습니다.`
     });
   }
 
@@ -530,7 +530,7 @@ export async function assignStudentIds(entries, { existing = [] } = {}) {
     warnings.push({
       type: 'unverified-name-link',
       count: unverifiedNameLinks,
-      message: `학번·반·번호 없이 이름만으로 기존 학생에 이어 붙인 행이 ${unverifiedNameLinks}건 있습니다. 동명이인이면 이력이 섞일 수 있습니다.`
+      message: `학번·반·번호 없이 이름만으로 기존 학생에 연결한 행이 ${unverifiedNameLinks}건 있습니다. 동명이인이면 이력이 섞일 수 있습니다.`
     });
   }
 

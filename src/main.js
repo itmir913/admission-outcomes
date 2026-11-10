@@ -250,7 +250,7 @@ function paintSummary(visible, total) {
     el('p', {
       class: 'border-t border-line-soft bg-canvas px-4 py-1.5 text-base text-ink-soft',
       text: 표본적음 && rate !== null
-        ? `${rateNote(tally)} 최종 판정이 ${SMALL_SAMPLE}건 미만이라 합격률을 내지 않습니다.`
+        ? `${rateNote(tally)} 최종 판정이 ${SMALL_SAMPLE}건 미만이라 합격률을 표시하지 않습니다.`
         : rateNote(tally)
     })
   ]));
@@ -276,7 +276,7 @@ function paintChips() {
       class: 'truncate text-ink-soft',
       text: state.view.summary
         ? '줄을 누르면 그 대학·전형으로 필터를 걸고 지원 목록으로 갑니다'
-        : '열 제목을 눌러 정렬 / 열을 드래그해 순서 변경 / 열 사이 선을 드래그해 너비 조절'
+        : '열 제목을 눌러 정렬 / 열을 드래그해 순서 변경 / 열 사이 선을 드래그해 너비 조절 / Shift + 휠로 좌우 스크롤'
     }));
     return;
   }
@@ -642,7 +642,7 @@ function paintView(visible) {
   for (const selector of ['#첫쪽', '#앞쪽', '#뒤쪽', '#끝쪽']) pick(selector).disabled = true;
   dom.행수.textContent = `${수.format(rows.length)}줄 · 지원 ${수.format(visible.length)}건`;
 
-  pick('#요약없음').textContent = '걸려 있는 조건에 맞는 지원 기록이 없습니다. 위 칩에서 필터를 하나씩 떼어 보세요.';
+  pick('#요약없음').textContent = '조건에 맞는 지원 기록이 없습니다. 조건을 하나씩 지워 보세요.';
   // 정렬을 걸지 않았으면 이름순으로 둔다. 다시 그릴 때마다 줄 순서가 흔들리면 보던 줄을 놓친다
   const 이름순 = [...rows].sort((left, right) => 묶음.keys
     .map((key) => String(left[key] ?? '').localeCompare(String(right[key] ?? ''), 'ko'))
@@ -737,8 +737,8 @@ function refresh({ keepScroll = false } = {}) {
 
   // 무엇 때문에 0건인지 말해 준다. 「없습니다」만으로는 어디를 되돌려야 하는지 모른다
   dom.표없음.textContent = state.search.trim()
-    ? `「${state.search.trim()}」에 맞는 지원 기록이 없습니다. 검색어를 지우거나 줄여 보세요.`
-    : '걸려 있는 필터에 맞는 지원 기록이 없습니다. 위 칩에서 필터를 하나씩 떼어 보세요.';
+    ? `「${state.search.trim()}」으로 찾은 지원 기록이 없습니다. 검색어를 지우거나 짧게 줄여 보세요.`
+    : '필터에 맞는 지원 기록이 없습니다. 조건을 하나씩 지워 보세요.';
 
   paintToolbar();
   팝오버그리기();
@@ -1008,7 +1008,7 @@ pick('#파일열기').addEventListener('click', async () => {
 });
 
 async function wipe() {
-  if (!confirm('진학결과 분석기에 불러온 데이터를 모두 초기화합니다. 되돌릴 수 없습니다. 계속할까요?')) return;
+  if (!confirm('불러온 데이터를 모두 삭제합니다. 되돌릴 수 없습니다. 계속할까요?')) return;
   busy(true);
   await clearAll(state.db);
   forgetView();

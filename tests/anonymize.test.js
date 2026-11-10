@@ -274,7 +274,7 @@ describe('동명이인 — 잘못 합치지 않는다', () => {
     const result = await assignStudentIds([entry(2025, { name: '김가온' })]);
     const warning = result.warnings.find((item) => item.type === 'name-only-identity');
     expect(warning.count).toBe(1);
-    expect(warning.message).toMatch(/동명이인이면 한 사람으로 묶입니다/);
+    expect(warning.message).toMatch(/동명이인이면 한 사람으로 간주됩니다/);
   });
 
   it('주키가 없는 같은 이름끼리는 한 사람으로 본다', async () => {

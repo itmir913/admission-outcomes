@@ -260,7 +260,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         submitButton.disabled = true;
         submitButton.textContent = '불러오는 중…';
         cancelButton.disabled = true;
-        footerNote.textContent = '불러오는 중입니다. 끝나면 이 창이 닫힙니다.';
+        footerNote.textContent = '불러오는 중입니다. 완료되면 이 창이 자동으로 닫힙니다.';
         footerNote.className = 'mr-auto text-base text-ink-soft';
         return;
       }
@@ -309,7 +309,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
       return el('div', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-3' }, [
         el('p', {
           class: 'text-base text-wait',
-          text: `이름이 같은 「${옛이름}」 파일을 이미 불러왔는데 내용이 다릅니다. 고친 파일이면 바꾸고, 다른 자료면 따로 더하세요. 따로 더하면 같은 지원 기록이 두 번 셀 수 있습니다.`
+          text: `이름이 같은 「${옛이름}」 파일을 이미 불러왔는데 내용이 다릅니다. 고친 파일이면 바꾸고, 다른 자료면 따로 추가하세요. 따로 추가하면 같은 지원 기록이 두 번 집계될 수 있습니다.`
         }),
         // 좁은 화면에서는 위아래로 쌓는다. 나란히 두면 긴 단추 글자가 한 글자씩 꺾인다
         el('div', { class: 'mt-3 flex flex-col gap-3 sm:flex-row' }, [바꾸기, 더하기])
@@ -404,7 +404,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
       const 기준선택 = needsBasisChoice(sheet)
         ? el('div', { class: 'mt-4 rounded-lg bg-wait-soft px-4 py-3' }, [
             el('p', { class: 'text-base font-semibold text-wait', text: `연도 열에 여러 해가 섞여 있습니다 (${원값.join(' · ')}).` }),
-            el('p', { class: 'mt-1 text-base text-wait', text: '이 값이 학년도인지 고3 년도인지 선택해 주세요. 한 해 밀리면 화면에서는 알아챌 방법이 없습니다.' }),
+            el('p', { class: 'mt-1 text-base text-wait', text: '이 값이 학년도인지 고3 년도인지 선택해 주세요. 한 해가 밀려도 화면에서는 알아챌 수 없습니다.' }),
             // 좁은 화면에서는 위아래로 쌓는다. 나란히 두면 단추 글자가 꺾인다
             el('div', { class: 'mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap' }, 기준단추),
             기준설명,
@@ -469,7 +469,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         reading?.readable && reading.nameOnlyIdentity
           ? el('p', {
               class: 'mt-3 rounded-lg bg-wait-soft px-4 py-2 text-base text-wait',
-              text: '학번도 반·번호도 없어 이름만으로 학생을 가립니다. 동명이인이 있으면 한 사람으로 묶입니다.'
+              text: '학번도 반·번호도 없어 이름만으로 학생을 구분합니다. 동명이인이 있으면 한 사람으로 간주됩니다.'
             })
           : null,
 
@@ -488,7 +488,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
                * **제보에서도 헤더만 받는다.** 「샘플을 보내 주세요」라고 적으면
                * 학생 데이터가 든 원본이 메일로 오간다 — 시작 화면과 같은 말로 적는다.
                */
-              '이 시트에서 「대학명」 열을 찾지 못해 꺼 두었습니다. 다른 시트이거나 아직 인식할 수 없는 양식입니다 — 나머지만 불러와도 됩니다. 엑셀의 1~2행(헤더)만 hello@luminousky.com 으로 보내 주시면 반영하겠습니다.'
+              '이 시트에서 「대학명」 열을 찾지 못해 꺼 두었습니다. 다른 용도의 시트이거나 아직 지원하지 않는 양식입니다 — 나머지만 불러와도 됩니다. 엑셀의 1~2행(헤더)만 hello@luminousky.com 으로 보내 주시면 반영하겠습니다.'
             ])
           : null,
 
@@ -499,7 +499,7 @@ export function confirmUploads(dialog, prepared, currentYear, commit) {
         reading?.readable && reading.source === 'names'
           ? el('div', { class: 'mt-3 rounded-lg bg-wait-soft px-4 py-3 text-base text-wait' }, [
               el('p', { class: 'font-semibold', text: '등록된 양식과 달라 열 이름으로 해석했습니다. 한 번 확인해 주세요.' }),
-              el('p', { class: 'mt-1 text-base' , text: `열 ${reading.columnCount}개 중 ${Object.keys(reading.columns).length}개를 해석했습니다.` }),
+              el('p', { class: 'mt-1 text-base' , text: `전체 열 ${reading.columnCount}개 중 ${Object.keys(reading.columns).length}개를 인식했습니다.` }),
               ...미해결안내(reading.unresolved),
               ...reading.notes.map((note) => el('p', { class: 'mt-1 text-base', text: note })),
               열배정표(reading.mapping)

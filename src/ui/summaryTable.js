@@ -72,11 +72,11 @@ export function paintSummaryChrome(head, notes, { summary, gpaLabel, gpaChoices,
     '지원·합격·불합격은 지원 건수 기준입니다. 한 학생이 같은 대학에 두 번 지원했다면 2건으로 계산합니다.',
     `합격률 = (합격 + 충원합격) ÷ 최종 판정. 최종 판정이 ${SMALL_SAMPLE}건 미만이면 합격률을 비워 둡니다.`,
     gpaLabel
-      ? `합격자 내신은 합격·충원합격한 학생만으로 냅니다. ${SMALL_SAMPLE}명 미만이면 값을 그대로, 그 이상이면 최저 / 중앙값 / 최고를 적습니다. 내신 빈칸은 내신이 비어 여기서 빠진 학생 수입니다.`
+      ? `합격자 내신은 합격·충원합격한 학생만으로 냅니다. ${SMALL_SAMPLE}명 미만이면 값을 그대로, 그 이상이면 최저 / 중앙값 / 최고를 적습니다. 「내신 빈칸」은 내신 값이 없어 집계에서 빠진 학생 수입니다.`
       : null,
     '1단계 불합격은 최종 판정이 없어 합격률의 분모에서 빠지지만, 따로 적어 둡니다.',
     summary.hasRegister ? '등록은 합격·충원합격한 지원 중 등록한 건수입니다.' : null,
-    summary.hasWaitRank ? '충원 예비순위는 충원합격한 지원의 최초 예비순위 중 가장 뒤 번호입니다.' : null,
+    summary.hasWaitRank ? '충원 예비순위는 충원합격한 지원의 최초 예비순위 중 가장 낮은 순위입니다.' : null,
     '줄을 누르면 그 대학·전형으로 필터를 걸고 지원 목록으로 돌아갑니다.'
   ].filter(Boolean);
   clear(notes).append(...문장.map((text) => el('li', { text })));
